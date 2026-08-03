@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UIDeviceFamily</key>
+    <array>
+        <integer>1</integer>
+        <integer>2</integer>
+    </array>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>arm64</string>
+    </array>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>XSAppIconAssets</key>
+    <string>Assets.xcassets/appicon.appiconset</string>
+    <!-- Focus timer as a Live Activity (lock screen/Dynamic Island) - updated locally,
+         needs no entitlement (free-tier capable). UI lives in the widget extension
+         (native/ios-liveactivity), embedded via scripts/build-ios-ipa.sh. -->
+    <key>NSSupportsLiveActivities</key>
+    <true/>
+    <!-- Mindful Minutes logging (HealthBridge.swift) - write-only, no read access needed. -->
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>StudyLife protokolliert abgeschlossene Fokus-Sessions als Achtsamkeitsminuten in Health.</string>
+    <key>NSHealthShareUsageDescription</key>
+    <string>StudyLife benötigt keinen Lesezugriff auf Health-Daten - dieser Hinweistext wird von iOS trotzdem verlangt.</string>
+    <!-- Background refresh (BackgroundRefresh.cs): occasionally warm up data caches -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>fetch</string>
+    </array>
+    <key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>app.studylife.mobile.refresh</string>
+    </array>
+    <!-- "Open with StudyLife" for calendar files (ICS import directly from Mail/Safari/Files) -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Kalenderdatei</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>com.apple.ical.ics</string>
+                <string>public.calendar-event</string>
+            </array>
+        </dict>
+    </array>
+    <!-- Return channel of the passkey login: the login page redirects, inside the system
+         browser sheet, to studylife://auth?token=..., which ASWebAuthenticationSession
+         intercepts. -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>app.studylife.mobile.auth</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>studylife</string>
+            </array>
+        </dict>
+    </array>
+    <!-- Home screen quick actions - counterpart to the "shortcuts" from the PWA manifest,
+         which iOS does not support as a PWA. Handled in AppDelegate.PerformActionForShortcutItem. -->
+    <key>UIApplicationShortcutItems</key>
+    <array>
+        <dict>
+            <key>UIApplicationShortcutItemType</key>
+            <string>app.studylife.mobile.focus</string>
+            <key>UIApplicationShortcutItemTitle</key>
+            <string>Fokus starten</string>
+            <key>UIApplicationShortcutItemSubtitle</key>
+            <string>Direkt in den Fokus-Timer springen</string>
+            <key>UIApplicationShortcutItemIconType</key>
+            <string>UIApplicationShortcutIconTypeTime</string>
+        </dict>
+        <dict>
+            <key>UIApplicationShortcutItemType</key>
+            <string>app.studylife.mobile.newnote</string>
+            <key>UIApplicationShortcutItemTitle</key>
+            <string>Neue Notiz</string>
+            <key>UIApplicationShortcutItemSubtitle</key>
+            <string>Sofort eine neue Notiz anlegen</string>
+            <key>UIApplicationShortcutItemIconType</key>
+            <string>UIApplicationShortcutIconTypeCompose</string>
+        </dict>
+        <dict>
+            <key>UIApplicationShortcutItemType</key>
+            <string>app.studylife.mobile.calendar</string>
+            <key>UIApplicationShortcutItemTitle</key>
+            <string>Kalender</string>
+            <key>UIApplicationShortcutItemSubtitle</key>
+            <string>Zur Wochenansicht</string>
+            <key>UIApplicationShortcutItemIconType</key>
+            <string>UIApplicationShortcutIconTypeDate</string>
+        </dict>
+        <!-- iOS shows a maximum of 4 static quick actions - further entries would be ignored. -->
+        <dict>
+            <key>UIApplicationShortcutItemType</key>
+            <string>app.studylife.mobile.stats</string>
+            <key>UIApplicationShortcutItemTitle</key>
+            <string>Statistiken</string>
+            <key>UIApplicationShortcutItemSubtitle</key>
+            <string>Auswertung öffnen</string>
+            <key>UIApplicationShortcutItemIconType</key>
+            <string>UIApplicationShortcutIconTypeTask</string>
+        </dict>
+    </array>
+</dict>
+</plist>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home screen widget "study progress" (Android counterpart to StudyTodayWidget.swift).
+     updatePeriodMillis 30 min = a fallback refresh cadence close to the system's minimum
+     interval; the actual updates are triggered by the app via HomeWidgetSnapshot/UpdateAll. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_study_today"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />

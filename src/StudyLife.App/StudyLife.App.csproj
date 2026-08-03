@@ -1,0 +1,167 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+
+        <OutputType>Exe</OutputType>
+        <RootNamespace>StudyLife.App</RootNamespace>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <EnableDefaultCssItems>false</EnableDefaultCssItems>
+        <Nullable>enable</Nullable>
+        <!-- Same as StudyLife.Client (WASM): identical date/number formatting as on the web,
+             otherwise the app would render visibly differently depending on device culture. -->
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <MauiXamlInflator>SourceGen</MauiXamlInflator>
+        <!-- For the delegate* function pointer of the Live Activity toggle bridge -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+        <!-- Display name -->
+        <ApplicationTitle>StudyLife</ApplicationTitle>
+
+        <!-- App Identifier -->
+        <ApplicationId>app.studylife.mobile</ApplicationId>
+
+        <!-- Versions -->
+        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <ApplicationVersion>1</ApplicationVersion>
+
+        <WindowsPackageType>None</WindowsPackageType>
+
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+        <!-- Paid developer profile: -p:PaidSigning=true includes the Associated Domains
+             entitlement and thereby enables the native in-app passkey dialog at runtime
+             (AppleSigningInfo detects the entitlement in the signed profile). Without the
+             flag the build stays free of entitlements and thus signable with a free account. -->
+        <CodesignEntitlements Condition="'$(PaidSigning)' == 'true' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">Platforms\iOS\Entitlements.PaidSigning.plist</CodesignEntitlements>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+        <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- App icon and splash: same icon as the PWA (icon-512.png), background = app dark tone -->
+        <MauiIcon Include="Resources\AppIcon\appicon.png" Color="#0e0e0f" />
+        <MauiSplashScreen Include="Resources\Splash\splash.png" Color="#0e0e0f" BaseSize="128,128" />
+
+        <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The complete existing frontend (Razor components, CSS, JS, i18n) comes in via
+             a project reference from the studylife repo - no copy, so the app UI always stays
+             identical to the web UI (same pattern as Server->Client in the hosted setup).
+             The client's static assets end up with BasePath "/" under the same
+             paths as on the web (css/..., js/..., Pages/*.razor.js). -->
+        <!-- UndefineProperties: the MAUI outer build (especially Android) passes RID-related
+             global properties down to the reference. The decisive one is
+             AppendRuntimeIdentifierToOutputPath=true (global, set by MAUI) - the client's
+             Blazor WASM SDK normally sets it to false itself, but it cannot override a
+             global property. Result without Undefine: CoreCompile writes without a RID,
+             the WASM packaging (scanner/Webcil/compression) looks under obj/.../browser-wasm/
+             => FileNotFound. With Undefine, the client builds exactly like standalone (works
+             in both Debug and Release). Do NOT use AdditionalProperties: that creates a
+             second property combination that doesn't share the static web assets manifest
+             calls. -->
+        <ProjectReference Include="..\..\studylife\src\StudyLife.Client\StudyLife.Client.csproj"
+                          UndefineProperties="RuntimeIdentifier;RuntimeIdentifiers;SelfContained;AppendRuntimeIdentifierToOutputPath" />
+    </ItemGroup>
+
+    <!-- The client's index.html collides with the app's own (same target path "/") -
+         the app variant boots blazor.webview.js instead of blazor.webassembly.js and also
+         contains the native bridge. Everything else from the client stays in. Must run AFTER
+         ResolveStaticWebAssetsInputs (only there are the reference assets in the ItemGroup)
+         and BEFORE GenerateStaticWebAssetsManifest (that's where the conflict check kicks in). -->
+    <PropertyGroup>
+        <_ClientIndexHtml>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..\studylife\src\StudyLife.Client\wwwroot\index.html'))</_ClientIndexHtml>
+        <!-- Forward slashes: the path must be resolvable on both macOS (build host) AND
+             Windows - with backslashes, Exists() fails on the Mac, the lib still gets linked
+             via ForceLoad, but the LIVE_ACTIVITY define is missing -> P/Invokes get compiled
+             away and the Live Activity silently stays dead, without any warning. -->
+        <_LiveActivityLib>$(MSBuildProjectDirectory)/../../native/ios-liveactivity/out/libStudyLifeLiveActivity.a</_LiveActivityLib>
+    </PropertyGroup>
+
+    <!-- Live Activity (focus timer on the lock screen): the Swift bridge is only
+         linked in if native/ios-liveactivity/build.sh has been run beforehand (Mac).
+         Without the library the P/Invokes stay compiled away (LIVE_ACTIVITY define missing)
+         and all other builds (Windows/Android/iOS check) run through unchanged. -->
+    <PropertyGroup Condition="Exists('$(_LiveActivityLib)') And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+        <DefineConstants>$(DefineConstants);LIVE_ACTIVITY</DefineConstants>
+    </PropertyGroup>
+    <ItemGroup Condition="Exists('$(_LiveActivityLib)') And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+        <NativeReference Include="$(_LiveActivityLib)">
+            <Kind>Static</Kind>
+            <ForceLoad>True</ForceLoad>
+        </NativeReference>
+    </ItemGroup>
+
+    <!-- Visibility in the build log of whether the Live Activity was really compiled in -
+         otherwise lib-linked-but-define-missing would be a silent half-state (ForceLoad pulls
+         the symbols into the binary even without the define). -->
+    <Target Name="_LiveActivityStatus" BeforeTargets="CoreCompile"
+            Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+        <Message Importance="high"
+                 Text="LiveActivity status: lib present=$([System.IO.File]::Exists('$(_LiveActivityLib)')), LIVE_ACTIVITY define=$(DefineConstants.Contains('LIVE_ACTIVITY'))" />
+    </Target>
+
+    <!-- Package diet: besides index.html, all client assets that only make sense in
+         browser-WASM operation get removed - the WASM runtime (_framework/**: dotnet.wasm,
+         Webcil assemblies, blazor.webassembly.js; in the hybrid setup the assemblies run
+         natively) and the pre-compressed .gz/.br duplicates (the WebView only requests the
+         plain-text files). IMPORTANT: blazor.webview.js is ALSO located under _framework/,
+         but comes from the MAUI package - that's why everything is additionally scoped to
+         SourceId/path 'StudyLife.Client'. Saves >10 MB per package.
+         The ItemGroup block is intentionally DUPLICATED in both targets: a shared
+         CallTarget target would only run once per build, leaving the publish chain
+         unfiltered. -->
+    <Target Name="_RemoveClientIndexHtmlAsset"
+            AfterTargets="ResolveStaticWebAssetsInputs"
+            BeforeTargets="GenerateStaticWebAssetsManifest">
+        <ItemGroup>
+            <StaticWebAsset Remove="@(StaticWebAsset)"
+                            Condition="'%(StaticWebAsset.Identity)' == '$(_ClientIndexHtml)'" />
+            <StaticWebAssetEndpoint Remove="@(StaticWebAssetEndpoint)"
+                                    Condition="'%(StaticWebAssetEndpoint.AssetFile)' == '$(_ClientIndexHtml)'" />
+            <StaticWebAsset Remove="@(StaticWebAsset)"
+                            Condition="'%(StaticWebAsset.SourceId)' == 'StudyLife.Client'
+                                       And ($([System.String]::Copy('%(StaticWebAsset.RelativePath)').StartsWith('_framework'))
+                                            Or '%(StaticWebAsset.AssetTraitName)' == 'Content-Encoding')" />
+            <StaticWebAssetEndpoint Remove="@(StaticWebAssetEndpoint)"
+                                    Condition="$([System.String]::Copy('%(StaticWebAssetEndpoint.AssetFile)').Contains('StudyLife.Client'))
+                                               And ($([System.String]::Copy('%(StaticWebAssetEndpoint.Route)').StartsWith('_framework'))
+                                                    Or $([System.String]::Copy('%(StaticWebAssetEndpoint.AssetFile)').EndsWith('.gz'))
+                                                    Or $([System.String]::Copy('%(StaticWebAssetEndpoint.AssetFile)').EndsWith('.br')))" />
+        </ItemGroup>
+    </Target>
+
+    <!-- Same thing again for the publish chain: MAUI packages during build and collects
+         the assets separately again for that (GenerateStaticWebAssetsPublishManifest). -->
+    <Target Name="_RemoveClientIndexHtmlAssetPublish"
+            BeforeTargets="GenerateStaticWebAssetsPublishManifest">
+        <ItemGroup>
+            <StaticWebAsset Remove="@(StaticWebAsset)"
+                            Condition="'%(StaticWebAsset.Identity)' == '$(_ClientIndexHtml)'" />
+            <StaticWebAssetEndpoint Remove="@(StaticWebAssetEndpoint)"
+                                    Condition="'%(StaticWebAssetEndpoint.AssetFile)' == '$(_ClientIndexHtml)'" />
+            <StaticWebAsset Remove="@(StaticWebAsset)"
+                            Condition="'%(StaticWebAsset.SourceId)' == 'StudyLife.Client'
+                                       And ($([System.String]::Copy('%(StaticWebAsset.RelativePath)').StartsWith('_framework'))
+                                            Or '%(StaticWebAsset.AssetTraitName)' == 'Content-Encoding')" />
+            <StaticWebAssetEndpoint Remove="@(StaticWebAssetEndpoint)"
+                                    Condition="$([System.String]::Copy('%(StaticWebAssetEndpoint.AssetFile)').Contains('StudyLife.Client'))
+                                               And ($([System.String]::Copy('%(StaticWebAssetEndpoint.Route)').StartsWith('_framework'))
+                                                    Or $([System.String]::Copy('%(StaticWebAssetEndpoint.AssetFile)').EndsWith('.gz'))
+                                                    Or $([System.String]::Copy('%(StaticWebAssetEndpoint.AssetFile)').EndsWith('.br')))" />
+        </ItemGroup>
+    </Target>
+
+</Project>

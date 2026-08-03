@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Only for builds with a PAID developer profile (dotnet build ... -p:PaidSigning=true):
+     unlocks the native in-app passkey dialog. Free-account profiles cannot contain this
+     entitlement - signing would fail with them, so this file is NOT included by default
+     (see csproj). Server-side prerequisite:
+     https://<domain>/.well-known/apple-app-site-association with the webcredentials entry
+     for the app (TEAMID.app.studylife.mobile), see README. -->
+<plist version="1.0">
+<dict>
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+        <string>webcredentials:studylife.example.com</string>
+    </array>
+    <!-- APNs (NativePush): "production" for TestFlight/App Store/ad-hoc distribution.
+         For debug builds installed directly via a developer profile, set this to
+         "development" instead (and set Apns:UseSandbox=true server-side). -->
+    <key>aps-environment</key>
+    <string>production</string>
+</dict>
+</plist>

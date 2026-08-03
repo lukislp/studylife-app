@@ -1,0 +1,306 @@
+@implements IDisposable
+@using System.Net.Http.Json
+@using StudyLife.Shared
+@using StudyLife.Client.I18nText
+@inject ServerUrlStore ServerUrls
+@inject SessionTokenStore TokenStore
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject DeepLinkService DeepLinks
+@inject TimerService Timer
+@inject AppStateService State
+@inject HttpClient Http
+@inject Toolbelt.Blazor.I18nText.I18nText I18nText
+
+@* Root component of the native app: takes over the boot sequence from
+   StudyLife.Client/Program.cs (load session token, set language default) and inserts the
+   first-run server URL dialog before it. Only once both are done is the unmodified
+   client app rendered - which means the scoped HttpClient doesn't exist until its
+   BaseAddress is settled. The dialog uses the same CSS classes as the login page
+   (progress-share-card etc.) so it looks like a native part of the app. *@
+
+@if (_ready)
+{
+    <StudyLife.Client.App />
+}
+else if (_needsServerUrl)
+{
+    <div class="progress-share-page">
+        <div class="progress-share-card">
+            <h1>StudyLife</h1>
+            <p class="ss-desc">@T.Description</p>
+            @if (_urlError != null)
+            {
+                <p class="ss-desc" style="color:var(--danger, #e74c3c)">@_urlError</p>
+            }
+            <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1.25rem;">
+                <label class="ss-label" for="server-url">@T.ServerUrlLabel</label>
+                <input id="server-url" class="input" type="url" inputmode="url" autocapitalize="off"
+                       spellcheck="false" placeholder="https://studylife.example.com"
+                       @bind="_urlInput" @bind:event="oninput" @onkeyup="@(e => { if (e.Key == "Enter") _ = SaveServerUrlAsync(); })" />
+                <button type="button" class="btn-primary" @onclick="SaveServerUrlAsync" disabled="@_checking">
+                    @(_checking ? T.CheckingConnection : _unreachableWarning ? T.UseAnyway : T.Connect)
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _ready;
+    private bool _needsServerUrl;
+    private bool _checking;
+    private bool _unreachableWarning;
+    private string _urlInput = "";
+    private string? _urlError;
+    private AppFirstRunText T = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetch EARLY, before the boot branch - the dialog can already appear on the first
+        // render (with empty T defaults), but gets populated correctly on the second render
+        // (after this await). Purely client-side lookup (localStorage + bundled JSON), needs
+        // no server connection - so this is unproblematic even though the server URL dialog
+        // itself isn't configured yet.
+        T = await I18nText.GetTextTableAsync<AppFirstRunText>(this);
+
+        if (!ServerUrls.IsConfigured)
+        {
+            _needsServerUrl = true;
+            return;
+        }
+        await BootAsync();
+    }
+
+    private TimerLiveActivityCoordinator? _liveActivity;
+    private WatchTimerCoordinator? _watchTimer;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        DeepLinks.OnNavigate += HandleDeepLink;
+        // Focus timer -> lock screen Live Activity (iOS; a no-op everywhere else).
+        // Diagnostics reporter: DOM banner (window.alert would be a silent no-op in the WKWebView).
+        _liveActivity = new TimerLiveActivityCoordinator(Timer, Http,
+            message => _ = InvokeAsync(() => JS.InvokeVoidAsync("showLiveActivityDiag", message).AsTask()));
+        // Siri/Shortcuts "Open Focus": deliberately navigates ONLY to the focus page
+        // (no blind start of a timer mode) - buffering is handled by the Swift hub.
+        TimerLiveActivity.RegisterOpenFocusHandler();
+        TimerLiveActivity.OpenFocusRequested += HandleOpenFocusRequested;
+        // Apple Watch companion: activates the WCSession so the next HomeWidgetSnapshot
+        // update can relay to a paired Watch (a no-op without one), and relays start/pause/
+        // stop taps from the Watch into TimerService (same button semantics as the focus page).
+        WatchBridge.Activate();
+        _watchTimer = new WatchTimerCoordinator(Timer, State, Http);
+        // Mindful Minutes: best-effort, one-time authorization prompt (Settings toggle if
+        // denied) - HealthBridge silently no-ops afterward either way.
+        _ = HealthBridge.RequestAuthorizationAsync();
+        // Share menu: shared text becomes a note (Android: ACTION_SEND intent,
+        // iOS: share extension inbox, drained on foreground transition/boot).
+        SharedNoteIntake.PendingChanged += HandleSharedNotesChanged;
+        // Session completed via timer -> home screen widget shows the new study time immediately.
+        Timer.OnSessionComplete += HandleSessionCompleteForWidget;
+        // Timer state change (start/pause/phase change) -> widget shows the running
+        // countdown. OnTick fires every second; writes only happen on real transitions.
+        Timer.OnTick += HandleTimerTickForWidget;
+        // Mindful Minutes per completed FOCUS round (not per whole mode): OnBreakStarted
+        // fires right after every focus phase ends, including the last round's - so a round
+        // is logged even if the user stops mid-way through a later break, instead of only
+        // once the entire mode finishes (which would lose everything on an early stop).
+        Timer.OnBreakStarted += HandleFocusRoundCompleteForHealth;
+        // Stand/stretch nudge for long focus rounds - needs every-second resolution (unlike
+        // the widget's change-only updates above), since it fires mid-phase, not on a transition.
+        Timer.OnTick += HandleTimerTickForStandNudge;
+        if (_ready && DeepLinks.ConsumePending() is { } pending)
+            HandleDeepLink(pending);
+    }
+
+    private void HandleOpenFocusRequested() => DeepLinks.Dispatch("/focus");
+
+    private void HandleSharedNotesChanged() => _ = InvokeAsync(ConsumeSharedNotesAsync);
+
+    /// <summary>Turns shared texts into notes: directly via API when online, via
+    /// AppStateService's write queue when offline - nothing is lost. Then navigates to /notes.</summary>
+    private async Task ConsumeSharedNotesAsync()
+    {
+        if (!_ready) return; // boot path consumes it itself after startup
+        var texts = SharedNoteIntake.TakeAll();
+        if (texts.Count == 0) return;
+        foreach (var text in texts)
+        {
+            var note = new NoteDto
+            {
+                Title = "",
+                Content = text,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
+            };
+            try { await Http.PostAsJsonAsync("api/notes", note); }
+            catch { await State.EnqueueNoteSaveAsync(note); }
+        }
+        DeepLinks.Dispatch("/notes");
+    }
+
+    public void Dispose()
+    {
+        DeepLinks.OnNavigate -= HandleDeepLink;
+        TimerLiveActivity.OpenFocusRequested -= HandleOpenFocusRequested;
+        SharedNoteIntake.PendingChanged -= HandleSharedNotesChanged;
+        Timer.OnSessionComplete -= HandleSessionCompleteForWidget;
+        Timer.OnTick -= HandleTimerTickForWidget;
+        Timer.OnBreakStarted -= HandleFocusRoundCompleteForHealth;
+        Timer.OnTick -= HandleTimerTickForStandNudge;
+        _watchTimer?.Dispose();
+        BackgroundRefresh.SetHandler(null);
+        _liveActivity?.Dispose();
+    }
+
+    private void HandleSessionCompleteForWidget()
+    {
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, justCompleted: true));
+    }
+
+    /// <summary>Timer.CurrentMode still reflects the in-progress mode at this point (only
+    /// LoadMode/Reset clear it) - logs exactly the one focus round that just ended
+    /// (mode.FocusMinutes), not the whole mode's total, so stopping early after only some
+    /// rounds still keeps every already-completed round's Mindful Minutes.</summary>
+    private void HandleFocusRoundCompleteForHealth()
+    {
+        if (Timer.CurrentMode is not { } mode) return;
+        var end = DateTime.UtcNow;
+        var start = end.AddMinutes(-mode.FocusMinutes);
+        HealthBridge.LogMindfulSession(start, end);
+    }
+
+    private (bool Running, bool IsBreak, int Round) _lastWidgetTimerState;
+
+    private void HandleTimerTickForWidget(int secondsLeft, bool isBreak, int round, bool isRunning)
+    {
+        var current = (isRunning, isBreak, round);
+        if (current == _lastWidgetTimerState) return;
+        _lastWidgetTimerState = current;
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer));
+    }
+
+    // 45min: long enough to matter (Ultradian/Deep Dive/Marathon qualify, Pomodoro/Sprint/
+    // Flow don't), short enough to still be useful within Marathon's 180min single round.
+    private const int StandNudgeIntervalMinutes = 45;
+    private int _lastStandNudgeSlot;
+
+    /// <summary>Fires a haptic-and-notification reminder to stand/stretch every 45 elapsed
+    /// minutes of a long focus round - resets whenever a break starts or the timer isn't
+    /// running, so each new focus round counts fresh from zero. Computed from SecondsLeft
+    /// (a countdown) rather than tracking a separate start time, so it's exact even after a
+    /// suspend/catch-up jump (TimerService.Tick's own wall-clock design, see its comments).</summary>
+    private void HandleTimerTickForStandNudge(int secondsLeft, bool isBreak, int round, bool isRunning)
+    {
+        if (!isRunning || isBreak || Timer.CurrentMode is not { } mode || mode.FocusMinutes < StandNudgeIntervalMinutes)
+        {
+            _lastStandNudgeSlot = 0;
+            return;
+        }
+        var elapsedMinutes = mode.FocusMinutes - secondsLeft / 60;
+        var slot = elapsedMinutes / StandNudgeIntervalMinutes;
+        if (slot == 0 || slot == _lastStandNudgeSlot) return;
+        _lastStandNudgeSlot = slot;
+        _ = NativeBridge.ShowNotificationAsync("Kurz aufstehen?",
+            $"Du bist schon {slot * StandNudgeIntervalMinutes} Minuten am Stück fokussiert - kurz strecken tut gut.");
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, standNudge: true));
+    }
+
+    private void HandleDeepLink(string route) => _ = InvokeAsync(() => Nav.NavigateTo(route));
+
+    /// <summary>Boot sequence as in StudyLife.Client/Program.cs: load the token before the
+    /// first render, set the first-run language default "de", sync html-lang.</summary>
+    private async Task BootAsync()
+    {
+        await TokenStore.InitializeAsync();
+        try
+        {
+            var storedLanguage = await JS.InvokeAsync<string?>("localStorage.getItem", "Toolbelt.Blazor.I18nText.CurrentLanguage");
+            if (string.IsNullOrEmpty(storedLanguage))
+                await I18nText.SetCurrentLanguageAsync("de");
+
+            var currentLanguage = await I18nText.GetCurrentLanguageAsync();
+            await JS.InvokeVoidAsync("setDocumentLanguage", currentLanguage);
+        }
+        catch { /* localStorage not available - app continues with the library's auto-detection */ }
+
+        _ready = true;
+
+        // iOS integrations after boot: background refresh gets its work order
+        // (warm caches + keep Spotlight current) and the search index gets its initial fill.
+        // Both calls are no-ops on other platforms.
+        BackgroundRefresh.SetHandler(RefreshInBackgroundAsync);
+        _ = Task.Run(() => SpotlightIndexer.ReindexAsync(Http));
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer));
+#if IOS
+        SharedNoteIntake.DrainIosInbox(); // cold start: collect anything left behind by the share extension
+#endif
+        _ = ConsumeSharedNotesAsync();
+
+        if (DeepLinks.ConsumePending() is { } pending)
+            HandleDeepLink(pending);
+    }
+
+    private async Task RefreshInBackgroundAsync()
+    {
+        await State.FetchSettingsFromServerAsync();
+        await State.GetSessionsAsync();
+        await SpotlightIndexer.ReindexAsync(Http);
+        await HomeWidgetSnapshot.UpdateAsync(State, Timer);
+    }
+
+    private async Task SaveServerUrlAsync()
+    {
+        var input = _urlInput.Trim();
+        if (input.Length == 0) return;
+        if (!input.Contains("://")) input = "https://" + input;
+
+        if (!Uri.TryCreate(input, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+        {
+            _urlError = T.InvalidUrl;
+            return;
+        }
+
+        // Best-effort reachability check via manifest.json (served statically by the server,
+        // no auth needed). On the first failure only warn - a second click ("Use anyway")
+        // saves the URL regardless, e.g. if the server is currently offline.
+        if (!_unreachableWarning)
+        {
+            _checking = true;
+            _urlError = null;
+            StateHasChanged();
+            try
+            {
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(6) };
+                var normalizedBase = uri.ToString().EndsWith('/') ? uri : new Uri(uri + "/");
+                var response = await http.GetAsync(new Uri(normalizedBase, "manifest.json"));
+                if (!response.IsSuccessStatusCode)
+                {
+                    _urlError = string.Format(T.UnexpectedResponse ?? "", (int)response.StatusCode);
+                    _unreachableWarning = true;
+                    return;
+                }
+            }
+            catch (Exception)
+            {
+                _urlError = T.ServerUnreachable;
+                _unreachableWarning = true;
+                return;
+            }
+            finally
+            {
+                _checking = false;
+            }
+        }
+
+        ServerUrls.Save(uri);
+        _needsServerUrl = false;
+        _urlError = null;
+        StateHasChanged();
+        await BootAsync();
+        StateHasChanged();
+    }
+}

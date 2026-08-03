@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Beschriftungen wie im PWA-Manifest (manifest.json "shortcuts") - deutsch, wie dort. -->
+<resources>
+    <string name="shortcut_focus_short">Fokus</string>
+    <string name="shortcut_focus_long">Fokus starten</string>
+    <string name="shortcut_note_short">Notiz</string>
+    <string name="shortcut_note_long">Neue Notiz</string>
+    <string name="shortcut_calendar_short">Kalender</string>
+    <string name="shortcut_calendar_long">Kalender</string>
+    <string name="shortcut_stats_short">Statistiken</string>
+    <string name="shortcut_stats_long">Auswertung öffnen</string>
+    <string name="shortcut_weekplan_short">Wochenplan</string>
+    <string name="shortcut_weekplan_long">Wochenplan öffnen</string>
+</resources>
