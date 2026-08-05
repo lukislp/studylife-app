@@ -47,7 +47,13 @@ public static class TimerLiveActivity
     /// <summary>Fires when the pause/resume button on the Live Activity card was pressed
     /// (StudyLifeTimerToggleIntent runs in the app process and calls back here through the
     /// registered C callback). Arrives from a non-UI thread.</summary>
+    // CS0067: the only raise site is OnNativeToggle, which only exists in
+    // LIVE_ACTIVITY && IOS builds - the subscription in TimerLiveActivityCoordinator below
+    // stays unconditional on purpose (harmless no-op elsewhere), so the compiler correctly
+    // sees "never raised" on every other build target.
+#pragma warning disable CS0067
     public static event Action? ToggleRequested;
+#pragma warning restore CS0067
 
     /// <summary>Registers the native callback - once, at coordinator startup.</summary>
     public static void RegisterToggleHandler()
@@ -68,7 +74,10 @@ public static class TimerLiveActivity
 
     /// <summary>Fires when ActivityKit has issued a new push token for the running Live
     /// Activity (step D). Arrives from a non-UI thread.</summary>
+    // CS0067: see ToggleRequested above - only raised in LIVE_ACTIVITY && IOS builds.
+#pragma warning disable CS0067
     public static event Action<string>? PushTokenReceived;
+#pragma warning restore CS0067
 
     /// <summary>Registers the native callback - once, at coordinator startup; only makes
     /// sense with the push entitlement (paid profile) - free signing never gets a token.</summary>
@@ -94,7 +103,10 @@ public static class TimerLiveActivity
 
     /// <summary>Fires on "Open Focus" from Siri/Shortcuts (StudyLifeOpenFocusIntent runs
     /// after the app is opened, in the app process). Arrives from a non-UI thread.</summary>
+    // CS0067: see ToggleRequested above - only raised in LIVE_ACTIVITY && IOS builds.
+#pragma warning disable CS0067
     public static event Action? OpenFocusRequested;
+#pragma warning restore CS0067
 
     /// <summary>Registers the native callback — once, at app startup (AppRoot).</summary>
     public static void RegisterOpenFocusHandler()

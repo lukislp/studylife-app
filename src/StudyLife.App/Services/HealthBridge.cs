@@ -23,7 +23,9 @@ public static class HealthBridge
         }
     }
 
+#if LIVE_ACTIVITY && IOS
     private static TaskCompletionSource<bool>? _authCompletion;
+#endif
 
     /// <summary>Requests write-only HealthKit authorization - once, at app startup. Denied/
     /// undetermined just means LogMindfulSession silently no-ops afterward.</summary>

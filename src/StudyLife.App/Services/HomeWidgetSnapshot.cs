@@ -23,7 +23,9 @@ public static class HomeWidgetSnapshot
     /// shows (null = none) - a plain static field is enough since UpdateAsync is called fresh
     /// from several AppRoot.razor call sites and this only needs to de-dup repeat calls for the
     /// SAME session, not persist across app restarts (ActivityKit itself already survives those).</summary>
+#if IOS
     private static DateTime? _upcomingActivityStartsAt;
+#endif
 
     public static async Task UpdateAsync(AppStateService state, TimerService? timer = null, bool justCompleted = false, bool standNudge = false)
     {

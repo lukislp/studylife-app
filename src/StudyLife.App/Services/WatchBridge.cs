@@ -57,7 +57,13 @@ public static class WatchBridge
     /// <summary>Fires when a command arrives from the Watch (command, modeId - see
     /// WatchTimerCoordinator; modeId is only meaningful for command 3). Arrives from a
     /// non-UI thread.</summary>
+    // CS0067: the only raise site is OnNativeCommand, which only exists in
+    // LIVE_ACTIVITY && IOS builds - the subscription in WatchTimerCoordinator stays
+    // unconditional on purpose (harmless no-op elsewhere), so the compiler correctly sees
+    // "never raised" on every other build target.
+#pragma warning disable CS0067
     public static event Action<int, int>? CommandReceived;
+#pragma warning restore CS0067
 
     /// <summary>Registers the native callback - once, at coordinator startup.</summary>
     public static void RegisterCommandHandler()
@@ -78,7 +84,10 @@ public static class WatchBridge
 
     /// <summary>Fires when a post-session rating tap arrives from the Watch. Arrives from a
     /// non-UI thread.</summary>
+    // CS0067: see CommandReceived above - only raised in LIVE_ACTIVITY && IOS builds.
+#pragma warning disable CS0067
     public static event Action<int>? RatingReceived;
+#pragma warning restore CS0067
 
     /// <summary>Registers the native callback - once, at coordinator startup.</summary>
     public static void RegisterRatingHandler()
