@@ -34,13 +34,16 @@ jobs:
         with:
           dotnet-version: "10.0.x"
       # maui-ios/maui-maccatalyst aren't even installable on Linux ("Workload ID maui-ios
-      # isn't supported on this platform"), so installing every workload everywhere (the
-      # previous attempt) can't work here at all. Instead override TargetFrameworks
-      # (plural) directly, which makes MSBuild treat the project as single-targeted from
-      # the very start of restore - -p:TargetFramework (singular) alone only affects which
-      # TFM gets compiled, not which ones restore still tries to evaluate.
+      # isn't supported on this platform"), so installing every workload everywhere (an
+      # earlier attempt) can't work here. A -p:TargetFrameworks= override was tried next.
+      # That's a *global* MSBuild property, so it also propagates into the referenced
+      # StudyLife.Client/StudyLife.Shared projects (plain net10.0 libraries, not MAUI
+      # multi-targeted) and corrupts their restore. Editing the csproj's own
+      # <TargetFrameworks> element directly is the only fix that's scoped to just this
+      # one file - the sibling projects are never touched.
+      - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFrameworks>net10.0-android</TargetFrameworks>|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-android
-      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release -p:TargetFrameworks=net10.0-android -p:TargetFramework=net10.0-android
+      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release
       # Debug-signed, directly sideloadable APK (no Apple/Google account involved) -
       # see the README's Android build section.
       - run: cp src/StudyLife.App/bin/Release/net10.0-android/publish/*-Signed.apk StudyLife-android.apk
@@ -61,8 +64,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+      - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFrameworks>net10.0-maccatalyst</TargetFrameworks>|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-maccatalyst
-      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release -p:TargetFrameworks=net10.0-maccatalyst -p:TargetFramework=net10.0-maccatalyst
+      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release
       # Unsigned .app bundle - recipients need to right-click "Open" (or `xattr -cr`)
       # once to bypass Gatekeeper, since no Apple Developer signing is involved.
       - name: Zip the .app bundle
@@ -87,6 +91,13 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+      # The Windows TFM is added by a *second*, conditional <TargetFrameworks> element
+      # (only active when IsOSPlatform('windows')) that appends onto the first via
+      # $(TargetFrameworks) - overwrite that element's value outright instead of
+      # appending, so the property resolves to just the one TFM on this runner.
+      - name: Restrict to one target framework
+        shell: bash
+        run: sed -i -E 's|(<TargetFrameworks Condition="[^"]*">)\$\(TargetFrameworks\);net10\.0-windows10\.0\.19041\.0(</TargetFrameworks>)|\1net10.0-windows10.0.19041.0\2|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-windows
       # WindowsPackageType=None -> plain unpackaged folder, no MSIX signing needed.
       # No -p:SelfContained/-p:RuntimeIdentifier overrides: forcing those triggered NuGet
@@ -94,7 +105,7 @@ jobs:
       # package (a broken runtime-pack resolution specific to that combination) -
       # framework-dependent (needs the .NET 10 runtime on the target machine) is an
       # acceptable tradeoff here since this is unsigned personal-use distribution anyway.
-      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release -p:TargetFrameworks=net10.0-windows10.0.19041.0 -p:TargetFramework=net10.0-windows10.0.19041.0 -p:WindowsPackageType=None
+      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release -p:WindowsPackageType=None
       - name: Zip the publish output
         shell: pwsh
         run: |
@@ -108,12 +119,10 @@ jobs:
 
   test-lint:
     # dotnet format has no -f/-p flag to scope itself to one TargetFramework - it always
-    # restores every TFM the project lists. On Linux that means net10.0-ios has no
-    # workload and the whole thing fails outright, so this has to run somewhere that can
-    # host every non-Windows TFM at once. The conditional net10.0-windows TFM never even
-    # enters the TargetFrameworks list on macOS (its csproj Condition checks for Windows),
-    # so macOS covers android+ios+maccatalyst without needing the Windows workload too.
-    runs-on: macos-latest
+    # restores every TFM the project lists, so the same csproj-patching trick as the
+    # other jobs applies here too. Code style doesn't differ by target framework, so
+    # android (the cheapest runner) stands in for all of them.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/checkout@v5
@@ -123,7 +132,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - run: dotnet workload install maui-android maui-ios maui-maccatalyst
+      - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFrameworks>net10.0-android</TargetFrameworks>|' src/StudyLife.App/StudyLife.App.csproj
+      - run: dotnet workload install maui-android
       - run: dotnet format src/StudyLife.App/StudyLife.App.csproj --verify-no-changes
 
   # ---------------------------------------------------------------------
