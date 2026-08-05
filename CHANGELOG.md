@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/lukislp/studylife-app/compare/v1.0.0...v1.0.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* bump actions to their Node.js 24 major versions ([eab7a4c](https://github.com/lukislp/studylife-app/commit/eab7a4c18e1392c70a5ac004bcc367bd23165fed))
+* clean up compiler warnings surfaced by the new CI build/lint jobs ([be77bad](https://github.com/lukislp/studylife-app/commit/be77bad7d652a6adc3d3036d999378f94e36bd7b)), closes [#if](https://github.com/lukislp/studylife-app/issues/if) [#if](https://github.com/lukislp/studylife-app/issues/if)
+
 # 1.0.0 (2026-08-05)
 
 
