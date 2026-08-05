@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/lukislp/studylife-app/compare/v1.0.1...v1.0.2) (2026-08-05)
+
+
+### Bug Fixes
+
+* use standard AGPL-3.0 license text so GitHub detects it correctly, add README badges ([cd7e2a6](https://github.com/lukislp/studylife-app/commit/cd7e2a657c9e5426ea15156579fb72291379bcf3))
+
 ## [1.0.1](https://github.com/lukislp/studylife-app/compare/v1.0.0...v1.0.1) (2026-08-05)
 
 
