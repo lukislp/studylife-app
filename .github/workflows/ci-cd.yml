@@ -30,7 +30,7 @@ jobs:
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
       # maui-ios/maui-maccatalyst aren't even installable on Linux ("Workload ID maui-ios
@@ -53,7 +53,7 @@ jobs:
       # Debug-signed, directly sideloadable APK (no Apple/Google account involved) -
       # see the README's Android build section.
       - run: cp src/StudyLife.App/bin/Release/net10.0-android/publish/*-Signed.apk StudyLife-android.apk
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: StudyLife-android
           path: StudyLife-android.apk
@@ -67,7 +67,7 @@ jobs:
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
       - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-maccatalyst</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
@@ -80,7 +80,7 @@ jobs:
           APP_PATH=$(find src/StudyLife.App/bin/Release/net10.0-maccatalyst -maxdepth 4 -name "*.app" -type d | head -1)
           echo "Found: $APP_PATH"
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" StudyLife-macos.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: StudyLife-macos
           path: StudyLife-macos.zip
@@ -94,7 +94,7 @@ jobs:
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
       # The Windows TFM is added by a *second*, conditional <TargetFrameworks> element
@@ -124,7 +124,7 @@ jobs:
         run: |
           $publishDir = Get-ChildItem -Path "src/StudyLife.App/bin/Release/net10.0-windows10.0.19041.0" -Recurse -Directory -Filter "publish" | Select-Object -First 1
           Compress-Archive -Path "$($publishDir.FullName)/*" -DestinationPath StudyLife-windows.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: StudyLife-windows
           path: StudyLife-windows.zip
@@ -142,7 +142,7 @@ jobs:
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
       - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-android</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
@@ -206,7 +206,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: StudyLife-*
           path: release-assets
