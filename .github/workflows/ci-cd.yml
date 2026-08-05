@@ -1,0 +1,201 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------
+  # Test/build stage — runs on every push to main AND every pull request
+  # ---------------------------------------------------------------------
+  # Every job needs a sibling checkout of the public studylife repo at
+  # ./studylife (matching src/StudyLife.App/StudyLife.App.csproj's relative
+  # ProjectReference "..\..\studylife\src\StudyLife.Client\..." - see the
+  # README's "Building" section) - the app's entire Blazor UI comes from
+  # there via project reference, no copy.
+  test-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: lukislp/studylife
+          path: studylife
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet workload install android
+      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -f net10.0-android -c Release
+      # Debug-signed, directly sideloadable APK (no Apple/Google account involved) -
+      # see the README's Android build section.
+      - run: cp src/StudyLife.App/bin/Release/net10.0-android/publish/*-Signed.apk StudyLife-android.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StudyLife-android
+          path: StudyLife-android.apk
+          retention-days: 5
+
+  test-maccatalyst:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: lukislp/studylife
+          path: studylife
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet workload install maccatalyst
+      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -f net10.0-maccatalyst -c Release
+      # Unsigned .app bundle - recipients need to right-click "Open" (or `xattr -cr`)
+      # once to bypass Gatekeeper, since no Apple Developer signing is involved.
+      - name: Zip the .app bundle
+        run: |
+          APP_PATH=$(find src/StudyLife.App/bin/Release/net10.0-maccatalyst -maxdepth 4 -name "*.app" -type d | head -1)
+          echo "Found: $APP_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" StudyLife-macos.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StudyLife-macos
+          path: StudyLife-macos.zip
+          retention-days: 5
+
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: lukislp/studylife
+          path: studylife
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet workload install maui-windows
+      # WindowsPackageType=None -> plain unpackaged win-x64 folder, no MSIX signing needed.
+      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -f net10.0-windows10.0.19041.0 -c Release -p:WindowsPackageType=None -p:RuntimeIdentifier=win-x64 -p:SelfContained=true
+      - name: Zip the publish output
+        shell: pwsh
+        run: |
+          $publishDir = Get-ChildItem -Path "src/StudyLife.App/bin/Release/net10.0-windows10.0.19041.0" -Recurse -Directory -Filter "publish" | Select-Object -First 1
+          Compress-Archive -Path "$($publishDir.FullName)/*" -DestinationPath StudyLife-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StudyLife-windows
+          path: StudyLife-windows.zip
+          retention-days: 5
+
+  test-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: lukislp/studylife
+          path: studylife
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet workload install android
+      # Scoped to one TFM (-f) so only the android workload is needed to restore -
+      # code style doesn't differ by target framework.
+      - run: dotnet format src/StudyLife.App/StudyLife.App.csproj -f net10.0-android --verify-no-changes
+
+  # ---------------------------------------------------------------------
+  # Version / release — push to main only
+  # ---------------------------------------------------------------------
+  get-version:
+    needs: [test-android, test-maccatalyst, test-windows, test-lint]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: studylife-app-release-chain
+      cancel-in-progress: false
+    # @semantic-release/github verifies push/write access as part of its plugin lifecycle
+    # even during a dry run - a read-only token fails that check outright. No actual writes
+    # happen here regardless of these permissions; dry_run: true never pushes/tags/releases.
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      published: ${{ steps.semrel.outputs.new_release_published }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: semrel
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
+        with:
+          dry_run: true
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/github
+            @semantic-release/git
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Fail if no next version determined
+        if: steps.semrel.outputs.new_release_published != 'true'
+        run: |
+          echo "::error::semantic-release did not determine a next version (no releasable commits since the last tag). Aborting instead of silently skipping."
+          exit 1
+
+  semantic-release:
+    needs: [get-version]
+    if: github.event_name == 'push' && needs.get-version.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: studylife-app-release-chain
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: StudyLife-*
+          path: release-assets
+          merge-multiple: true
+      - id: semrel
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
+        with:
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/github
+            @semantic-release/git
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+      # Retry once for the narrow window where an out-of-band push to main landed between
+      # this job's checkout and its own push (the concurrency group above already serializes
+      # overlapping runs of this workflow, so this only guards against a genuinely external push).
+      - if: steps.semrel.outcome == 'failure'
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+      - if: steps.semrel.outcome == 'failure'
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
+        with:
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/github
+            @semantic-release/git
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

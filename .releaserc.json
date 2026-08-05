@@ -1,0 +1,19 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    ["@semantic-release/changelog", { "changelogFile": "CHANGELOG.md" }],
+    ["@semantic-release/github", {
+      "assets": [
+        { "path": "release-assets/StudyLife-android.apk", "label": "Android (.apk, debug-signed, sideload only)" },
+        { "path": "release-assets/StudyLife-macos.zip", "label": "macOS (Mac Catalyst, unsigned - right-click \"Open\" once, or `xattr -cr` to bypass Gatekeeper)" },
+        { "path": "release-assets/StudyLife-windows.zip", "label": "Windows (unsigned - SmartScreen warning expected, click \"More info\" -> \"Run anyway\")" }
+      ]
+    }],
+    ["@semantic-release/git", {
+      "assets": ["CHANGELOG.md"],
+      "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+    }]
+  ]
+}
