@@ -99,13 +99,18 @@ jobs:
           dotnet-version: "10.0.x"
       # The Windows TFM is added by a *second*, conditional <TargetFrameworks> element
       # (only active when IsOSPlatform('windows')) that appends onto the first via
-      # $(TargetFrameworks). Rename it to the singular <TargetFramework> with just its
-      # own value - same reasoning as the android/maccatalyst jobs: the singular element
-      # short-circuits cross-targeting entirely, so no -f/-p:TargetFramework is needed
-      # (and can't be used anyway without corrupting the sibling projects' restore).
+      # $(TargetFrameworks). Converting only that second line to singular <TargetFramework>
+      # left the first (still plural, still listing android;ios;maccatalyst) in place too -
+      # restore ended up using that stale plural list instead of the intended windows-only
+      # target, so publish then found no matching entry in project.assets.json. Deleting the
+      # first line outright removes the ambiguity: only the singular declaration remains.
       - name: Restrict to one target framework
         shell: bash
-        run: sed -i -E 's|<TargetFrameworks (Condition="[^"]*")>\$\(TargetFrameworks\);net10\.0-windows10\.0\.19041\.0</TargetFrameworks>|<TargetFramework \1>net10.0-windows10.0.19041.0</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
+        run: |
+          sed -i -E \
+            -e '/<TargetFrameworks>net10\.0-android;net10\.0-ios;net10\.0-maccatalyst<\/TargetFrameworks>/d' \
+            -e 's|<TargetFrameworks (Condition="[^"]*")>\$\(TargetFrameworks\);net10\.0-windows10\.0\.19041\.0</TargetFrameworks>|<TargetFramework \1>net10.0-windows10.0.19041.0</TargetFramework>|' \
+            src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-windows
       # WindowsPackageType=None -> plain unpackaged folder, no MSIX signing needed.
       # No -p:SelfContained/-p:RuntimeIdentifier overrides: forcing those triggered NuGet
