@@ -1,5 +1,10 @@
 # StudyLife App (iOS / Android / Mac / Windows)
 
+[![CI/CD](https://github.com/lukislp/studylife-app/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/lukislp/studylife-app/actions/workflows/ci-cd.yml)
+[![Release](https://img.shields.io/github/v/release/lukislp/studylife-app)](https://github.com/lukislp/studylife-app/releases)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![.NET MAUI](https://img.shields.io/badge/.NET_MAUI-10.0-512BD4)](https://dotnet.microsoft.com/apps/maui)
+
 Native app shell for [StudyLife](https://github.com/lukislp/studylife) built on **.NET MAUI Blazor Hybrid**.
 The entire frontend (Razor components, CSS, JS interop, all 26 languages) comes **directly
 from the studylife repo via a project reference** — no copy, so the app UI is always
@@ -162,6 +167,8 @@ German, since that's this app's primary usage context. Contributions to localize
 welcome; see the web client's i18n setup in the main app repo for the established pattern.
 
 ## License
+
+Copyright (C) 2026 Lukas Koerber
 
 [AGPL-3.0](LICENSE) — consistent with the main [StudyLife](https://github.com/lukislp/studylife)
 repo, since this app is built directly on top of its (AGPL-3.0) Client project via a project
