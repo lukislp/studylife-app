@@ -33,12 +33,14 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      # Restore evaluates EVERY TFM the project lists, not just the one being built -
-      # -p:TargetFramework=X only scopes the actual compile step, not restore itself -
-      # so every workload the csproj references has to be present regardless of which
-      # platform this job ultimately builds.
-      - run: dotnet workload install maui-android maui-ios maui-maccatalyst
-      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release -p:TargetFramework=net10.0-android
+      # maui-ios/maui-maccatalyst aren't even installable on Linux ("Workload ID maui-ios
+      # isn't supported on this platform"), so installing every workload everywhere (the
+      # previous attempt) can't work here at all. Instead override TargetFrameworks
+      # (plural) directly, which makes MSBuild treat the project as single-targeted from
+      # the very start of restore - -p:TargetFramework (singular) alone only affects which
+      # TFM gets compiled, not which ones restore still tries to evaluate.
+      - run: dotnet workload install maui-android
+      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release -p:TargetFrameworks=net10.0-android -p:TargetFramework=net10.0-android
       # Debug-signed, directly sideloadable APK (no Apple/Google account involved) -
       # see the README's Android build section.
       - run: cp src/StudyLife.App/bin/Release/net10.0-android/publish/*-Signed.apk StudyLife-android.apk
@@ -59,8 +61,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - run: dotnet workload install maui-android maui-ios maui-maccatalyst
-      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release -p:TargetFramework=net10.0-maccatalyst
+      - run: dotnet workload install maui-maccatalyst
+      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release -p:TargetFrameworks=net10.0-maccatalyst -p:TargetFramework=net10.0-maccatalyst
       # Unsigned .app bundle - recipients need to right-click "Open" (or `xattr -cr`)
       # once to bypass Gatekeeper, since no Apple Developer signing is involved.
       - name: Zip the .app bundle
@@ -92,7 +94,7 @@ jobs:
       # package (a broken runtime-pack resolution specific to that combination) -
       # framework-dependent (needs the .NET 10 runtime on the target machine) is an
       # acceptable tradeoff here since this is unsigned personal-use distribution anyway.
-      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -f net10.0-windows10.0.19041.0 -c Release -p:WindowsPackageType=None
+      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release -p:TargetFrameworks=net10.0-windows10.0.19041.0 -p:TargetFramework=net10.0-windows10.0.19041.0 -p:WindowsPackageType=None
       - name: Zip the publish output
         shell: pwsh
         run: |
