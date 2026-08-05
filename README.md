@@ -2,7 +2,7 @@
 
 [![CI/CD](https://github.com/lukislp/studylife-app/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/lukislp/studylife-app/actions/workflows/ci-cd.yml)
 [![Release](https://img.shields.io/github/v/release/lukislp/studylife-app)](https://github.com/lukislp/studylife-app/releases)
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/github/license/lukislp/studylife-app)](LICENSE)
 [![.NET MAUI](https://img.shields.io/badge/.NET_MAUI-10.0-512BD4)](https://dotnet.microsoft.com/apps/maui)
 
 Native app shell for [StudyLife](https://github.com/lukislp/studylife) built on **.NET MAUI Blazor Hybrid**.
