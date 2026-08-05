@@ -35,13 +35,19 @@ jobs:
           dotnet-version: "10.0.x"
       # maui-ios/maui-maccatalyst aren't even installable on Linux ("Workload ID maui-ios
       # isn't supported on this platform"), so installing every workload everywhere (an
-      # earlier attempt) can't work here. A -p:TargetFrameworks= override was tried next.
-      # That's a *global* MSBuild property, so it also propagates into the referenced
-      # StudyLife.Client/StudyLife.Shared projects (plain net10.0 libraries, not MAUI
-      # multi-targeted) and corrupts their restore. Editing the csproj's own
-      # <TargetFrameworks> element directly is the only fix that's scoped to just this
-      # one file - the sibling projects are never touched.
-      - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFrameworks>net10.0-android</TargetFrameworks>|' src/StudyLife.App/StudyLife.App.csproj
+      # earlier attempt) can't work here. A -p:TargetFrameworks=/-p:TargetFramework=
+      # command-line override was tried next - those are *global* MSBuild properties, so
+      # they also propagate into the referenced StudyLife.Client/StudyLife.Shared projects
+      # (plain net10.0 libraries, not MAUI multi-targeted) and corrupt their restore.
+      # Reducing <TargetFrameworks> (plural) to one item was tried after that - restore
+      # then worked, but Publish itself still refused ("targets multiple frameworks"),
+      # because the plural element name alone keeps the SDK in cross-targeting/outer-build
+      # mode regardless of list length, which requires an explicit -f/-p:TargetFramework
+      # to select from it - right back to the global-property propagation problem.
+      # Renaming the element to the *singular* <TargetFramework> sidesteps all of this:
+      # a real single-targeted project needs no outer/inner build split and no
+      # command-line selection at all, and it's still just a local edit to this one file.
+      - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-android</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-android
       - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release
       # Debug-signed, directly sideloadable APK (no Apple/Google account involved) -
@@ -64,7 +70,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFrameworks>net10.0-maccatalyst</TargetFrameworks>|' src/StudyLife.App/StudyLife.App.csproj
+      - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-maccatalyst</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-maccatalyst
       - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release
       # Unsigned .app bundle - recipients need to right-click "Open" (or `xattr -cr`)
@@ -93,11 +99,13 @@ jobs:
           dotnet-version: "10.0.x"
       # The Windows TFM is added by a *second*, conditional <TargetFrameworks> element
       # (only active when IsOSPlatform('windows')) that appends onto the first via
-      # $(TargetFrameworks) - overwrite that element's value outright instead of
-      # appending, so the property resolves to just the one TFM on this runner.
+      # $(TargetFrameworks). Rename it to the singular <TargetFramework> with just its
+      # own value - same reasoning as the android/maccatalyst jobs: the singular element
+      # short-circuits cross-targeting entirely, so no -f/-p:TargetFramework is needed
+      # (and can't be used anyway without corrupting the sibling projects' restore).
       - name: Restrict to one target framework
         shell: bash
-        run: sed -i -E 's|(<TargetFrameworks Condition="[^"]*">)\$\(TargetFrameworks\);net10\.0-windows10\.0\.19041\.0(</TargetFrameworks>)|\1net10.0-windows10.0.19041.0\2|' src/StudyLife.App/StudyLife.App.csproj
+        run: sed -i -E 's|<TargetFrameworks (Condition="[^"]*")>\$\(TargetFrameworks\);net10\.0-windows10\.0\.19041\.0</TargetFrameworks>|<TargetFramework \1>net10.0-windows10.0.19041.0</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-windows
       # WindowsPackageType=None -> plain unpackaged folder, no MSIX signing needed.
       # No -p:SelfContained/-p:RuntimeIdentifier overrides: forcing those triggered NuGet
@@ -132,7 +140,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFrameworks>net10.0-android</TargetFrameworks>|' src/StudyLife.App/StudyLife.App.csproj
+      - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-android</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-android
       - run: dotnet format src/StudyLife.App/StudyLife.App.csproj --verify-no-changes
 
