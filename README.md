@@ -22,6 +22,11 @@ repos/
 each under its own repo name (`studylife` and `studylife-app`) — the project reference is
 relative.
 
+![StudyLife mobile dashboard, showing the same shared UI this app's Blazor Hybrid shell renders natively](docs/screenshot.png)
+
+*Captured from the live demo in a phone-sized viewport — this app's native shell renders the
+exact same `StudyLife.Client` UI shown here, project-referenced rather than copied (see above).*
+
 ## What the app can do beyond the iOS PWA
 
 | Feature | PWA (iOS) | Native App |
