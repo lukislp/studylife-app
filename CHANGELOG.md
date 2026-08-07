@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/lukislp/studylife-app/compare/v1.0.3...v1.0.4) (2026-08-07)
+
+
+### Bug Fixes
+
+* add a mobile dashboard screenshot to the README ([ab5bddf](https://github.com/lukislp/studylife-app/commit/ab5bddfe0532482df3ad138d9d91240e9d51879a))
+
 ## [1.0.3](https://github.com/lukislp/studylife-app/compare/v1.0.2...v1.0.3) (2026-08-05)
 
 
