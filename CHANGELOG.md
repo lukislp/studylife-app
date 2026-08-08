@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/lukislp/studylife-app/compare/v1.0.4...v1.0.5) (2026-08-08)
+
+
+### Bug Fixes
+
+* rebuild against studylife's latest shared UI ([7e772e4](https://github.com/lukislp/studylife-app/commit/7e772e4a8eff3d567151cbde3f477882fb215caa))
+
 ## [1.0.4](https://github.com/lukislp/studylife-app/compare/v1.0.3...v1.0.4) (2026-08-07)
 
 
