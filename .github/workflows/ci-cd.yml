@@ -70,7 +70,11 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
-      - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-maccatalyst</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
+      # BSD/macOS sed requires -i to take an explicit backup-suffix argument (even '') -
+      # `sed -i -E '...'` silently consumes -E as that suffix instead of enabling extended
+      # regex, so the substitution below was running in basic-regex mode without the author
+      # noticing (it happened to still match, since the pattern doesn't need ERE syntax).
+      - run: sed -i '' -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-maccatalyst</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-maccatalyst
       - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release
       # Unsigned .app bundle - recipients need to right-click "Open" (or `xattr -cr`)
@@ -177,9 +181,9 @@ jobs:
         with:
           dry_run: true
           extra_plugins: |
-            @semantic-release/changelog
-            @semantic-release/github
-            @semantic-release/git
+            @semantic-release/changelog@7.0.0
+            @semantic-release/github@12.0.9
+            @semantic-release/git@11.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: No release needed for this push
@@ -202,9 +206,6 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v7.0.0
-        with:
-          python-version: "3.13"
       - uses: actions/download-artifact@v8
         with:
           pattern: StudyLife-*
@@ -214,9 +215,9 @@ jobs:
         uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
         with:
           extra_plugins: |
-            @semantic-release/changelog
-            @semantic-release/github
-            @semantic-release/git
+            @semantic-release/changelog@7.0.0
+            @semantic-release/github@12.0.9
+            @semantic-release/git@11.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
@@ -239,8 +240,8 @@ jobs:
         uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
         with:
           extra_plugins: |
-            @semantic-release/changelog
-            @semantic-release/github
-            @semantic-release/git
+            @semantic-release/changelog@7.0.0
+            @semantic-release/github@12.0.9
+            @semantic-release/git@11.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
