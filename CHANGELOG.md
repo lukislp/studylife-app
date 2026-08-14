@@ -1,3 +1,10 @@
+## [1.0.7](https://github.com/lukislp/studylife-app/compare/v1.0.6...v1.0.7) (2026-08-14)
+
+
+### Bug Fixes
+
+* add viewport-fit=cover to the app's own index.html ([0c98eb1](https://github.com/lukislp/studylife-app/commit/0c98eb199613afbf303039b2b14273a92a82cbf4))
+
 ## [1.0.6](https://github.com/lukislp/studylife-app/compare/v1.0.5...v1.0.6) (2026-08-14)
 
 
