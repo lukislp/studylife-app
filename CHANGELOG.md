@@ -1,3 +1,10 @@
+## [1.0.9](https://github.com/lukislp/studylife-app/compare/v1.0.8...v1.0.9) (2026-08-14)
+
+
+### Bug Fixes
+
+* remove ineffective print frame-resize workaround, rely on the CSS fix ([8f9901d](https://github.com/lukislp/studylife-app/commit/8f9901df3f4787d43df212e6896e53f082f34279))
+
 ## [1.0.8](https://github.com/lukislp/studylife-app/compare/v1.0.7...v1.0.8) (2026-08-14)
 
 
