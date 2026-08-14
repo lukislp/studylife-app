@@ -28,9 +28,11 @@ public static class MauiProgram
 #if IOS || MACCATALYST
         // Safe-area behavior matching the installed PWA: the WKWebView ScrollView's automatic
         // content inset would push the fixed bottom navbar up by the home indicator zone,
-        // hiding the last list item. Insets are disabled here - the native page handles the
-        // safe area instead (UseSafeArea in MainPage.xaml), so the WebView content gets
-        // exactly the area the PWA also uses in standalone mode.
+        // hiding the last list item. Insets are disabled here AND at the page level
+        // (SafeAreaEdges="None" in MainPage.xaml, was "Container" until it left a visible gap
+        // under the bottom navbar) - the WebView now gets the full physical screen, same as the
+        // PWA in standalone mode, and handles every safe-area edge itself via CSS env(safe-area-inset-*)
+        // (see --safe-top/--safe-bottom in wwwroot/css/base.css).
         // While we're here: remember the WebView reference for the native print dialog (NativeBridge.NativePrint).
         Microsoft.AspNetCore.Components.WebView.Maui.BlazorWebViewHandler.BlazorWebViewMapper
             .AppendToMapping("StudyLifeSafeArea", (handler, view) =>
