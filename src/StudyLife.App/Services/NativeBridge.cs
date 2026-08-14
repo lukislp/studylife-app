@@ -59,31 +59,23 @@ public static class NativeBridge
                 controller.PrintInfo = printInfo;
                 controller.PrintFormatter = webView.ViewPrintFormatter;
 
-                // WKWebView.ViewPrintFormatter paginates from the view's CURRENT frame height,
-                // not its full scrollable content - long pages (e.g. WeekPlan.razor, 7 days of
-                // sessions) got silently cut off after roughly one screen's worth of content
-                // (confirmed live: the week plan stopped mid-Thursday). Temporarily grow the
-                // webview to its real scrollable height so the formatter sees the whole
-                // document, then restore the original frame once the print sheet is dismissed.
-                var originalFrame = webView.Frame;
-                var contentHeight = webView.ScrollView.ContentSize.Height;
-                if (contentHeight > originalFrame.Height)
-                {
-                    webView.Frame = new CoreGraphics.CGRect(
-                        originalFrame.X, originalFrame.Y, originalFrame.Width, contentHeight);
-                }
-
+                // A previous version of this method temporarily grew webView.Frame here to
+                // work around long pages (WeekPlan.razor) getting cut off after roughly one
+                // screen's worth of content. That never actually helped - it was gated on
+                // webView.ScrollView.ContentSize.Height, which itself was capped to the
+                // viewport as long as the page's html/body had overflow:hidden (nothing
+                // scrollable to measure), so the resize never even ran. The real fix was on
+                // the studylife-client side: @media print now resets that overflow AND takes
+                // .app-shell out of its flex layout (CSS multi-page fragmentation is
+                // unreliable inside flex containers) - ViewPrintFormatter renders the same
+                // document, so it paginates correctly now without any native workaround.
                 var presented = controller.Present(true, (printController, completed, error) =>
                 {
-                    webView.Frame = originalFrame;
                     if (error != null)
                         _ = ShowNotificationAsync("Print diagnostics", $"Print error: {error.LocalizedDescription}");
                 });
                 if (!presented)
-                {
-                    webView.Frame = originalFrame;
                     _ = ShowNotificationAsync("Print diagnostics", "Present() returned false - print dialog not shown");
-                }
                 completion.TrySetResult(presented);
             }
             catch (Exception ex)
