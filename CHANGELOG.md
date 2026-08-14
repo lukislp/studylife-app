@@ -1,3 +1,10 @@
+## [1.0.8](https://github.com/lukislp/studylife-app/compare/v1.0.7...v1.0.8) (2026-08-14)
+
+
+### Bug Fixes
+
+* stop native iOS print from cutting off long pages mid-week ([bd0f310](https://github.com/lukislp/studylife-app/commit/bd0f31025cdd7795e2a3c16fbdb4203cfbfb7a38))
+
 ## [1.0.7](https://github.com/lukislp/studylife-app/compare/v1.0.6...v1.0.7) (2026-08-14)
 
 
