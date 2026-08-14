@@ -1,3 +1,10 @@
+## [1.0.6](https://github.com/lukislp/studylife-app/compare/v1.0.5...v1.0.6) (2026-08-14)
+
+
+### Bug Fixes
+
+* stop reserving native safe-area insets around the WebView ([5bdf32e](https://github.com/lukislp/studylife-app/commit/5bdf32efe2a0f534e09d9e8bc50f3409f74374b1))
+
 ## [1.0.5](https://github.com/lukislp/studylife-app/compare/v1.0.4...v1.0.5) (2026-08-08)
 
 
