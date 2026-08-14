@@ -58,13 +58,32 @@ public static class NativeBridge
                 var controller = UIKit.UIPrintInteractionController.SharedPrintController;
                 controller.PrintInfo = printInfo;
                 controller.PrintFormatter = webView.ViewPrintFormatter;
+
+                // WKWebView.ViewPrintFormatter paginates from the view's CURRENT frame height,
+                // not its full scrollable content - long pages (e.g. WeekPlan.razor, 7 days of
+                // sessions) got silently cut off after roughly one screen's worth of content
+                // (confirmed live: the week plan stopped mid-Thursday). Temporarily grow the
+                // webview to its real scrollable height so the formatter sees the whole
+                // document, then restore the original frame once the print sheet is dismissed.
+                var originalFrame = webView.Frame;
+                var contentHeight = webView.ScrollView.ContentSize.Height;
+                if (contentHeight > originalFrame.Height)
+                {
+                    webView.Frame = new CoreGraphics.CGRect(
+                        originalFrame.X, originalFrame.Y, originalFrame.Width, contentHeight);
+                }
+
                 var presented = controller.Present(true, (printController, completed, error) =>
                 {
+                    webView.Frame = originalFrame;
                     if (error != null)
                         _ = ShowNotificationAsync("Print diagnostics", $"Print error: {error.LocalizedDescription}");
                 });
                 if (!presented)
+                {
+                    webView.Frame = originalFrame;
                     _ = ShowNotificationAsync("Print diagnostics", "Present() returned false - print dialog not shown");
+                }
                 completion.TrySetResult(presented);
             }
             catch (Exception ex)
