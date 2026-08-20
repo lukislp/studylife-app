@@ -2,10 +2,10 @@ import Foundation
 import HealthKit
 
 // C ABI exports for the .NET side (DllImport "__Internal" in Services/HealthBridge.cs).
-// Write: Mindful Minutes (focus rounds). Read: Heart Rate Variability (SDNN), for the
-// Dashboard's HRV readiness-score tile (INativeHealthData/BuildReadinessScore, studylife
-// repo) - both requested together in one authorization prompt at app startup, see
-// slla_health_request_authorization below.
+// Write: Mindful Minutes (focus rounds). Read: Heart Rate Variability (SDNN) for the HRV
+// readiness tile, and Sleep Analysis for the sleep-consistency tile (both
+// INativeHealthData/Index.Health.razor.cs, studylife repo) - all requested together in one
+// authorization prompt at app startup, see slla_health_request_authorization below.
 
 private let healthStore = HKHealthStore()
 
@@ -18,11 +18,12 @@ public func slla_health_is_available() -> Int32 {
 public func slla_health_request_authorization(_ handler: (@convention(c) (Int32) -> Void)?) {
     guard HKHealthStore.isHealthDataAvailable(),
           let mindfulType = HKObjectType.categoryType(forIdentifier: .mindfulSession),
-          let hrvType = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN) else {
+          let hrvType = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN),
+          let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
         handler?(0)
         return
     }
-    healthStore.requestAuthorization(toShare: [mindfulType], read: [hrvType]) { success, _ in
+    healthStore.requestAuthorization(toShare: [mindfulType], read: [hrvType, sleepType]) { success, _ in
         handler?(success ? 1 : 0)
     }
 }
@@ -81,6 +82,76 @@ public func slla_health_get_recent_hrv(_ days: Int32, _ handler: (@convention(c)
         // The pointer is only valid for the duration of this closure - the C# callback
         // (UnmanagedCallersOnly, see HealthBridge.cs) must copy it into a managed array
         // synchronously during the call, not retain the raw pointer afterward.
+        values.withUnsafeBufferPointer { buffer in
+            handler?(buffer.baseAddress, Int32(buffer.count))
+        }
+    }
+
+    healthStore.execute(query)
+}
+
+/// Sleep onset time for the last `nights` nights, oldest first, most recent last, as minutes
+/// after 6pm wrapping at 24h - matches INativeHealthData.GetRecentSleepOnsetMinutesAsync's doc
+/// comment (studylife repo). Sleep Analysis is a HealthKit *category* type (unlike HRV's
+/// quantity type), so HKStatisticsCollectionQuery does not apply here - a plain HKSampleQuery
+/// over raw samples is clustered into nightly sessions by gap instead.
+@_cdecl("slla_health_get_recent_sleep_onsets")
+public func slla_health_get_recent_sleep_onsets(_ nights: Int32, _ handler: (@convention(c) (UnsafePointer<Double>?, Int32) -> Void)?) {
+    guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+        handler?(nil, 0)
+        return
+    }
+
+    let calendar = Calendar.current
+    let now = Date()
+    let startDate = calendar.date(byAdding: .day, value: -Int(nights), to: now)!
+    let predicate = HKQuery.predicateForSamples(withStart: startDate, end: now, options: .strictStartDate)
+    let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+
+    let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
+        guard let categorySamples = samples as? [HKCategorySample], !categorySamples.isEmpty else {
+            handler?(nil, 0)
+            return
+        }
+
+        // Keep only genuine "asleep" states, not "in bed" - "in bed" can start well before
+        // actual sleep onset (reading, scrolling) and would skew the onset-time signal.
+        // watchOS/iOS 16+ report distinct asleepCore/Deep/REM/unspecified sub-states, all of
+        // which count as "asleep" here.
+        let asleepValues: Set<Int> = [
+            HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+            HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+            HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+            HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+        ]
+        let asleep = categorySamples.filter { asleepValues.contains($0.value) }.sorted { $0.startDate < $1.startDate }
+        guard !asleep.isEmpty else {
+            handler?(nil, 0)
+            return
+        }
+
+        // Cluster into nights by gap: consecutive asleep samples within ~1h of each other
+        // belong to the same night's sleep session (a real overnight sleep has many short
+        // stage-change samples with small gaps) - a gap bigger than that marks the boundary
+        // between one night's sleep and the next (or a daytime nap).
+        var nightOnsets: [Date] = [asleep[0].startDate]
+        var previousEnd = asleep[0].endDate
+        for sample in asleep.dropFirst() {
+            if sample.startDate.timeIntervalSince(previousEnd) > 3600 {
+                nightOnsets.append(sample.startDate)
+            }
+            previousEnd = max(previousEnd, sample.endDate)
+        }
+
+        // Minutes after 6pm, wrapping at 24h (see INativeHealthData doc comment) - keeps
+        // normal bedtimes (21:00-03:00) in a contiguous range instead of wrapping at midnight.
+        let values: [Double] = nightOnsets.map { onset in
+            let comps = calendar.dateComponents([.hour, .minute], from: onset)
+            let hour = comps.hour ?? 0
+            let minute = comps.minute ?? 0
+            return Double(((hour - 18 + 24) % 24) * 60 + minute)
+        }
+
         values.withUnsafeBufferPointer { buffer in
             handler?(buffer.baseAddress, Int32(buffer.count))
         }

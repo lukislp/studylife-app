@@ -39,7 +39,7 @@
     <key>NSHealthUpdateUsageDescription</key>
     <string>StudyLife protokolliert abgeschlossene Fokus-Sessions als Achtsamkeitsminuten in Health.</string>
     <key>NSHealthShareUsageDescription</key>
-    <string>StudyLife liest deine Herzratenvariabilität, um dir eine persönliche Lernbereitschafts-Einschätzung im Dashboard anzuzeigen.</string>
+    <string>StudyLife liest deine Herzratenvariabilität und deine Schlafzeiten, um dir eine persönliche Lernbereitschafts- und Schlaf-Konsistenz-Einschätzung im Dashboard anzuzeigen.</string>
     <!-- Background refresh (BackgroundRefresh.cs): occasionally warm up data caches -->
     <key>UIBackgroundModes</key>
     <array>
