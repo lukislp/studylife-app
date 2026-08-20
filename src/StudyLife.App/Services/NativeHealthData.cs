@@ -3,10 +3,11 @@ using StudyLife.Client.Services;
 namespace StudyLife.App.Services;
 
 /// <summary>
-/// HRV data for the native app shell (the client's INativeHealthData hook, Dashboard readiness
-/// score) - backed by HealthBridge.swift's HKStatisticsCollectionQuery. IsAvailable delegates
-/// straight to HealthBridge.IsAvailable, which is already false outside iOS
-/// (LIVE_ACTIVITY && IOS conditional compilation) - no extra platform check needed here.
+/// HRV + sleep-onset data for the native app shell (the client's INativeHealthData hook,
+/// Dashboard readiness-score/sleep-consistency tiles) - backed by HealthBridge.swift's
+/// HKStatisticsCollectionQuery/HKSampleQuery. IsAvailable delegates straight to
+/// HealthBridge.IsAvailable, which is already false outside iOS (LIVE_ACTIVITY && IOS
+/// conditional compilation) - no extra platform check needed here.
 /// </summary>
 public sealed class NativeHealthData : INativeHealthData
 {
@@ -15,6 +16,12 @@ public sealed class NativeHealthData : INativeHealthData
     public async Task<IReadOnlyList<double>?> GetRecentHrvAsync(int days)
     {
         var samples = await HealthBridge.GetRecentHrvAsync(days);
+        return samples.Length > 0 ? samples : null;
+    }
+
+    public async Task<IReadOnlyList<double>?> GetRecentSleepOnsetMinutesAsync(int nights)
+    {
+        var samples = await HealthBridge.GetRecentSleepOnsetMinutesAsync(nights);
         return samples.Length > 0 ? samples : null;
     }
 }

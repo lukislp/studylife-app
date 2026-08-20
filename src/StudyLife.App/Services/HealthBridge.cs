@@ -5,9 +5,10 @@ namespace StudyLife.App.Services;
 /// <summary>
 /// Facade over the Swift HealthKit bridge (native/ios-liveactivity/HealthBridge.swift): logs
 /// completed focus rounds as Mindful Session samples (write), and reads recent Heart Rate
-/// Variability for the Dashboard's readiness-score tile (INativeHealthData, studylife repo).
-/// Same no-op-by-default rules as TimerLiveActivity/WatchBridge - only active with the
-/// LIVE_ACTIVITY define (static lib present at build time).
+/// Variability + Sleep Analysis for the Dashboard's readiness-score/sleep-consistency tiles
+/// (INativeHealthData, studylife repo). Same no-op-by-default rules as
+/// TimerLiveActivity/WatchBridge - only active with the LIVE_ACTIVITY define (static lib
+/// present at build time).
 /// </summary>
 public static class HealthBridge
 {
@@ -28,9 +29,10 @@ public static class HealthBridge
     private static TaskCompletionSource<bool>? _authCompletion;
 #endif
 
-    /// <summary>Requests Mindful Session write + HRV read authorization together, once, at app
-    /// startup. Denied/undetermined just means LogMindfulSession/GetRecentHrvAsync silently
-    /// no-op afterward.</summary>
+    /// <summary>Requests Mindful Session write + HRV/Sleep Analysis read authorization
+    /// together, once, at app startup. Denied/undetermined just means
+    /// LogMindfulSession/GetRecentHrvAsync/GetRecentSleepOnsetMinutesAsync silently no-op
+    /// afterward.</summary>
     public static Task<bool> RequestAuthorizationAsync()
     {
 #if LIVE_ACTIVITY && IOS
@@ -101,6 +103,39 @@ public static class HealthBridge
 #endif
 
 #if LIVE_ACTIVITY && IOS
+    private static TaskCompletionSource<double[]>? _sleepOnsetCompletion;
+#endif
+
+    /// <summary>Sleep onset time (minutes after 6pm, wrapping at 24h) for the last
+    /// <paramref name="nights"/> nights, oldest first - see
+    /// INativeHealthData.GetRecentSleepOnsetMinutesAsync (studylife repo) for the exact
+    /// contract. Empty array (not null) on denied/undetermined authorization or a query
+    /// error, same "caller treats empty as not-enough-data" convention as GetRecentHrvAsync.</summary>
+    public static Task<double[]> GetRecentSleepOnsetMinutesAsync(int nights)
+    {
+#if LIVE_ACTIVITY && IOS
+        _sleepOnsetCompletion = new TaskCompletionSource<double[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+        unsafe
+        {
+            try { slla_health_get_recent_sleep_onsets(nights, &OnSleepOnsetResult); }
+            catch { _sleepOnsetCompletion.TrySetResult(Array.Empty<double>()); }
+        }
+        return _sleepOnsetCompletion.Task;
+#else
+        return Task.FromResult(Array.Empty<double>());
+#endif
+    }
+
+#if LIVE_ACTIVITY && IOS
+    [UnmanagedCallersOnly]
+    private static unsafe void OnSleepOnsetResult(double* values, int count)
+    {
+        var managed = count > 0 && values != null ? new ReadOnlySpan<double>(values, count).ToArray() : Array.Empty<double>();
+        _sleepOnsetCompletion?.TrySetResult(managed);
+    }
+#endif
+
+#if LIVE_ACTIVITY && IOS
     [DllImport("__Internal")]
     private static extern int slla_health_is_available();
 
@@ -112,5 +147,8 @@ public static class HealthBridge
 
     [DllImport("__Internal")]
     private static extern unsafe void slla_health_get_recent_hrv(int days, delegate* unmanaged<double*, int, void> handler);
+
+    [DllImport("__Internal")]
+    private static extern unsafe void slla_health_get_recent_sleep_onsets(int nights, delegate* unmanaged<double*, int, void> handler);
 #endif
 }
