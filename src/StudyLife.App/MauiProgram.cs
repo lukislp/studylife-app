@@ -60,6 +60,7 @@ public static class MauiProgram
         builder.Services.AddScoped<INativePush, NativePush>();
         builder.Services.AddScoped<INativeIcsIntake, NativeIcsIntake>();
         builder.Services.AddScoped<INativeFileExport, NativeFileExport>();
+        builder.Services.AddScoped<INativeHealthData, NativeHealthData>();
         builder.Services.AddScoped<SessionTokenStore>();
         builder.Services.AddScoped(sp =>
         {
