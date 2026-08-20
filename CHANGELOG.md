@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/lukislp/studylife-app/compare/v1.3.0...v1.4.0) (2026-08-20)
+
+
+### Features
+
+* add step-count HealthKit bridge (native, S2a) ([15cef8a](https://github.com/lukislp/studylife-app/commit/15cef8adb8ca9bf9deb7108bb72c8f518f66c043))
+
 # [1.3.0](https://github.com/lukislp/studylife-app/compare/v1.2.0...v1.3.0) (2026-08-20)
 
 
