@@ -5,10 +5,11 @@ namespace StudyLife.App.Services;
 /// <summary>
 /// Facade over the Swift HealthKit bridge (native/ios-liveactivity/HealthBridge.swift): logs
 /// completed focus rounds as Mindful Session samples (write), and reads recent Heart Rate
-/// Variability + Sleep Analysis + Step Count for the Dashboard's readiness-score/sleep-
-/// consistency tiles and the Focus Timer's movement-break nudge (INativeHealthData,
-/// studylife repo). Same no-op-by-default rules as TimerLiveActivity/WatchBridge - only
-/// active with the LIVE_ACTIVITY define (static lib present at build time).
+/// Variability + Sleep Analysis + Step Count + VO2max for the Dashboard's readiness-score/
+/// sleep-consistency tiles, the Focus Timer's movement-break nudge, and the Stats page's
+/// cardio fitness trend (INativeHealthData, studylife repo). Same no-op-by-default rules as
+/// TimerLiveActivity/WatchBridge - only active with the LIVE_ACTIVITY define (static lib
+/// present at build time).
 /// </summary>
 public static class HealthBridge
 {
@@ -29,10 +30,10 @@ public static class HealthBridge
     private static TaskCompletionSource<bool>? _authCompletion;
 #endif
 
-    /// <summary>Requests Mindful Session write + HRV/Sleep Analysis/Step Count read
+    /// <summary>Requests Mindful Session write + HRV/Sleep Analysis/Step Count/VO2max read
     /// authorization together, once, at app startup. Denied/undetermined just means
-    /// LogMindfulSession/GetRecentHrvAsync/GetRecentSleepOnsetMinutesAsync/GetStepsSinceAsync
-    /// silently no-op afterward.</summary>
+    /// LogMindfulSession/GetRecentHrvAsync/GetRecentSleepOnsetMinutesAsync/GetStepsSinceAsync/
+    /// GetCardioFitnessHistoryAsync silently no-op afterward.</summary>
     public static Task<bool> RequestAuthorizationAsync()
     {
 #if LIVE_ACTIVITY && IOS
@@ -165,6 +166,42 @@ public static class HealthBridge
 #endif
 
 #if LIVE_ACTIVITY && IOS
+    private static TaskCompletionSource<(double[] Dates, double[] Values)>? _cardioFitnessCompletion;
+#endif
+
+    /// <summary>Cardio Fitness (VO2max, ml/(kg·min)) history for the last <paramref name="days"/>
+    /// days, oldest first, as two parallel arrays (Unix-seconds dates, values) - see
+    /// INativeHealthData.GetCardioFitnessHistoryAsync (studylife repo) for the exact contract,
+    /// which zips these into (DateTime, double) tuples. Both arrays empty (not null) on
+    /// denied/undetermined authorization, a query error, or simply no readings in the window
+    /// (e.g. no Apple Watch outdoor workout history) - the caller treats all three the same.</summary>
+    public static Task<(double[] Dates, double[] Values)> GetCardioFitnessHistoryAsync(int days)
+    {
+#if LIVE_ACTIVITY && IOS
+        _cardioFitnessCompletion = new TaskCompletionSource<(double[], double[])>(TaskCreationOptions.RunContinuationsAsynchronously);
+        unsafe
+        {
+            try { slla_health_get_cardio_fitness_history(days, &OnCardioFitnessResult); }
+            catch { _cardioFitnessCompletion.TrySetResult((Array.Empty<double>(), Array.Empty<double>())); }
+        }
+        return _cardioFitnessCompletion.Task;
+#else
+        return Task.FromResult((Array.Empty<double>(), Array.Empty<double>()));
+#endif
+    }
+
+#if LIVE_ACTIVITY && IOS
+    [UnmanagedCallersOnly]
+    private static unsafe void OnCardioFitnessResult(double* dates, double* values, int count)
+    {
+        // Copy both immediately - same pointer-validity rule as OnHrvResult/OnSleepOnsetResult.
+        var managedDates = count > 0 && dates != null ? new ReadOnlySpan<double>(dates, count).ToArray() : Array.Empty<double>();
+        var managedValues = count > 0 && values != null ? new ReadOnlySpan<double>(values, count).ToArray() : Array.Empty<double>();
+        _cardioFitnessCompletion?.TrySetResult((managedDates, managedValues));
+    }
+#endif
+
+#if LIVE_ACTIVITY && IOS
     [DllImport("__Internal")]
     private static extern int slla_health_is_available();
 
@@ -182,5 +219,8 @@ public static class HealthBridge
 
     [DllImport("__Internal")]
     private static extern unsafe void slla_health_get_steps_since(int minutesAgo, delegate* unmanaged<int, int, void> handler);
+
+    [DllImport("__Internal")]
+    private static extern unsafe void slla_health_get_cardio_fitness_history(int days, delegate* unmanaged<double*, double*, int, void> handler);
 #endif
 }
