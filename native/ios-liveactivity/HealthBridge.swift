@@ -3,10 +3,10 @@ import HealthKit
 
 // C ABI exports for the .NET side (DllImport "__Internal" in Services/HealthBridge.cs).
 // Write: Mindful Minutes (focus rounds). Read: Heart Rate Variability (SDNN) for the HRV
-// readiness tile, Sleep Analysis for the sleep-consistency tile, and Step Count for the
-// Focus Timer's movement-break nudge (all INativeHealthData/studylife repo consumers) - all
-// requested together in one authorization prompt at app startup, see
-// slla_health_request_authorization below.
+// readiness tile, Sleep Analysis for the sleep-consistency tile, Step Count for the Focus
+// Timer's movement-break nudge, and VO2max (Cardio Fitness) for the Stats page trend chart
+// (all INativeHealthData/studylife repo consumers) - all requested together in one
+// authorization prompt at app startup, see slla_health_request_authorization below.
 
 private let healthStore = HKHealthStore()
 
@@ -21,11 +21,12 @@ public func slla_health_request_authorization(_ handler: (@convention(c) (Int32)
           let mindfulType = HKObjectType.categoryType(forIdentifier: .mindfulSession),
           let hrvType = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN),
           let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
-          let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) else {
+          let stepType = HKObjectType.quantityType(forIdentifier: .stepCount),
+          let vo2MaxType = HKObjectType.quantityType(forIdentifier: .vo2Max) else {
         handler?(0)
         return
     }
-    healthStore.requestAuthorization(toShare: [mindfulType], read: [hrvType, sleepType, stepType]) { success, _ in
+    healthStore.requestAuthorization(toShare: [mindfulType], read: [hrvType, sleepType, stepType, vo2MaxType]) { success, _ in
         handler?(success ? 1 : 0)
     }
 }
@@ -187,6 +188,48 @@ public func slla_health_get_steps_since(_ minutesAgo: Int32, _ handler: (@conven
         }
         let steps = Int32(sum.doubleValue(for: HKUnit.count()))
         handler?(1, steps)
+    }
+
+    healthStore.execute(query)
+}
+
+/// Cardio Fitness (VO2max, ml/(kg*min)) history for the last `days` days, oldest first -
+/// matches INativeHealthData.GetCardioFitnessHistoryAsync's doc comment (studylife repo).
+/// watchOS computes these roughly monthly from outdoor walk/run workouts, so readings are
+/// sparse (unlike HRV's daily cadence) - a plain HKSampleQuery sorted by date is the right
+/// tool, not a collection query. Two parallel arrays are passed back (Unix-seconds dates,
+/// values) since - unlike the single-value HRV/sleep-onset bridges - each reading needs both
+/// its date AND its value on the C# side (INativeHealthData's tuple return type).
+@_cdecl("slla_health_get_cardio_fitness_history")
+public func slla_health_get_cardio_fitness_history(_ days: Int32, _ handler: (@convention(c) (UnsafePointer<Double>?, UnsafePointer<Double>?, Int32) -> Void)?) {
+    guard let vo2MaxType = HKObjectType.quantityType(forIdentifier: .vo2Max) else {
+        handler?(nil, nil, 0)
+        return
+    }
+
+    let calendar = Calendar.current
+    let now = Date()
+    let startDate = calendar.date(byAdding: .day, value: -Int(days), to: now)!
+    let predicate = HKQuery.predicateForSamples(withStart: startDate, end: now, options: .strictStartDate)
+    let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+
+    let query = HKSampleQuery(sampleType: vo2MaxType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
+        guard let quantitySamples = samples as? [HKQuantitySample], !quantitySamples.isEmpty else {
+            handler?(nil, nil, 0)
+            return
+        }
+
+        let unit = HKUnit(from: "ml/(kg*min)")
+        let dates = quantitySamples.map { $0.startDate.timeIntervalSince1970 }
+        let values = quantitySamples.map { $0.quantity.doubleValue(for: unit) }
+
+        // Both pointers are only valid for the duration of this closure - see the matching
+        // comment in HealthBridge.cs, which copies both arrays out synchronously.
+        dates.withUnsafeBufferPointer { dateBuffer in
+            values.withUnsafeBufferPointer { valueBuffer in
+                handler?(dateBuffer.baseAddress, valueBuffer.baseAddress, Int32(quantitySamples.count))
+            }
+        }
     }
 
     healthStore.execute(query)
