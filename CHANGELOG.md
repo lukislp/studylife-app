@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/lukislp/studylife-app/compare/v1.4.0...v1.5.0) (2026-08-20)
+
+
+### Features
+
+* add cardio fitness (VO2max) HealthKit bridge (native, S3a) ([9ad4484](https://github.com/lukislp/studylife-app/commit/9ad448477468e6722a95acdd4189acfb9072b242))
+
 # [1.4.0](https://github.com/lukislp/studylife-app/compare/v1.3.0...v1.4.0) (2026-08-20)
 
 
