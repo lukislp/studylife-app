@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/lukislp/studylife-app/compare/v1.1.0...v1.2.0) (2026-08-20)
+
+
+### Features
+
+* **health:** wire real INativeHealthData to the HealthKit HRV bridge ([0a3f672](https://github.com/lukislp/studylife-app/commit/0a3f6729504e6615ab3e64c179863a066671baaa))
+
 # [1.1.0](https://github.com/lukislp/studylife-app/compare/v1.0.9...v1.1.0) (2026-08-20)
 
 
