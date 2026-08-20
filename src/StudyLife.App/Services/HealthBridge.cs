@@ -5,10 +5,10 @@ namespace StudyLife.App.Services;
 /// <summary>
 /// Facade over the Swift HealthKit bridge (native/ios-liveactivity/HealthBridge.swift): logs
 /// completed focus rounds as Mindful Session samples (write), and reads recent Heart Rate
-/// Variability + Sleep Analysis for the Dashboard's readiness-score/sleep-consistency tiles
-/// (INativeHealthData, studylife repo). Same no-op-by-default rules as
-/// TimerLiveActivity/WatchBridge - only active with the LIVE_ACTIVITY define (static lib
-/// present at build time).
+/// Variability + Sleep Analysis + Step Count for the Dashboard's readiness-score/sleep-
+/// consistency tiles and the Focus Timer's movement-break nudge (INativeHealthData,
+/// studylife repo). Same no-op-by-default rules as TimerLiveActivity/WatchBridge - only
+/// active with the LIVE_ACTIVITY define (static lib present at build time).
 /// </summary>
 public static class HealthBridge
 {
@@ -29,10 +29,10 @@ public static class HealthBridge
     private static TaskCompletionSource<bool>? _authCompletion;
 #endif
 
-    /// <summary>Requests Mindful Session write + HRV/Sleep Analysis read authorization
-    /// together, once, at app startup. Denied/undetermined just means
-    /// LogMindfulSession/GetRecentHrvAsync/GetRecentSleepOnsetMinutesAsync silently no-op
-    /// afterward.</summary>
+    /// <summary>Requests Mindful Session write + HRV/Sleep Analysis/Step Count read
+    /// authorization together, once, at app startup. Denied/undetermined just means
+    /// LogMindfulSession/GetRecentHrvAsync/GetRecentSleepOnsetMinutesAsync/GetStepsSinceAsync
+    /// silently no-op afterward.</summary>
     public static Task<bool> RequestAuthorizationAsync()
     {
 #if LIVE_ACTIVITY && IOS
@@ -136,6 +136,35 @@ public static class HealthBridge
 #endif
 
 #if LIVE_ACTIVITY && IOS
+    private static TaskCompletionSource<int?>? _stepsCompletion;
+#endif
+
+    /// <summary>Cumulative step count over the last <paramref name="minutesAgo"/> minutes up
+    /// to now - see INativeHealthData.GetStepsSinceAsync (studylife repo) for the exact
+    /// contract. Null (not 0) on denied/undetermined authorization or a query error, so the
+    /// Focus Timer's movement-break nudge (Focus.razor) can tell "we don't know" apart from a
+    /// genuine zero steps and skip the nudge in the former case.</summary>
+    public static Task<int?> GetStepsSinceAsync(int minutesAgo)
+    {
+#if LIVE_ACTIVITY && IOS
+        _stepsCompletion = new TaskCompletionSource<int?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        unsafe
+        {
+            try { slla_health_get_steps_since(minutesAgo, &OnStepsResult); }
+            catch { _stepsCompletion.TrySetResult(null); }
+        }
+        return _stepsCompletion.Task;
+#else
+        return Task.FromResult<int?>(null);
+#endif
+    }
+
+#if LIVE_ACTIVITY && IOS
+    [UnmanagedCallersOnly]
+    private static void OnStepsResult(int success, int steps) => _stepsCompletion?.TrySetResult(success != 0 ? steps : null);
+#endif
+
+#if LIVE_ACTIVITY && IOS
     [DllImport("__Internal")]
     private static extern int slla_health_is_available();
 
@@ -150,5 +179,8 @@ public static class HealthBridge
 
     [DllImport("__Internal")]
     private static extern unsafe void slla_health_get_recent_sleep_onsets(int nights, delegate* unmanaged<double*, int, void> handler);
+
+    [DllImport("__Internal")]
+    private static extern unsafe void slla_health_get_steps_since(int minutesAgo, delegate* unmanaged<int, int, void> handler);
 #endif
 }

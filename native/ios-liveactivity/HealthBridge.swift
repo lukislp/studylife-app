@@ -3,9 +3,10 @@ import HealthKit
 
 // C ABI exports for the .NET side (DllImport "__Internal" in Services/HealthBridge.cs).
 // Write: Mindful Minutes (focus rounds). Read: Heart Rate Variability (SDNN) for the HRV
-// readiness tile, and Sleep Analysis for the sleep-consistency tile (both
-// INativeHealthData/Index.Health.razor.cs, studylife repo) - all requested together in one
-// authorization prompt at app startup, see slla_health_request_authorization below.
+// readiness tile, Sleep Analysis for the sleep-consistency tile, and Step Count for the
+// Focus Timer's movement-break nudge (all INativeHealthData/studylife repo consumers) - all
+// requested together in one authorization prompt at app startup, see
+// slla_health_request_authorization below.
 
 private let healthStore = HKHealthStore()
 
@@ -19,11 +20,12 @@ public func slla_health_request_authorization(_ handler: (@convention(c) (Int32)
     guard HKHealthStore.isHealthDataAvailable(),
           let mindfulType = HKObjectType.categoryType(forIdentifier: .mindfulSession),
           let hrvType = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN),
-          let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+          let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
+          let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) else {
         handler?(0)
         return
     }
-    healthStore.requestAuthorization(toShare: [mindfulType], read: [hrvType, sleepType]) { success, _ in
+    healthStore.requestAuthorization(toShare: [mindfulType], read: [hrvType, sleepType, stepType]) { success, _ in
         handler?(success ? 1 : 0)
     }
 }
@@ -155,6 +157,36 @@ public func slla_health_get_recent_sleep_onsets(_ nights: Int32, _ handler: (@co
         values.withUnsafeBufferPointer { buffer in
             handler?(buffer.baseAddress, Int32(buffer.count))
         }
+    }
+
+    healthStore.execute(query)
+}
+
+/// Cumulative step count over the last `minutesAgo` minutes up to now - matches
+/// INativeHealthData.GetStepsSinceAsync's doc comment (studylife repo), used by the Focus
+/// Timer's movement-break nudge. Step Count is dense/daily-summable, so a single
+/// HKStatisticsQuery with .cumulativeSum is enough (unlike HRV/sleep, no collection or sample
+/// query needed). handler's first Int32 is a success flag (0 = denied/undetermined/error, in
+/// which case the second value is meaningless) - lets the C# side distinguish "unavailable"
+/// from a genuine zero steps, matching GetStepsSinceAsync's nullable-int contract.
+@_cdecl("slla_health_get_steps_since")
+public func slla_health_get_steps_since(_ minutesAgo: Int32, _ handler: (@convention(c) (Int32, Int32) -> Void)?) {
+    guard let stepType = HKObjectType.quantityType(forIdentifier: .stepCount) else {
+        handler?(0, 0)
+        return
+    }
+
+    let now = Date()
+    let startDate = now.addingTimeInterval(-Double(minutesAgo) * 60)
+    let predicate = HKQuery.predicateForSamples(withStart: startDate, end: now, options: .strictStartDate)
+
+    let query = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, error in
+        guard error == nil, let sum = result?.sumQuantity() else {
+            handler?(0, 0)
+            return
+        }
+        let steps = Int32(sum.doubleValue(for: HKUnit.count()))
+        handler?(1, steps)
     }
 
     healthStore.execute(query)
