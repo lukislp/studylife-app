@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/lukislp/studylife-app/compare/v1.0.9...v1.1.0) (2026-08-20)
+
+
+### Features
+
+* **health:** add HRV read bridge for the Dashboard readiness score ([7336e5e](https://github.com/lukislp/studylife-app/commit/7336e5e597897e035c7c26430bdd2b83faa96bd5))
+
 ## [1.0.9](https://github.com/lukislp/studylife-app/compare/v1.0.8...v1.0.9) (2026-08-14)
 
 
