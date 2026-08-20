@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/lukislp/studylife-app/compare/v1.2.0...v1.3.0) (2026-08-20)
+
+
+### Features
+
+* add sleep-onset HealthKit bridge (native, S1a) ([d05ae40](https://github.com/lukislp/studylife-app/commit/d05ae40f86349e7bcce9cb96dc4a9362cc5079d5))
+
 # [1.2.0](https://github.com/lukislp/studylife-app/compare/v1.1.0...v1.2.0) (2026-08-20)
 
 
