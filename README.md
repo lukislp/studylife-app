@@ -40,6 +40,9 @@ exact same `StudyLife.Client` UI shown here, project-referenced rather than copi
 | Siri/Shortcuts "Open Focus" | ✗ | ✓ (iOS, navigates straight to the focus page) |
 | Home screen widget (today's study time, streak) | ✗ | ✓ (iOS/Android) |
 | Share sheet → new note | ✗ | ✓ (share any text from another app directly into a StudyLife note) |
+| Study readiness score + sleep consistency (Dashboard) | ✗ | ✓ (iOS, via Apple HealthKit - Heart Rate Variability + Sleep Analysis, read-only, on-device only) |
+| Movement-break reminder (Focus Timer) | ✗ | ✓ (iOS, via Apple HealthKit step count, read-only) |
+| Cardio fitness (VO2max) trend (Evaluation) | ✗ | ✓ (iOS, via Apple HealthKit, read-only - populated from Apple Watch outdoor walk/run workouts) |
 
 ## First launch
 
@@ -162,6 +165,10 @@ dotnet build -f net10.0-windows10.0.19041.0       # on Windows (dev/test target)
   app contact.
 - `Services/SharedNoteIntake.cs` — drains text handed in via the OS share sheet (Android
   `ACTION_SEND` intent, iOS share extension via an App Group inbox file) into a new note.
+- `Services/HealthBridge.cs` — facade over the Swift Apple HealthKit bridge
+  (`native/ios-liveactivity/HealthBridge.swift`); backs the studylife repo's
+  `INativeHealthData` (HRV, sleep onset, step count, cardio fitness/VO2max) - read-only, one
+  combined authorization prompt at startup, data never leaves the device.
 
 ## Language
 
