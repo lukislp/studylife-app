@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/lukislp/studylife-app/compare/v1.5.0...v1.5.1) (2026-08-26)
+
+
+### Bug Fixes
+
+* consume the record-struct health contract instead of value tuples ([b5e7735](https://github.com/lukislp/studylife-app/commit/b5e7735baff89810310d564b571e45b99299834e))
+
 # [1.5.0](https://github.com/lukislp/studylife-app/compare/v1.4.0...v1.5.0) (2026-08-20)
 
 
