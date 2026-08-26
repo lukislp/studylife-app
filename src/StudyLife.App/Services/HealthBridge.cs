@@ -171,10 +171,13 @@ public static class HealthBridge
 
     /// <summary>Cardio Fitness (VO2max, ml/(kg·min)) history for the last <paramref name="days"/>
     /// days, oldest first, as two parallel arrays (Unix-seconds dates, values) - see
-    /// INativeHealthData.GetCardioFitnessHistoryAsync (studylife repo) for the exact contract,
-    /// which zips these into (DateTime, double) tuples. Both arrays empty (not null) on
-    /// denied/undetermined authorization, a query error, or simply no readings in the window
-    /// (e.g. no Apple Watch outdoor workout history) - the caller treats all three the same.</summary>
+    /// INativeHealthData.GetCardioFitnessPointsAsync (studylife repo) for the exact contract,
+    /// which zips these into CardioFitnessPoint record structs (NativeHealthData.cs). Both
+    /// arrays empty (not null) on denied/undetermined authorization, a query error, or simply no
+    /// readings in the window (e.g. no Apple Watch outdoor workout history) - the caller treats
+    /// all three the same. This method's own (double[], double[]) return stays a plain value
+    /// tuple deliberately - it's only ever deconstructed, never run through LINQ, so it doesn't
+    /// hit the AOT crash pattern that motivated CardioFitnessPoint.</summary>
     public static Task<(double[] Dates, double[] Values)> GetCardioFitnessHistoryAsync(int days)
     {
 #if LIVE_ACTIVITY && IOS
