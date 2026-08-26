@@ -28,14 +28,19 @@ public sealed class NativeHealthData : INativeHealthData
 
     public Task<int?> GetStepsSinceAsync(int minutesAgo) => HealthBridge.GetStepsSinceAsync(minutesAgo);
 
-    public async Task<IReadOnlyList<(DateTime Date, double Vo2Max)>?> GetCardioFitnessHistoryAsync(int days)
+    // Overrides GetCardioFitnessPointsAsync (record-struct based) directly rather than the
+    // older, now-[Obsolete] tuple-based GetCardioFitnessHistoryAsync: LINQ generic-instantiated
+    // over a value-tuple element type reproducibly crashed Mono's iOS AOT compiler (see
+    // INativeHealthData.CardioFitnessPoint's doc comment in the studylife repo for the full
+    // writeup) - CardioFitnessPoint is a record struct and doesn't hit that bug.
+    public async Task<IReadOnlyList<CardioFitnessPoint>?> GetCardioFitnessPointsAsync(int days)
     {
         var (dates, values) = await HealthBridge.GetCardioFitnessHistoryAsync(days);
         if (dates.Length == 0) return null;
 
-        var result = new List<(DateTime Date, double Vo2Max)>(dates.Length);
+        var result = new List<CardioFitnessPoint>(dates.Length);
         for (var i = 0; i < dates.Length; i++)
-            result.Add((DateTimeOffset.FromUnixTimeSeconds((long)dates[i]).UtcDateTime, values[i]));
+            result.Add(new CardioFitnessPoint(DateTimeOffset.FromUnixTimeSeconds((long)dates[i]).UtcDateTime, values[i]));
         return result;
     }
 }
