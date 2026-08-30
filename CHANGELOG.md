@@ -1,3 +1,10 @@
+## [1.5.2](https://github.com/lukislp/studylife-app/compare/v1.5.1...v1.5.2) (2026-08-30)
+
+
+### Bug Fixes
+
+* register MarketplaceClient in the native app's DI container ([9fe77e8](https://github.com/lukislp/studylife-app/commit/9fe77e8acd9ce43fd9193e6f72d875efa4e470b2))
+
 ## [1.5.1](https://github.com/lukislp/studylife-app/compare/v1.5.0...v1.5.1) (2026-08-26)
 
 
