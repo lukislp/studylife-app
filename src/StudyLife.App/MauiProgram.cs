@@ -80,6 +80,17 @@ public static class MauiProgram
         builder.Services.AddScoped<TimerService>();
         builder.Services.AddScoped<NotificationService>();
 
+        // Missing here until now (StudyLife.Client/Program.cs's WASM registration was never
+        // mirrored over) - MarketplaceBrowserModal.razor @injects this, and DI throws resolving
+        // it before the component's own OnInitializedAsync/try-catch ever runs, so the Setup
+        // page's Marketplace card silently did nothing on tap: no exception surfaced to the
+        // user, just DiagLoggerProvider swallowing it below.
+        builder.Services.AddHttpClient<MarketplaceClient>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.github.com/");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("StudyLife-Marketplace-Client");
+        });
+
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Logging.AddDebug();
