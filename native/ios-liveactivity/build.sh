@@ -26,7 +26,7 @@ swiftc -target "$TARGET" -sdk "$SDK" -O -parse-as-library -whole-module-optimiza
     -emit-library -static \
     -o "$OUT/libStudyLifeLiveActivity.a" \
     "$PWD/TimerActivityAttributes.swift" "$PWD/TimerControlIntent.swift" "$PWD/LiveActivityBridge.swift" \
-    "$PWD/WatchBridge.swift" "$PWD/HealthBridge.swift" "$PWD/UpcomingSessionActivity.swift"
+    "$PWD/WatchBridge.swift" "$PWD/HealthBridge.swift" "$PWD/TelemetryBridge.swift" "$PWD/UpcomingSessionActivity.swift"
 
 # The widget extension itself is NO LONGER built here: the swiftc hand-linked
 # appex binary doesn't render on the device (Xcode's special linker setup is missing) -

@@ -491,3 +491,8 @@ native/ios-signing/WidgetShell/
 native/ios-signing/WatchWidgetsShell/
 native/ios-signing/build/
 native/ios-liveactivity/out/
+
+# Nested studylife checkout used only by a git-worktree-based dev setup (the normal setup has
+# studylife as a SIBLING directory next to this repo, per the README - see there for why the
+# ProjectReference still resolves the same way either way). Never meant to be tracked here.
+/studylife/

@@ -11,6 +11,10 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
+        // As early as possible - see AppLaunchTiming's doc comment for why this can't stand in
+        // for MetricKit's coldMs, but it's still the best available webviewReadyMs starting point.
+        AppLaunchTiming.Start();
+
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>();
 
@@ -61,6 +65,8 @@ public static class MauiProgram
         builder.Services.AddScoped<INativeIcsIntake, NativeIcsIntake>();
         builder.Services.AddScoped<INativeFileExport, NativeFileExport>();
         builder.Services.AddScoped<INativeHealthData, NativeHealthData>();
+        builder.Services.AddScoped<INativeTelemetry, NativeTelemetry>();
+        builder.Services.AddScoped<IClientPlatform, AppClientPlatform>();
         builder.Services.AddScoped<SessionTokenStore>();
         builder.Services.AddScoped(sp =>
         {
@@ -70,7 +76,10 @@ public static class MauiProgram
             // never actually requested.
             var baseUri = sp.GetRequiredService<ServerUrlStore>().BaseUri
                 ?? new Uri("https://unconfigured.invalid/");
-            var handler = new SessionHandler(sp.GetRequiredService<SessionTokenStore>(), baseUri)
+            // Third argument (IServiceProvider) added by telemetry phase 2 (studylife repo):
+            // SessionHandler resolves TelemetryService lazily through it to time every own-API
+            // round trip, avoiding a DI construction cycle (see SessionHandler's doc comment).
+            var handler = new SessionHandler(sp.GetRequiredService<SessionTokenStore>(), baseUri, sp)
             {
                 InnerHandler = new HttpClientHandler()
             };
@@ -79,6 +88,11 @@ public static class MauiProgram
         builder.Services.AddScoped<AppStateService>();
         builder.Services.AddScoped<TimerService>();
         builder.Services.AddScoped<NotificationService>();
+        // Telemetry phase 2 (studylife repo docs/ARCHITECTURE.md "Telemetry") - MainLayout.razor
+        // (shared Client project) @injects this directly by concrete type and calls
+        // InitializeAsync itself, same as the browser client's Program.cs registration.
+        // INativeTelemetry/IClientPlatform above are what it merges native events through.
+        builder.Services.AddScoped<TelemetryService>();
 
         // Missing here until now (StudyLife.Client/Program.cs's WASM registration was never
         // mirrored over) - MarketplaceBrowserModal.razor @injects this, and DI throws resolving

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Net.Http.Json;
 using StudyLife.Client.Services;
+using StudyLife.Shared;
 
 namespace StudyLife.App.Services;
 
@@ -37,7 +38,10 @@ public sealed class NativePush : INativePush
         {
             var response = await _http.PostAsJsonAsync("api/push/subscribe-apns",
                 new { Token = token, DeviceName = DeviceInfo.Current.Name });
-            return response.IsSuccessStatusCode;
+            var success = response.IsSuccessStatusCode;
+            if (success)
+                NativeTelemetry.Enqueue(new TelemetryEventDto { Type = "push", Event = "registered" });
+            return success;
         }
         catch (HttpRequestException)
         {
