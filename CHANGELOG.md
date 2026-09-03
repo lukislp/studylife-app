@@ -1,3 +1,10 @@
+## [1.5.4](https://github.com/lukislp/studylife-app/compare/v1.5.3...v1.5.4) (2026-09-03)
+
+
+### Bug Fixes
+
+* **ci:** add Dependabot for github-actions, nuget ([28703fd](https://github.com/lukislp/studylife-app/commit/28703fdc3b592c9f32e11f44178f2905970efa4a))
+
 ## [1.5.3](https://github.com/lukislp/studylife-app/compare/v1.5.2...v1.5.3) (2026-09-03)
 
 
