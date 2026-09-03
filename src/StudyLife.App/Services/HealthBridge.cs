@@ -137,6 +137,41 @@ public static class HealthBridge
 #endif
 
 #if LIVE_ACTIVITY && IOS
+    private static TaskCompletionSource<(double[] Onsets, double[] Durations)>? _sleepNightsCompletion;
+#endif
+
+    /// <summary>One main sleep per sleep day for the last <paramref name="nights"/> nights,
+    /// oldest first, as parallel arrays (onset minutes after 6pm, asleep minutes) - see
+    /// INativeHealthData.GetRecentSleepNightsAsync (studylife repo) for the contract and
+    /// HealthBridge.swift for why this replaces the onset-only bridge on the dashboard. Empty
+    /// arrays (not null) on denied/undetermined authorization or a query error.</summary>
+    public static Task<(double[] Onsets, double[] Durations)> GetRecentSleepNightsAsync(int nights)
+    {
+#if LIVE_ACTIVITY && IOS
+        _sleepNightsCompletion = new TaskCompletionSource<(double[], double[])>(TaskCreationOptions.RunContinuationsAsynchronously);
+        unsafe
+        {
+            try { slla_health_get_recent_sleep_nights(nights, &OnSleepNightsResult); }
+            catch { _sleepNightsCompletion.TrySetResult((Array.Empty<double>(), Array.Empty<double>())); }
+        }
+        return _sleepNightsCompletion.Task;
+#else
+        return Task.FromResult((Array.Empty<double>(), Array.Empty<double>()));
+#endif
+    }
+
+#if LIVE_ACTIVITY && IOS
+    [UnmanagedCallersOnly]
+    private static unsafe void OnSleepNightsResult(double* onsets, double* durations, int count)
+    {
+        // Copy both immediately - same pointer-validity rule as OnHrvResult/OnSleepOnsetResult.
+        var managedOnsets = count > 0 && onsets != null ? new ReadOnlySpan<double>(onsets, count).ToArray() : Array.Empty<double>();
+        var managedDurations = count > 0 && durations != null ? new ReadOnlySpan<double>(durations, count).ToArray() : Array.Empty<double>();
+        _sleepNightsCompletion?.TrySetResult((managedOnsets, managedDurations));
+    }
+#endif
+
+#if LIVE_ACTIVITY && IOS
     private static TaskCompletionSource<int?>? _stepsCompletion;
 #endif
 
@@ -219,6 +254,9 @@ public static class HealthBridge
 
     [DllImport("__Internal")]
     private static extern unsafe void slla_health_get_recent_sleep_onsets(int nights, delegate* unmanaged<double*, int, void> handler);
+
+    [DllImport("__Internal")]
+    private static extern unsafe void slla_health_get_recent_sleep_nights(int nights, delegate* unmanaged<double*, double*, int, void> handler);
 
     [DllImport("__Internal")]
     private static extern unsafe void slla_health_get_steps_since(int minutesAgo, delegate* unmanaged<int, int, void> handler);

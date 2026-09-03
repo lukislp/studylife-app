@@ -26,6 +26,18 @@ public sealed class NativeHealthData : INativeHealthData
         return samples.Length > 0 ? samples : null;
     }
 
+    // Plain for loop, no LINQ over the tuple - see the Mono AOT note on GetCardioFitnessPointsAsync.
+    public async Task<IReadOnlyList<SleepNight>?> GetRecentSleepNightsAsync(int nights)
+    {
+        var (onsets, durations) = await HealthBridge.GetRecentSleepNightsAsync(nights);
+        if (onsets.Length == 0) return null;
+
+        var result = new List<SleepNight>(onsets.Length);
+        for (var i = 0; i < onsets.Length; i++)
+            result.Add(new SleepNight(onsets[i], durations[i]));
+        return result;
+    }
+
     public Task<int?> GetStepsSinceAsync(int minutesAgo) => HealthBridge.GetStepsSinceAsync(minutesAgo);
 
     // Overrides GetCardioFitnessPointsAsync (record-struct based) directly rather than the
