@@ -1,3 +1,15 @@
+# [1.6.0](https://github.com/lukislp/studylife-app/compare/v1.5.4...v1.6.0) (2026-09-03)
+
+
+### Bug Fixes
+
+* look for the dSYM where dotnet publish actually leaves it ([0c8fa59](https://github.com/lukislp/studylife-app/commit/0c8fa593ff675ca633ad050c87dd633ad2d67b95))
+
+
+### Features
+
+* implement native telemetry (phase 3) ([6c5a2fd](https://github.com/lukislp/studylife-app/commit/6c5a2fd71df2359b3e20d0846a903af44d40d83a)), closes [#140](https://github.com/lukislp/studylife-app/issues/140)
+
 ## [1.5.4](https://github.com/lukislp/studylife-app/compare/v1.5.3...v1.5.4) (2026-09-03)
 
 
