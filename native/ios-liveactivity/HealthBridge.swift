@@ -193,6 +193,115 @@ public func slla_health_get_steps_since(_ minutesAgo: Int32, _ handler: (@conven
     healthStore.execute(query)
 }
 
+/// One MAIN sleep per sleep day for the last `nights` nights, oldest first - matches
+/// INativeHealthData.GetRecentSleepNightsAsync's doc comment (studylife repo). Two parallel
+/// arrays: onset as minutes after 6pm (wrapping at 24h, same anchor as the onset-only bridge
+/// above) and asleep duration in minutes.
+///
+/// Why this exists next to slla_health_get_recent_sleep_onsets: that bridge starts a new
+/// "night" at every gap of more than an hour between asleep samples and keeps every cluster,
+/// so a long nocturnal wake produced a second onset at 04:30 and an afternoon nap produced an
+/// onset of "20 hours after 6pm" - a perfectly regular sleeper ended up with a bedtime spread
+/// of 150+ minutes on the dashboard. Here clusters tolerate gaps up to 3 h (a wake-up longer
+/// than that is rare; unrecorded stretches are common), every cluster is assigned to the sleep
+/// day that began at 18:00, and only the longest cluster per day survives - if it lasted at
+/// least 3 h, which rules out naps.
+@_cdecl("slla_health_get_recent_sleep_nights")
+public func slla_health_get_recent_sleep_nights(_ nights: Int32, _ handler: (@convention(c) (UnsafePointer<Double>?, UnsafePointer<Double>?, Int32) -> Void)?) {
+    guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+        handler?(nil, nil, 0)
+        return
+    }
+
+    let calendar = Calendar.current
+    let now = Date()
+    // One extra day of lookback so the oldest requested night's samples (which start the
+    // evening before) are included; the per-day selection below trims the result.
+    let startDate = calendar.date(byAdding: .day, value: -(Int(nights) + 1), to: now)!
+    let predicate = HKQuery.predicateForSamples(withStart: startDate, end: now, options: .strictStartDate)
+    let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+
+    let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, _ in
+        guard let categorySamples = samples as? [HKCategorySample], !categorySamples.isEmpty else {
+            handler?(nil, nil, 0)
+            return
+        }
+
+        let asleepValues: Set<Int> = [
+            HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+            HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+            HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+            HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+        ]
+        let asleep = categorySamples.filter { asleepValues.contains($0.value) }.sorted { $0.startDate < $1.startDate }
+        guard !asleep.isEmpty else {
+            handler?(nil, nil, 0)
+            return
+        }
+
+        struct Cluster {
+            var onset: Date
+            var coveredUntil: Date
+            var asleepSeconds: TimeInterval
+        }
+
+        // Cluster with a 3 h gap tolerance. Asleep seconds are the union of the samples, not
+        // their sum: Health frequently holds overlapping samples for the same night from more
+        // than one source (Watch and iPhone, or a third-party sleep app).
+        let gapTolerance: TimeInterval = 3 * 3600
+        var clusters: [Cluster] = []
+        for sample in asleep {
+            if var current = clusters.last, sample.startDate.timeIntervalSince(current.coveredUntil) <= gapTolerance {
+                let uncoveredStart = max(sample.startDate, current.coveredUntil)
+                if sample.endDate > uncoveredStart {
+                    current.asleepSeconds += sample.endDate.timeIntervalSince(uncoveredStart)
+                    current.coveredUntil = sample.endDate
+                }
+                clusters[clusters.count - 1] = current
+            } else {
+                clusters.append(Cluster(onset: sample.startDate, coveredUntil: sample.endDate, asleepSeconds: sample.endDate.timeIntervalSince(sample.startDate)))
+            }
+        }
+
+        // Sleep day = the calendar day that began at 18:00 before the onset; longest cluster
+        // per sleep day wins, anything under 3 h is a nap and dropped.
+        let minimumMainSleep: TimeInterval = 3 * 3600
+        var mainSleepByDay: [Date: Cluster] = [:]
+        for cluster in clusters where cluster.asleepSeconds >= minimumMainSleep {
+            let shifted = cluster.onset.addingTimeInterval(-18 * 3600)
+            let dayKey = calendar.startOfDay(for: shifted)
+            if let existing = mainSleepByDay[dayKey], existing.asleepSeconds >= cluster.asleepSeconds {
+                continue
+            }
+            mainSleepByDay[dayKey] = cluster
+        }
+
+        let ordered = mainSleepByDay.keys.sorted().suffix(Int(nights)).compactMap { mainSleepByDay[$0] }
+        guard !ordered.isEmpty else {
+            handler?(nil, nil, 0)
+            return
+        }
+
+        let onsets: [Double] = ordered.map { cluster in
+            let comps = calendar.dateComponents([.hour, .minute], from: cluster.onset)
+            let hour = comps.hour ?? 0
+            let minute = comps.minute ?? 0
+            return Double(((hour - 18 + 24) % 24) * 60 + minute)
+        }
+        let durations: [Double] = ordered.map { $0.asleepSeconds / 60 }
+
+        // Both pointers are only valid for the duration of this closure - HealthBridge.cs copies
+        // both arrays out synchronously (same rule as the cardio-fitness bridge below).
+        onsets.withUnsafeBufferPointer { onsetBuffer in
+            durations.withUnsafeBufferPointer { durationBuffer in
+                handler?(onsetBuffer.baseAddress, durationBuffer.baseAddress, Int32(ordered.count))
+            }
+        }
+    }
+
+    healthStore.execute(query)
+}
+
 /// Cardio Fitness (VO2max, ml/(kg*min)) history for the last `days` days, oldest first -
 /// matches INativeHealthData.GetCardioFitnessHistoryAsync's doc comment (studylife repo).
 /// watchOS computes these roughly monthly from outdoor walk/run workouts, so readings are
