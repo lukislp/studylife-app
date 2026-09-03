@@ -43,6 +43,15 @@ public static class MauiProgram
             {
                 handler.PlatformView.ScrollView.ContentInsetAdjustmentBehavior =
                     UIKit.UIScrollViewContentInsetAdjustmentBehavior.Never;
+                // WKWebView paints white until the first HTML frame - two bright frames between the
+                // dark splash and the dark index.html on every cold start (seen in a screen
+                // recording, 2026-09-04). Same colour as MauiSplashScreen/MainPage/index.html.
+                var appBackground = UIKit.UIColor.FromRGB(0x0e, 0x0e, 0x0f);
+                handler.PlatformView.Opaque = false;
+                handler.PlatformView.BackgroundColor = appBackground;
+                handler.PlatformView.ScrollView.BackgroundColor = appBackground;
+                if (OperatingSystem.IsIOSVersionAtLeast(15))
+                    handler.PlatformView.UnderPageBackgroundColor = appBackground;
                 NativeBridge.SetWebView(handler.PlatformView);
             });
 #endif
