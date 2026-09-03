@@ -59,7 +59,9 @@ rm -rf "$WORK"
 DSYM_VERSION="$(git -C "$OLDPWD" rev-parse --short HEAD 2>/dev/null || date +%Y%m%d%H%M%S)"
 DSYM_OUT="$OLDPWD/artifacts/dsym/$DSYM_VERSION"
 mkdir -p "$DSYM_OUT"
-find bin/Release/net10.0-ios/ios-arm64/publish -iname "*.dSYM" -maxdepth 2 -exec cp -R {} "$DSYM_OUT/" \; 2>/dev/null || true
+# dotnet publish leaves the dSYM next to the .app one level ABOVE publish/ (verified on the
+# first phase-3 device build: bin/Release/net10.0-ios/ios-arm64/StudyLife.App.app.dSYM).
+find bin/Release/net10.0-ios/ios-arm64 -maxdepth 2 -iname "*.dSYM" -exec cp -R {} "$DSYM_OUT/" \; 2>/dev/null || true
 if [ -n "$(ls -A "$DSYM_OUT" 2>/dev/null)" ]; then
     echo "dSYM(s) kept: $DSYM_OUT"
 else
