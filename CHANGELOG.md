@@ -1,3 +1,10 @@
+## [1.5.3](https://github.com/lukislp/studylife-app/compare/v1.5.2...v1.5.3) (2026-09-03)
+
+
+### Bug Fixes
+
+* report one main sleep per night so bedtime spread stops counting naps ([99f2d3d](https://github.com/lukislp/studylife-app/commit/99f2d3d972f70a34f8531487a968c4baf4f4e5bf))
+
 ## [1.5.2](https://github.com/lukislp/studylife-app/compare/v1.5.1...v1.5.2) (2026-08-30)
 
 
