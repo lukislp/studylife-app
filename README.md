@@ -169,6 +169,65 @@ dotnet build -f net10.0-windows10.0.19041.0       # on Windows (dev/test target)
   (`native/ios-liveactivity/HealthBridge.swift`); backs the studylife repo's
   `INativeHealthData` (HRV, sleep onset, step count, cardio fitness/VO2max) - read-only, one
   combined authorization prompt at startup, data never leaves the device.
+- `Services/NativeTelemetry.cs` + `Services/TelemetryBridge.cs` — back the studylife repo's
+  `INativeTelemetry`/`IClientPlatform` (see "Telemetry (native)" below).
+
+## Telemetry (native)
+
+This app implements the studylife repo's client telemetry contract
+(`docs/ARCHITECTURE.md` there, "Telemetry") via `INativeTelemetry`/`IClientPlatform` -
+`Services/NativeTelemetry.cs`, `Services/AppClientPlatform.cs`, `Services/AppLaunchTiming.cs`,
+`Services/TelemetryBridge.cs` (+ `native/ios-liveactivity/TelemetryBridge.swift`).
+
+**What is collected, native-only, on top of the web contract's boot/vitals/api/error events:**
+
+- `app_launch` — `webviewReadyMs` (all platforms, Stopwatch from `MauiProgram.CreateMauiApp` to
+  the BlazorWebView's first rendered component) and `coldMs`/`warmMs` (iOS only, MetricKit
+  averages - never approximated any other way).
+- `app_resource` — iOS only, MetricKit's daily peak memory / cumulative CPU time / cellular+wifi
+  bytes aggregate.
+- `error` with `kind: native_crash | native_hang` — iOS crash/hang diagnostics from MetricKit,
+  Android crashes from an `AppDomain.UnhandledException`/`AndroidEnvironment.UnhandledExceptionRaiser`
+  handler. Only the exception type, a sanitized stack (frame lines only, capped at 4 KB, no
+  message text) and its SHA-256 hash ever leave the device - never the exception message, which
+  can contain user content.
+- `health_query` — one event per Apple HealthKit read (`NativeHealthData.cs`): `kind`
+  (`hrv`/`sleep`/`steps`/`vo2max`), `durationMs`, a coarse `authorization` guess (HealthKit's
+  bridge doesn't expose the real authorization status - "granted" is inferred from "data came
+  back", "undetermined" from an empty result, which conflates denied/undetermined/no-data-in-range)
+  and a bucketed `result` (`empty`/`below_minimum`/`sufficient`/`error`) - **never** the actual
+  sample/night count, and never any health value itself.
+- `push` — `registered` (APNs token registration succeeded) / `received` (a notification arrived
+  while foregrounded, or was tapped) - no push payload content.
+
+**Consent and network egress:** this app never sends anything over the network itself. Every
+event above is written to `NativeTelemetry`'s on-device queue (a small JSON file in
+`FileSystem.AppDataDirectory`, so events recorded before the WebView/consent decision even exist
+- e.g. a cold-start crash - survive a relaunch); the studylife repo's `TelemetryService` drains
+that queue on its own flush cycle and is the only thing that ever calls `POST /api/telemetry`,
+gated on the same `UserSettings.TelemetryConsent` toggle as the browser client's own telemetry
+(off/undecided ⇒ nothing native leaves the device either).
+
+**Finding crashes:** native crashes land in Grafana/Loki as `ClientError` log events with
+`kind=native_crash` (or `native_hang`), tagged with `platform`/`appVersion`/`stackHash` - query
+`{app="studylife-server"} | json | kind="native_crash"` (adjust the Loki label to whatever this
+deployment names the server's log stream) and cross-reference `stackHash` to correlate repeat
+crashes across sessions without needing the full stack every time.
+
+**Symbolicating an iOS MetricKit stack with `atos`:** MetricKit frames are pre-symbolicated
+where Apple already has the symbol (system frameworks), but frames from this app's own binary
+need the matching dSYM. `scripts/build-ios-ipa.sh` copies every dSYM produced by a build to
+`artifacts/dsym/<git-short-sha>/` (gitignored - these are build outputs, keyed by the exact
+commit that produced them). Given a `stack` line like `StudyLife.App + 12345 (0xabcde)` from a
+Loki log entry:
+
+```bash
+atos -o artifacts/dsym/<sha>/StudyLife.App.app.dSYM/Contents/Resources/DWARF/StudyLife.App \
+     -arch arm64 -l <app's load address, if known> 0xabcde
+```
+
+Without a known load address, `-l` can be omitted and the raw `offsetIntoBinaryTextSegment`
+passed as the address instead - close enough to identify the function/file for triage purposes.
 
 ## Language
 

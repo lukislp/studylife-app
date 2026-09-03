@@ -78,6 +78,15 @@ else if (_needsServerUrl)
     protected override void OnAfterRender(bool firstRender)
     {
         if (!firstRender) return;
+        // Earliest point at which the BlazorWebView has actually painted something -
+        // app_launch's webviewReadyMs (see AppLaunchTiming's doc comment for why coldMs/warmMs
+        // are never derived from this, only from MetricKit on iOS).
+        AppLaunchTiming.MarkWebviewReady();
+        // MetricKit crash/hang/launch/resource reports (a no-op everywhere but iOS) - started
+        // here alongside the other native bridge hooks below, not in MauiProgram, so it shares
+        // their "app has actually rendered something" timing instead of running during the bare
+        // .NET/MAUI host startup.
+        TelemetryBridge.Start();
         DeepLinks.OnNavigate += HandleDeepLink;
         // Focus timer -> lock screen Live Activity (iOS; a no-op everywhere else).
         // Diagnostics reporter: DOM banner (window.alert would be a silent no-op in the WKWebView).

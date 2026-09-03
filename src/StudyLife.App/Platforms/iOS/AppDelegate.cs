@@ -1,5 +1,6 @@
 using Foundation;
 using StudyLife.App.Services;
+using StudyLife.Shared;
 using UIKit;
 using UserNotifications;
 using WebKit;
@@ -164,8 +165,24 @@ internal sealed class ForegroundNotificationDelegate : UNUserNotificationCenterD
     public override void WillPresentNotification(UNUserNotificationCenter center,
         UNNotification notification, Action<UNNotificationPresentationOptions> completionHandler)
     {
+        RecordPushReceived();
         completionHandler(UNNotificationPresentationOptions.Banner
             | UNNotificationPresentationOptions.Sound
             | UNNotificationPresentationOptions.Badge);
     }
+
+    // Covers a background/terminated delivery the user actually taps - there is no reliable
+    // hook for "arrived but the user never interacted with it" without a
+    // content-available/background-push entitlement the server doesn't send today
+    // (ApnsSender.cs's alert payload, studylife repo). LatencyMs stays null: the payload
+    // carries no sent-at timestamp to diff against - see the wire contract's "push" row.
+    public override void DidReceiveNotificationResponse(UNUserNotificationCenter center,
+        UNNotificationResponse response, Action completionHandler)
+    {
+        RecordPushReceived();
+        completionHandler();
+    }
+
+    private static void RecordPushReceived() =>
+        NativeTelemetry.Enqueue(new TelemetryEventDto { Type = "push", Event = "received" });
 }
