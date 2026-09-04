@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/lukislp/studylife-app/compare/v1.6.0...v1.6.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* paint the WebView dark from the first frame and time the launch from process start ([5829b18](https://github.com/lukislp/studylife-app/commit/5829b1806174eaa931c86879ff19749b180ebb07))
+
 # [1.6.0](https://github.com/lukislp/studylife-app/compare/v1.5.4...v1.6.0) (2026-09-03)
 
 
