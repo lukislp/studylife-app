@@ -22,6 +22,19 @@ public static class AppLaunchTiming
     /// <summary>Call first thing in MauiProgram.CreateMauiApp.</summary>
     public static void Start() => Stopwatch.Restart();
 
+    /// <summary>Milliseconds from process creation to the call, or null when the OS does not
+    /// expose the process start time. Covers the native part of a cold start (dyld, Mono runtime,
+    /// assembly loading) that no managed Stopwatch can see - on the 2026-09-04 screen recording
+    /// that part was ~0.5 s of dark screen the Stopwatch below reported as 200 ms.</summary>
+    private static double? SinceProcessStartMs()
+    {
+        try
+        {
+            return (DateTime.Now - Process.GetCurrentProcess().StartTime).TotalMilliseconds;
+        }
+        catch { return null; }
+    }
+
     /// <summary>Call once, from AppRoot's first OnAfterRender - later calls are no-ops (a
     /// second/third render, e.g. after the first-run server-URL dialog, isn't a second launch).</summary>
     public static void MarkWebviewReady()
@@ -31,7 +44,8 @@ public static class AppLaunchTiming
         NativeTelemetry.Enqueue(new TelemetryEventDto
         {
             Type = "app_launch",
-            WebviewReadyMs = Stopwatch.Elapsed.TotalMilliseconds,
+            // From process start when available (the honest cold-start number), else from CreateMauiApp.
+            WebviewReadyMs = SinceProcessStartMs() ?? Stopwatch.Elapsed.TotalMilliseconds,
         });
     }
 }
