@@ -25,12 +25,12 @@ jobs:
   test-android:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: "10.0.x"
       # maui-ios/maui-maccatalyst aren't even installable on Linux ("Workload ID maui-ios
@@ -53,7 +53,7 @@ jobs:
       # Debug-signed, directly sideloadable APK (no Apple/Google account involved) -
       # see the README's Android build section.
       - run: cp src/StudyLife.App/bin/Release/net10.0-android/publish/*-Signed.apk StudyLife-android.apk
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: StudyLife-android
           path: StudyLife-android.apk
@@ -62,12 +62,12 @@ jobs:
   test-maccatalyst:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: "10.0.x"
       # BSD/macOS sed requires -i to take an explicit backup-suffix argument (even '') -
@@ -84,7 +84,7 @@ jobs:
           APP_PATH=$(find src/StudyLife.App/bin/Release/net10.0-maccatalyst -maxdepth 4 -name "*.app" -type d | head -1)
           echo "Found: $APP_PATH"
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" StudyLife-macos.zip
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: StudyLife-macos
           path: StudyLife-macos.zip
@@ -93,12 +93,12 @@ jobs:
   test-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: "10.0.x"
       # The Windows TFM is added by a *second*, conditional <TargetFrameworks> element
@@ -128,7 +128,7 @@ jobs:
         run: |
           $publishDir = Get-ChildItem -Path "src/StudyLife.App/bin/Release/net10.0-windows10.0.19041.0" -Recurse -Directory -Filter "publish" | Select-Object -First 1
           Compress-Archive -Path "$($publishDir.FullName)/*" -DestinationPath StudyLife-windows.zip
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: StudyLife-windows
           path: StudyLife-windows.zip
@@ -141,12 +141,12 @@ jobs:
     # android (the cheapest runner) stands in for all of them.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: "10.0.x"
       - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-android</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
@@ -173,7 +173,7 @@ jobs:
     outputs:
       published: ${{ steps.semrel.outputs.new_release_published }}
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       # Ruleset bypass for the release commit (2026-09-11 main-protection rollout): main is
@@ -226,7 +226,7 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       # Ruleset bypass for the release commit (2026-09-11 main-protection rollout): main is
@@ -252,7 +252,7 @@ jobs:
           echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" >> ~/.ssh/known_hosts
           git remote set-url origin "git@github.com:${{ github.repository }}.git"
           echo "GIT_SSH_COMMAND=ssh -i ~/.ssh/semantic_release -o IdentitiesOnly=yes" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: StudyLife-*
           path: release-assets
