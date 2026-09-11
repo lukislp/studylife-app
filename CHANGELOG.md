@@ -1,3 +1,10 @@
+## [1.6.2](https://github.com/lukislp/studylife-app/compare/v1.6.1...v1.6.2) (2026-09-11)
+
+
+### Bug Fixes
+
+* **ci:** push release commits as a deploy key so the default branch can be ruleset-protected ([aa4ccf8](https://github.com/lukislp/studylife-app/commit/aa4ccf84b9abd27322bd3eeffe1d2415fb4d0045))
+
 ## [1.6.1](https://github.com/lukislp/studylife-app/compare/v1.6.0...v1.6.1) (2026-09-04)
 
 
