@@ -1,3 +1,10 @@
+## [1.6.4](https://github.com/lukislp/studylife-app/compare/v1.6.3...v1.6.4) (2026-09-11)
+
+
+### Bug Fixes
+
+* **ci:** sign the release assets and attach build provenance ([#17](https://github.com/lukislp/studylife-app/issues/17)) ([aad054c](https://github.com/lukislp/studylife-app/commit/aad054c62801f7efc0073c21298de36e0049e919))
+
 ## [1.6.3](https://github.com/lukislp/studylife-app/compare/v1.6.2...v1.6.3) (2026-09-11)
 
 
