@@ -1,3 +1,10 @@
+## [1.6.3](https://github.com/lukislp/studylife-app/compare/v1.6.2...v1.6.3) (2026-09-11)
+
+
+### Bug Fixes
+
+* **ci:** read-only GITHUB_TOKEN in the Dependabot auto-merge workflow ([04b880c](https://github.com/lukislp/studylife-app/commit/04b880ca1bb60116b1aaf0ee85a2cdd8943b73f2))
+
 ## [1.6.2](https://github.com/lukislp/studylife-app/compare/v1.6.1...v1.6.2) (2026-09-11)
 
 
