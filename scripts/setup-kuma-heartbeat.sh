@@ -15,10 +15,16 @@ KUMA_URL=${KUMA_URL:-$DEFAULT_URL}
 read -r -p "Username: " KUMA_USER
 read -r -s -p "Password: " KUMA_PASS; echo
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 PUSH_URL=""
 if command -v python3 >/dev/null 2>&1; then
     echo "Trying to create the monitor via the API ..."
-    python3 -m pip install --user --quiet uptime-kuma-api 2>/dev/null || true
+    # Hash-locked install (requirements-kuma.in explains how to regenerate it): this script has
+    # just been handed the Kuma password, so the library it hands that password to must not be
+    # whatever PyPI happens to serve today. A mismatch or a missing wheel fails the install, the
+    # import below then fails too, and the guided manual path takes over.
+    python3 -m pip install --user --quiet --require-hashes -r "$SCRIPT_DIR/requirements-kuma.txt" 2>/dev/null || true
     PUSH_TOKEN=$(python3 - "$KUMA_URL" "$KUMA_USER" "$KUMA_PASS" <<'PY' 2>/dev/null || true
 import sys
 try:
