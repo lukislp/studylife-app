@@ -1,3 +1,10 @@
+## [1.6.5](https://github.com/lukislp/studylife-app/compare/v1.6.4...v1.6.5) (2026-09-16)
+
+
+### Bug Fixes
+
+* **scripts:** hash-lock the Uptime Kuma client the heartbeat setup installs ([#31](https://github.com/lukislp/studylife-app/issues/31)) ([0a93787](https://github.com/lukislp/studylife-app/commit/0a93787ec2d10d33c632a936e9b94c3bd46e9705))
+
 ## [1.6.4](https://github.com/lukislp/studylife-app/compare/v1.6.3...v1.6.4) (2026-09-11)
 
 
