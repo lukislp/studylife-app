@@ -1,0 +1,9 @@
+# Source for scripts/requirements-kuma.txt, the hash-locked dependency set of
+# setup-kuma-heartbeat.sh. That script talks to the Uptime Kuma API through this library to
+# create the signing-renewal push monitor; without it the script falls back to the guided
+# manual path and this file is never installed.
+#
+# Regenerate after a version bump (the .txt carries the hashes of every published wheel of
+# each pinned version, so it works on any platform the Mac happens to run):
+#     pip-compile --generate-hashes --output-file requirements-kuma.txt requirements-kuma.in
+uptime-kuma-api
