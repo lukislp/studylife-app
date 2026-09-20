@@ -1,3 +1,10 @@
+## [1.6.6](https://github.com/lukislp/studylife-app/compare/v1.6.5...v1.6.6) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ci:** add Harden Runner in audit mode to every job ([#37](https://github.com/lukislp/studylife-app/issues/37)) ([68fb1ee](https://github.com/lukislp/studylife-app/commit/68fb1ee04ad60c5ea978e35eca223940a9d0768b))
+
 ## [1.6.5](https://github.com/lukislp/studylife-app/compare/v1.6.4...v1.6.5) (2026-09-16)
 
 
