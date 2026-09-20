@@ -38,7 +38,26 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            fulcio.sigstore.dev:443
+            github.com:22
+            github.com:443
+            rekor.sigstore.dev:443
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.sigstore.dev:443
+            token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
+            uploads.github.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -81,7 +100,26 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            fulcio.sigstore.dev:443
+            github.com:22
+            github.com:443
+            rekor.sigstore.dev:443
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.sigstore.dev:443
+            token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
+            uploads.github.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -118,7 +156,26 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            fulcio.sigstore.dev:443
+            github.com:22
+            github.com:443
+            rekor.sigstore.dev:443
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.sigstore.dev:443
+            token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
+            uploads.github.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -172,7 +229,26 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            fulcio.sigstore.dev:443
+            github.com:22
+            github.com:443
+            rekor.sigstore.dev:443
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.sigstore.dev:443
+            token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
+            uploads.github.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -209,7 +285,26 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            fulcio.sigstore.dev:443
+            github.com:22
+            github.com:443
+            rekor.sigstore.dev:443
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.sigstore.dev:443
+            token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
+            uploads.github.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -253,7 +348,26 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            fulcio.sigstore.dev:443
+            github.com:22
+            github.com:443
+            rekor.sigstore.dev:443
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.sigstore.dev:443
+            token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
+            uploads.github.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -366,7 +480,26 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            fulcio.sigstore.dev:443
+            github.com:22
+            github.com:443
+            rekor.sigstore.dev:443
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.sigstore.dev:443
+            token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
+            uploads.github.com:443
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
       - name: Sign the assets of releases that have no signature bundle yet
         env:
