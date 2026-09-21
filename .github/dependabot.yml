@@ -7,6 +7,8 @@ updates:
       interval: weekly
     commit-message:
       prefix: "fix(ci)"
+    reviewers:
+      - "lukislp"
   - package-ecosystem: nuget
     directory: /
     schedule:
@@ -21,3 +23,5 @@ updates:
       - dependency-name: "Microsoft.AspNetCore.Components.WebView.Maui"
     commit-message:
       prefix: "fix(deps)"
+    reviewers:
+      - "lukislp"
