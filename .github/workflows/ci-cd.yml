@@ -158,7 +158,9 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
-          egress-policy: block
+          # audit, not block: harden-runner >= 2.20 enforces the block on Windows runners too,
+          # and the agent's DNS setup failed there on 2026-09-23 ("Could not resolve host: github.com").
+          egress-policy: audit
           allowed-endpoints: >
             *.githubapp.com:443
             *.blob.core.windows.net:443
@@ -302,6 +304,7 @@ jobs:
             fulcio.sigstore.dev:443
             github.com:22
             github.com:443
+            registry.npmjs.org:443
             rekor.sigstore.dev:443
             release-assets.githubusercontent.com:443
             results-receiver.actions.githubusercontent.com:443
@@ -366,6 +369,7 @@ jobs:
             fulcio.sigstore.dev:443
             github.com:22
             github.com:443
+            registry.npmjs.org:443
             rekor.sigstore.dev:443
             release-assets.githubusercontent.com:443
             results-receiver.actions.githubusercontent.com:443
