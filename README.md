@@ -11,6 +11,8 @@ from the studylife repo via a project reference** — no copy, so the app UI is 
 automatically identical to the web/PWA UI. The app talks to the same REST API as the
 browser client.
 
+https://github.com/user-attachments/assets/53ada52d-7724-4734-8135-cc72395e1a1c
+
 ```
 repos/
 ├── studylife/                  github.com/lukislp/studylife (Server, Client, Shared)
