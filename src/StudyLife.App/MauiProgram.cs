@@ -102,6 +102,11 @@ public static class MauiProgram
         // InitializeAsync itself, same as the browser client's Program.cs registration.
         // INativeTelemetry/IClientPlatform above are what it merges native events through.
         builder.Services.AddScoped<TelemetryService>();
+        // Same StudyLife.Client/Program.cs-mirroring gap as MarketplaceClient below -
+        // MainLayout.razor (shared Client project) @injects this by concrete type, and DI threw
+        // resolving it before MainLayout's own OnInitializedAsync ever ran, so the native app
+        // showed the "An unhandled error has occurred" banner immediately on every launch.
+        builder.Services.AddScoped<LocalDateNames>();
 
         // Missing here until now (StudyLife.Client/Program.cs's WASM registration was never
         // mirrored over) - MarketplaceBrowserModal.razor @injects this, and DI throws resolving
