@@ -53,6 +53,15 @@ public static class MauiProgram
                 if (OperatingSystem.IsIOSVersionAtLeast(15))
                     handler.PlatformView.UnderPageBackgroundColor = appBackground;
                 NativeBridge.SetWebView(handler.PlatformView);
+#if IOS
+                // Notes voice dictation (interop.js: startDictationRecording) needs the WebView's
+                // getUserMedia() to actually be granted - WKWebView denies it by default. See
+                // MicPermissionUIDelegate's own doc comment for why this wraps rather than
+                // replaces MAUI's own WKUIDelegate. iOS only: the type lives under Platforms/iOS
+                // and MacCatalyst's WebKit permission model differs (desktop mic prompt, not
+                // this WKUIDelegate callback) - not covered here.
+                MicPermissionUIDelegate.Install(handler.PlatformView);
+#endif
             });
 #endif
 #if ANDROID
