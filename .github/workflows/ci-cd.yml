@@ -93,6 +93,28 @@ jobs:
           path: StudyLife-android.apk
           retention-days: 5
 
+  # Pure text comparison, no dotnet/workload install needed - catches the "works on web,
+  # throws immediately on native" DI/JS-interop mirroring gap (see scripts/check-native-parity.sh)
+  # before any of the build jobs below even start. iOS device installs are deliberately not
+  # part of CI at all (see the README), so this is the only automated net for that platform.
+  test-native-parity:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            github.com:443
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: lukislp/studylife
+          path: studylife
+      - run: bash scripts/check-native-parity.sh
+
   test-maccatalyst:
     if: github.event_name != 'workflow_dispatch'
     runs-on: macos-latest
@@ -271,7 +293,7 @@ jobs:
   # Version / release — push to main only
   # ---------------------------------------------------------------------
   get-version:
-    needs: [test-android, test-maccatalyst, test-windows, test-lint]
+    needs: [test-android, test-maccatalyst, test-windows, test-lint, test-native-parity]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 20
