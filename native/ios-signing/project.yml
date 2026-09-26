@@ -68,32 +68,32 @@ targets:
       - path: ../ios-liveactivity/UpcomingSessionActivity.swift
       - path: ../ios-liveactivity/Widget/StudyLifeWidgets.swift
       - path: ../ios-liveactivity/Widget/StudyTodayWidget.swift
-      - path: WidgetShell/bg.lproj
-      - path: WidgetShell/cs.lproj
-      - path: WidgetShell/da.lproj
-      - path: WidgetShell/de.lproj
-      - path: WidgetShell/el.lproj
-      - path: WidgetShell/en.lproj
-      - path: WidgetShell/es.lproj
-      - path: WidgetShell/et.lproj
-      - path: WidgetShell/fi.lproj
-      - path: WidgetShell/fr.lproj
-      - path: WidgetShell/ga.lproj
-      - path: WidgetShell/hr.lproj
-      - path: WidgetShell/hu.lproj
-      - path: WidgetShell/it.lproj
-      - path: WidgetShell/lt.lproj
-      - path: WidgetShell/lv.lproj
-      - path: WidgetShell/mt.lproj
-      - path: WidgetShell/nl.lproj
-      - path: WidgetShell/pl.lproj
-      - path: WidgetShell/pt.lproj
-      - path: WidgetShell/ro.lproj
-      - path: WidgetShell/ru.lproj
-      - path: WidgetShell/sk.lproj
-      - path: WidgetShell/sl.lproj
-      - path: WidgetShell/sv.lproj
-      - path: WidgetShell/uk.lproj
+      - path: ../ios-liveactivity/Widget/bg.lproj
+      - path: ../ios-liveactivity/Widget/cs.lproj
+      - path: ../ios-liveactivity/Widget/da.lproj
+      - path: ../ios-liveactivity/Widget/de.lproj
+      - path: ../ios-liveactivity/Widget/el.lproj
+      - path: ../ios-liveactivity/Widget/en.lproj
+      - path: ../ios-liveactivity/Widget/es.lproj
+      - path: ../ios-liveactivity/Widget/et.lproj
+      - path: ../ios-liveactivity/Widget/fi.lproj
+      - path: ../ios-liveactivity/Widget/fr.lproj
+      - path: ../ios-liveactivity/Widget/ga.lproj
+      - path: ../ios-liveactivity/Widget/hr.lproj
+      - path: ../ios-liveactivity/Widget/hu.lproj
+      - path: ../ios-liveactivity/Widget/it.lproj
+      - path: ../ios-liveactivity/Widget/lt.lproj
+      - path: ../ios-liveactivity/Widget/lv.lproj
+      - path: ../ios-liveactivity/Widget/mt.lproj
+      - path: ../ios-liveactivity/Widget/nl.lproj
+      - path: ../ios-liveactivity/Widget/pl.lproj
+      - path: ../ios-liveactivity/Widget/pt.lproj
+      - path: ../ios-liveactivity/Widget/ro.lproj
+      - path: ../ios-liveactivity/Widget/ru.lproj
+      - path: ../ios-liveactivity/Widget/sk.lproj
+      - path: ../ios-liveactivity/Widget/sl.lproj
+      - path: ../ios-liveactivity/Widget/sv.lproj
+      - path: ../ios-liveactivity/Widget/uk.lproj
     info:
       path: WidgetShell/Info.plist
       properties:
@@ -228,32 +228,32 @@ targets:
     sources:
       - path: ../watchos-app/Widgets/StudyLifeWatchWidgets.swift
       - path: ../watchos-app/WatchSnapshot.swift
-      - path: WatchWidgetsShell/bg.lproj
-      - path: WatchWidgetsShell/cs.lproj
-      - path: WatchWidgetsShell/da.lproj
-      - path: WatchWidgetsShell/de.lproj
-      - path: WatchWidgetsShell/el.lproj
-      - path: WatchWidgetsShell/en.lproj
-      - path: WatchWidgetsShell/es.lproj
-      - path: WatchWidgetsShell/et.lproj
-      - path: WatchWidgetsShell/fi.lproj
-      - path: WatchWidgetsShell/fr.lproj
-      - path: WatchWidgetsShell/ga.lproj
-      - path: WatchWidgetsShell/hr.lproj
-      - path: WatchWidgetsShell/hu.lproj
-      - path: WatchWidgetsShell/it.lproj
-      - path: WatchWidgetsShell/lt.lproj
-      - path: WatchWidgetsShell/lv.lproj
-      - path: WatchWidgetsShell/mt.lproj
-      - path: WatchWidgetsShell/nl.lproj
-      - path: WatchWidgetsShell/pl.lproj
-      - path: WatchWidgetsShell/pt.lproj
-      - path: WatchWidgetsShell/ro.lproj
-      - path: WatchWidgetsShell/ru.lproj
-      - path: WatchWidgetsShell/sk.lproj
-      - path: WatchWidgetsShell/sl.lproj
-      - path: WatchWidgetsShell/sv.lproj
-      - path: WatchWidgetsShell/uk.lproj
+      - path: ../watchos-app/Widgets/bg.lproj
+      - path: ../watchos-app/Widgets/cs.lproj
+      - path: ../watchos-app/Widgets/da.lproj
+      - path: ../watchos-app/Widgets/de.lproj
+      - path: ../watchos-app/Widgets/el.lproj
+      - path: ../watchos-app/Widgets/en.lproj
+      - path: ../watchos-app/Widgets/es.lproj
+      - path: ../watchos-app/Widgets/et.lproj
+      - path: ../watchos-app/Widgets/fi.lproj
+      - path: ../watchos-app/Widgets/fr.lproj
+      - path: ../watchos-app/Widgets/ga.lproj
+      - path: ../watchos-app/Widgets/hr.lproj
+      - path: ../watchos-app/Widgets/hu.lproj
+      - path: ../watchos-app/Widgets/it.lproj
+      - path: ../watchos-app/Widgets/lt.lproj
+      - path: ../watchos-app/Widgets/lv.lproj
+      - path: ../watchos-app/Widgets/mt.lproj
+      - path: ../watchos-app/Widgets/nl.lproj
+      - path: ../watchos-app/Widgets/pl.lproj
+      - path: ../watchos-app/Widgets/pt.lproj
+      - path: ../watchos-app/Widgets/ro.lproj
+      - path: ../watchos-app/Widgets/ru.lproj
+      - path: ../watchos-app/Widgets/sk.lproj
+      - path: ../watchos-app/Widgets/sl.lproj
+      - path: ../watchos-app/Widgets/sv.lproj
+      - path: ../watchos-app/Widgets/uk.lproj
     info:
       path: WatchWidgetsShell/Info.plist
       properties:
