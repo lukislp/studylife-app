@@ -50,6 +50,21 @@
         <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
 
+    <!-- InfoPlist.strings/Localizable.strings under Platforms/iOS/<lang>.lproj/ - confirmed live
+         2026-09-27 that .NET-for-iOS does NOT glob *.lproj content into BundleResource by
+         default (verified via a diagnostic build log: zero matches, and the built .app had no
+         .lproj folders at all despite the files being on disk and the build succeeding without
+         warning). Needs an explicit BundleResource include - AND an explicit LogicalName, same
+         reason the MauiAsset item above needs one: without it, .NET-for-iOS keeps the item's
+         full project-relative path (Platforms/iOS/<lang>.lproj/...) as its bundle destination
+         instead of placing <lang>.lproj at the bundle ROOT, which is where iOS's own
+         localization lookup requires it to be - confirmed via the same diagnostic log
+         (LogicalName=Platforms/iOS/bg.lproj/... before this fix, i.e. nested one level too
+         deep, silently un-discoverable by NSBundle/SwiftUI's Text(_:) lookup). -->
+    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+        <BundleResource Include="Platforms\iOS\*.lproj\**\*" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
