@@ -233,11 +233,16 @@ private struct CountdownText: View {
     }
 }
 
-private func phaseLabel(_ state: TimerActivityAttributes.ContentState) -> String {
+// LocalizedStringKey, not String: Text(_:) only auto-localizes a literal written directly at
+// the call site, not a String returned from a helper function - these two are called from
+// several Text(...) sites above, so the localization has to happen HERE instead, by returning
+// the already-resolved key type (the string-interpolation initializer below still captures
+// "Runde %lld von %lld" as the lookup pattern, exactly as if it were written inline).
+private func phaseLabel(_ state: TimerActivityAttributes.ContentState) -> LocalizedStringKey {
     if state.isPaused { return "Pausiert" }
     return state.isBreak ? "Pause ☕" : "Fokus"
 }
 
-private func roundLabel(_ state: TimerActivityAttributes.ContentState) -> String {
+private func roundLabel(_ state: TimerActivityAttributes.ContentState) -> LocalizedStringKey {
     "Runde \(state.round) von \(state.totalRounds)"
 }

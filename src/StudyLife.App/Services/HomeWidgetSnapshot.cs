@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.JSInterop;
 using StudyLife.Client.Models;
 using StudyLife.Client.Services;
 using StudyLife.Shared;
@@ -27,7 +28,7 @@ public static class HomeWidgetSnapshot
     private static DateTime? _upcomingActivityStartsAt;
 #endif
 
-    public static async Task UpdateAsync(AppStateService state, TimerService? timer = null, bool justCompleted = false, bool standNudge = false)
+    public static async Task UpdateAsync(AppStateService state, IJSRuntime jsRuntime, TimerService? timer = null, bool justCompleted = false, bool standNudge = false)
     {
 #if IOS || ANDROID
         try
@@ -59,7 +60,7 @@ public static class HomeWidgetSnapshot
                 streakHistory.Where(s => StudyMetrics.IsStudied(s, now)).Select(s => s.StartTime), today);
             // Fire-and-forget: a missed/delayed celebration notification must never hold up
             // the widget snapshot write.
-            _ = StreakMilestones.CheckAndCelebrateAsync(streak);
+            _ = StreakMilestones.CheckAndCelebrateAsync(streak, jsRuntime);
             var next = sessions
                 .Where(s => !s.IsCompleted && s.StartTime > now)
                 .OrderBy(s => s.StartTime)

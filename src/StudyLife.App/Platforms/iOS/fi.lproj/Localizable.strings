@@ -1,0 +1,16 @@
+"Fokus-Timer öffnen" = "Avaa fokusajastin";
+"Öffnet die Fokus-Seite von StudyLife." = "Avaa StudyLifen fokussivun.";
+"Lernserie abfragen" = "Kysy opiskeluputkea";
+"Sagt dir deine aktuelle Lernserie in StudyLife." = "Kertoo nykyisen opiskeluputkesi StudyLifessa.";
+"Heutige Lernzeit abfragen" = "Kysy tämän päivän opiskeluaikaa";
+"Sagt dir, wie viel du heute schon in StudyLife gelernt hast." = "Kertoo, kuinka paljon olet opiskellut tänään StudyLifessa.";
+"Wöchentliche Lernzeit abfragen" = "Kysy viikon opiskeluaikaa";
+"Sagt dir, wie viel du diese Woche schon in StudyLife gelernt hast." = "Kertoo, kuinka paljon olet opiskellut tällä viikolla StudyLifessa.";
+"Fokus-Timer pausieren oder fortsetzen" = "Keskeytä tai jatka fokusajastinta";
+"Ich konnte deine Daten gerade nicht abrufen. Öffne StudyLife einmal, dann sind sie aktuell." = "En saanut juuri nyt tietojasi haettua. Avaa StudyLife kerran, niin ne päivittyvät.";
+"Du hast aktuell keine Lernserie in StudyLife." = "Sinulla ei ole tällä hetkellä opiskeluputkea StudyLifessa.";
+"Deine Lernserie in StudyLife beträgt %@." = "Opiskeluputkesi StudyLifessa on %@.";
+"Du hast heute noch nicht in StudyLife gelernt." = "Et ole vielä opiskellut tänään StudyLifessa.";
+"Du hast heute %@ in StudyLife gelernt." = "Olet opiskellut %@ tänään StudyLifessa.";
+"Du hast diese Woche noch nicht in StudyLife gelernt." = "Et ole vielä opiskellut tällä viikolla StudyLifessa.";
+"Du hast diese Woche %@ in StudyLife gelernt." = "Olet opiskellut %@ tällä viikolla StudyLifessa.";

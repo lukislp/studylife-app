@@ -134,7 +134,7 @@ struct StatsSection: View {
         let date = Date(timeIntervalSince1970: epoch)
         let formatter = DateFormatter()
         formatter.dateFormat = "EE HH:mm"
-        formatter.locale = Locale(identifier: "de_DE")
+        formatter.locale = Locale.current
         return formatter.string(from: date)
     }
 
@@ -144,7 +144,7 @@ struct StatsSection: View {
         guard let date = parser.date(from: iso) else { return "" }
         let out = DateFormatter()
         out.dateFormat = "EE"
-        out.locale = Locale(identifier: "de_DE")
+        out.locale = Locale.current
         return out.string(from: date)
     }
 

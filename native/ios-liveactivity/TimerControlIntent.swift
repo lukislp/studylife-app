@@ -94,10 +94,73 @@ private func rolledOver(_ raw: SiriStatsSnapshot, now: Date) -> SiriStatsSnapsho
     return snapshot
 }
 
+// Siri dialogs are LocalizedStringResource-backed just like `title` above (per-target
+// Localizable.strings, see native/ios-signing/*Shell/*.lproj/) - but a Swift ternary for
+// singular/plural NESTED inside a string's own "\(...)" interpolation does NOT get localized
+// (only the outer literal would be), so plural-sensitive fragments are resolved to a plain
+// String FIRST, via SiriText's own small per-language table, before being interpolated as an
+// opaque %@ argument into the (separately localized) outer sentence. Simplified to a singular/
+// plural (2-form) split for every language - not fully correct for the handful of languages
+// with 3-4 grammatical plural forms (e.g. Slavic), a deliberate scope cut for this Siri-only
+// feature; flagged for a native-speaker pass later.
+private enum SiriText {
+    static func language() -> String {
+        let code = Locale.current.language.languageCode?.identifier ?? "en"
+        return DayWord.keys.contains(code) ? code : "en"
+    }
+
+    static func dayWord(_ days: Int) -> String {
+        let (singular, plural) = DayWord[language()] ?? DayWord["en"]!
+        return days == 1 ? singular : plural
+    }
+
+    static func hourWord(_ hours: Int) -> String {
+        let (singular, plural) = HourWord[language()] ?? HourWord["en"]!
+        return hours == 1 ? singular : plural
+    }
+
+    static func minuteWord(_ minutes: Int) -> String {
+        let (singular, plural) = MinuteWord[language()] ?? MinuteWord["en"]!
+        return minutes == 1 ? singular : plural
+    }
+
+    private static let DayWord: [String: (String, String)] = [
+        "bg": ("ден", "дни"), "cs": ("den", "dní"), "da": ("dag", "dage"), "de": ("Tag", "Tage"),
+        "el": ("ημέρα", "ημέρες"), "en": ("day", "days"), "es": ("día", "días"), "et": ("päev", "päeva"),
+        "fi": ("päivä", "päivää"), "fr": ("jour", "jours"), "ga": ("lá", "lá"), "hr": ("dan", "dana"),
+        "hu": ("nap", "nap"), "it": ("giorno", "giorni"), "lt": ("diena", "dienos"), "lv": ("diena", "dienas"),
+        "mt": ("jum", "jiem"), "nl": ("dag", "dagen"), "pl": ("dzień", "dni"), "pt": ("dia", "dias"),
+        "ro": ("zi", "zile"), "ru": ("день", "дней"), "sk": ("deň", "dní"), "sl": ("dan", "dni"),
+        "sv": ("dag", "dagar"), "uk": ("день", "днів"),
+    ]
+
+    private static let HourWord: [String: (String, String)] = [
+        "bg": ("час", "часа"), "cs": ("hodina", "hodin"), "da": ("time", "timer"), "de": ("Stunde", "Stunden"),
+        "el": ("ώρα", "ώρες"), "en": ("hour", "hours"), "es": ("hora", "horas"), "et": ("tund", "tundi"),
+        "fi": ("tunti", "tuntia"), "fr": ("heure", "heures"), "ga": ("uair", "uair"), "hr": ("sat", "sati"),
+        "hu": ("óra", "óra"), "it": ("ora", "ore"), "lt": ("valanda", "valandos"), "lv": ("stunda", "stundas"),
+        "mt": ("siegħa", "sigħat"), "nl": ("uur", "uur"), "pl": ("godzina", "godzin"), "pt": ("hora", "horas"),
+        "ro": ("oră", "ore"), "ru": ("час", "часов"), "sk": ("hodina", "hodín"), "sl": ("ura", "ur"),
+        "sv": ("timme", "timmar"), "uk": ("година", "годин"),
+    ]
+
+    private static let MinuteWord: [String: (String, String)] = [
+        "bg": ("минута", "минути"), "cs": ("minuta", "minut"), "da": ("minut", "minutter"), "de": ("Minute", "Minuten"),
+        "el": ("λεπτό", "λεπτά"), "en": ("minute", "minutes"), "es": ("minuto", "minutos"), "et": ("minut", "minutit"),
+        "fi": ("minuutti", "minuuttia"), "fr": ("minute", "minutes"), "ga": ("nóiméad", "nóiméad"), "hr": ("minuta", "minuta"),
+        "hu": ("perc", "perc"), "it": ("minuto", "minuti"), "lt": ("minutė", "minutės"), "lv": ("minūte", "minūtes"),
+        "mt": ("minuta", "minuti"), "nl": ("minuut", "minuten"), "pl": ("minuta", "minut"), "pt": ("minuto", "minutos"),
+        "ro": ("minut", "minute"), "ru": ("минута", "минут"), "sk": ("minúta", "minút"), "sl": ("minuta", "minut"),
+        "sv": ("minut", "minuter"), "uk": ("хвилина", "хвилин"),
+    ]
+}
+
 private func durationLabel(_ minutes: Int) -> String {
-    minutes >= 60
-        ? "\(minutes / 60) Stunden und \(minutes % 60) Minuten"
-        : "\(minutes) Minuten"
+    if minutes >= 60 {
+        let h = minutes / 60, m = minutes % 60
+        return "\(h) \(SiriText.hourWord(h)) \(m) \(SiriText.minuteWord(m))"
+    }
+    return "\(minutes) \(SiriText.minuteWord(minutes))"
 }
 
 private let statsUnavailableDialog: IntentDialog =
@@ -120,7 +183,8 @@ public struct StudyLifeStreakQueryIntent: AppIntent {
         if days == 0 {
             return .result(dialog: "Du hast aktuell keine Lernserie in StudyLife.")
         }
-        return .result(dialog: "Deine Lernserie in StudyLife beträgt \(days) \(days == 1 ? "Tag" : "Tage").")
+        let dayPhrase = "\(days) \(SiriText.dayWord(days))"
+        return .result(dialog: "Deine Lernserie in StudyLife beträgt \(dayPhrase).")
     }
 }
 

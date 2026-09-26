@@ -108,7 +108,8 @@ struct StudyLifeWatchComplicationView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         case .accessoryInline:
             if let ends = snapshot.activeTimerEnd {
-                Text("✦ \(snapshot.timerIsBreak == true ? "Pause" : "Fokus") ") + Text(timerInterval: Date.now...ends, countsDown: true)
+                // Text concatenation, not interpolation - see StudyTodayWidget.swift's identical fix.
+                Text("✦ ") + Text(snapshot.timerIsBreak == true ? "Pause" : "Fokus") + Text(" ") + Text(timerInterval: Date.now...ends, countsDown: true)
             } else {
                 Text("✦ \(formatWatchMinutes(snapshot.todayMinutes))"
                      + (snapshot.streakDays > 0 ? " · \(snapshot.streakDays)🔥" : ""))

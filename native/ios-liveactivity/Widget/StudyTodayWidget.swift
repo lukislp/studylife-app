@@ -299,7 +299,10 @@ private struct StudyTodayView: View {
             }
         case .accessoryInline:
             if let ends = snapshot.activeTimerEnd {
-                Text("✦ \(snapshot.timerIsBreak == true ? "Pause" : "Fokus") ")
+                // Text concatenation, not string interpolation: a ternary of literals NESTED
+                // inside a "\(...)" interpolation does NOT get localized (only the outer literal
+                // would), so the phase name needs its own separate, directly-literal Text(_:).
+                Text("✦ ") + Text(snapshot.timerIsBreak == true ? "Pause" : "Fokus") + Text(" ")
                     + Text(timerInterval: Date.now...ends, countsDown: true)
             } else {
                 Text("✦ \(formatMinutes(snapshot.todayMinutes))"
@@ -408,7 +411,12 @@ private struct StudyTodayView: View {
         HStack(spacing: 6) {
             Image(systemName: icon).font(.caption).foregroundStyle(tint).frame(width: 16)
             Text(value).font(.caption.weight(.semibold).monospacedDigit()).foregroundStyle(wFg)
-            Text(label).font(.caption).foregroundStyle(wFgMuted).lineLimit(1)
+            // label is a String parameter (some callers pass a fixed phrase, others a session/
+            // course title), so Text(label) alone would take the non-localizing StringProtocol
+            // overload even for the fixed-phrase callers. LocalizedStringKey(label) fixes that
+            // for them, and is safe for the title callers too: an arbitrary title has no
+            // matching Localizable.strings entry, so it just falls back to displaying unchanged.
+            Text(LocalizedStringKey(label)).font(.caption).foregroundStyle(wFgMuted).lineLimit(1)
         }
     }
 
@@ -429,7 +437,7 @@ private struct StudyTodayView: View {
         var calendar = Calendar.current
         calendar.timeZone = .current
         formatter.dateFormat = calendar.isDateInToday(date) ? "HH:mm" : "EE HH:mm"
-        formatter.locale = Locale(identifier: "de_DE")
+        formatter.locale = Locale.current
         return formatter.string(from: date)
     }
 }

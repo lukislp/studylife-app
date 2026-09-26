@@ -166,7 +166,7 @@ else if (_needsServerUrl)
 
     private void HandleSessionCompleteForWidget()
     {
-        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, justCompleted: true));
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, JS, Timer, justCompleted: true));
     }
 
     /// <summary>Timer.CurrentMode still reflects the in-progress mode at this point (only
@@ -188,7 +188,7 @@ else if (_needsServerUrl)
         var current = (isRunning, isBreak, round);
         if (current == _lastWidgetTimerState) return;
         _lastWidgetTimerState = current;
-        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer));
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, JS, Timer));
     }
 
     // 45min: long enough to matter (Ultradian/Deep Dive/Marathon qualify, Pomodoro/Sprint/
@@ -212,9 +212,78 @@ else if (_needsServerUrl)
         var slot = elapsedMinutes / StandNudgeIntervalMinutes;
         if (slot == 0 || slot == _lastStandNudgeSlot) return;
         _lastStandNudgeSlot = slot;
-        _ = NativeBridge.ShowNotificationAsync("Kurz aufstehen?",
-            $"Du bist schon {slot * StandNudgeIntervalMinutes} Minuten am Stück fokussiert - kurz strecken tut gut.");
-        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, standNudge: true));
+        _ = ShowStandNudgeNotificationAsync(slot * StandNudgeIntervalMinutes);
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, JS, Timer, standNudge: true));
+    }
+
+    // Same 26 languages as the app's i18ntext tables - see NativeText's doc comment (Services/NativeText.cs)
+    // for why this is a small embedded table instead of a formal i18n table.
+    private static readonly Dictionary<string, string> StandNudgeTitles = new()
+    {
+        ["bg"] = "Кратка почивка?",
+        ["cs"] = "Krátká přestávka?",
+        ["da"] = "Kort pause?",
+        ["de"] = "Kurz aufstehen?",
+        ["el"] = "Σύντομο διάλειμμα;",
+        ["en"] = "Quick stretch?",
+        ["es"] = "¿Una pausa breve?",
+        ["et"] = "Lühike paus?",
+        ["fi"] = "Pieni venyttelytauko?",
+        ["fr"] = "Petite pause ?",
+        ["ga"] = "Sos gairid?",
+        ["hr"] = "Kratka pauza?",
+        ["hu"] = "Rövid nyújtózás?",
+        ["it"] = "Una breve pausa?",
+        ["lt"] = "Trumpa pertraukėlė?",
+        ["lv"] = "Īsa pauze?",
+        ["mt"] = "Waqfa qasira?",
+        ["nl"] = "Even opstaan?",
+        ["pl"] = "Krótka przerwa?",
+        ["pt"] = "Uma pausa rápida?",
+        ["ro"] = "O pauză scurtă?",
+        ["ru"] = "Короткий перерыв?",
+        ["sk"] = "Krátka prestávka?",
+        ["sl"] = "Kratek odmor?",
+        ["sv"] = "Dags att sträcka på benen?",
+        ["uk"] = "Коротка перерва?",
+    };
+
+    private static readonly Dictionary<string, string> StandNudgeBodies = new()
+    {
+        ["bg"] = "Вече си фокусиран {0} минути без прекъсване - кратко разтягане ще ти се отрази добре.",
+        ["cs"] = "Už se soustředíš {0} minut v kuse - krátké protažení udělá dobře.",
+        ["da"] = "Du har fokuseret i {0} minutter i træk - en kort strækpause gør godt.",
+        ["de"] = "Du bist schon {0} Minuten am Stück fokussiert - kurz strecken tut gut.",
+        ["el"] = "Είσαι συγκεντρωμένος/η εδώ και {0} λεπτά συνεχόμενα - λίγη διάταση θα σου κάνει καλό.",
+        ["en"] = "You've been focused for {0} minutes straight - a quick stretch will do you good.",
+        ["es"] = "Llevas {0} minutos concentrado sin parar - un breve estiramiento te vendrá bien.",
+        ["et"] = "Oled juba {0} minutit järjest keskendunud - lühike venitus teeb head.",
+        ["fi"] = "Olet keskittynyt jo {0} minuuttia yhtäjaksoisesti - pieni venyttely tekisi hyvää.",
+        ["fr"] = "Tu es concentré depuis {0} minutes d'affilée - un petit étirement te fera du bien.",
+        ["ga"] = "Tá tú dírithe le {0} nóiméad as a chéile - dhéanfadh sínteog ghairid maith duit.",
+        ["hr"] = "Već si {0} minuta neprekidno fokusiran - kratko istezanje će ti dobro doći.",
+        ["hu"] = "Már {0} perce megszakítás nélkül fókuszálsz - egy rövid nyújtózás jót tenne.",
+        ["it"] = "Sei concentrato da {0} minuti di fila - un breve stretching ti farebbe bene.",
+        ["lt"] = "Jau {0} minutes be pertraukos esi susikaupęs - trumpas pasitempimas nepakenks.",
+        ["lv"] = "Tu jau {0} minūtes nepārtraukti koncentrējies - īsa izstaipīšanās nāktu par labu.",
+        ["mt"] = "Ilek iffukat għal {0} minuta wara xulxin - ftit tiġbid jagħmillek ġid.",
+        ["nl"] = "Je bent al {0} minuten achter elkaar gefocust - even rekken doet je goed.",
+        ["pl"] = "Jesteś skupiony już {0} minut bez przerwy - krótkie rozciąganie dobrze ci zrobi.",
+        ["pt"] = "Já estás concentrado há {0} minutos seguidos - um alongamento rápido vai fazer-te bem.",
+        ["ro"] = "Ești concentrat de {0} minute la rând - o scurtă întindere ți-ar prinde bine.",
+        ["ru"] = "Вы уже {0} минут сосредоточены без перерыва - небольшая разминка пойдёт на пользу.",
+        ["sk"] = "Už si sústredený {0} minút v kuse - krátke pretiahnutie ti padne dobre.",
+        ["sl"] = "Že {0} minut si neprekinjeno osredotočen - kratko raztezanje ti bo dobro delo.",
+        ["sv"] = "Du har varit fokuserad i {0} minuter i sträck - lite stretching skulle göra dig gott.",
+        ["uk"] = "Ти вже {0} хвилин безперервно зосереджений - невелика розтяжка піде на користь.",
+    };
+
+    private async Task ShowStandNudgeNotificationAsync(int minutes)
+    {
+        var lang = await NativeText.GetCurrentLanguageAsync(JS);
+        await NativeBridge.ShowNotificationAsync(
+            NativeText.Get(StandNudgeTitles, lang),
+            string.Format(NativeText.Get(StandNudgeBodies, lang), minutes));
     }
 
     private void HandleDeepLink(string route) => _ = InvokeAsync(() => Nav.NavigateTo(route));
@@ -241,8 +310,8 @@ else if (_needsServerUrl)
         // (warm caches + keep Spotlight current) and the search index gets its initial fill.
         // Both calls are no-ops on other platforms.
         BackgroundRefresh.SetHandler(RefreshInBackgroundAsync);
-        _ = Task.Run(() => SpotlightIndexer.ReindexAsync(Http));
-        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer));
+        _ = Task.Run(() => SpotlightIndexer.ReindexAsync(Http, JS));
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, JS, Timer));
 #if IOS
         SharedNoteIntake.DrainIosInbox(); // cold start: collect anything left behind by the share extension
 #endif
@@ -256,8 +325,8 @@ else if (_needsServerUrl)
     {
         await State.FetchSettingsFromServerAsync();
         await State.GetSessionsAsync();
-        await SpotlightIndexer.ReindexAsync(Http);
-        await HomeWidgetSnapshot.UpdateAsync(State, Timer);
+        await SpotlightIndexer.ReindexAsync(Http, JS);
+        await HomeWidgetSnapshot.UpdateAsync(State, JS, Timer);
     }
 
     private async Task SaveServerUrlAsync()
