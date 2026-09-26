@@ -15,18 +15,25 @@ namespace StudyLife.App;
 /// message-forwarding protocol (RespondsToSelector/ForwardingTargetForSelector), so MAUI's own
 /// dialog handling keeps working unchanged.
 /// </summary>
-internal sealed class MicPermissionUIDelegate(NSObject? inner) : WKUIDelegate
+internal sealed class MicPermissionUIDelegate(IWKUIDelegate? inner) : WKUIDelegate
 {
+    // WKWebView.UIDelegate is typed as the IWKUIDelegate protocol interface, but the forwarding
+    // machinery below (RespondsToSelector/ForwardingTargetForSelector) is plain NSObject/ObjC
+    // runtime plumbing - every real WKUIDelegate implementation is backed by an NSObject, so this
+    // cast is always valid for an actual delegate instance (never for, say, a mock in a unit test,
+    // but nothing here runs outside a real WKWebView).
+    private readonly NSObject? _inner = inner as NSObject;
+
     public override void RequestMediaCapturePermission(WKWebView webView, WKSecurityOrigin origin, WKFrameInfo frame,
         WKMediaCaptureType type, Action<WKPermissionDecision> decisionHandler) =>
         decisionHandler(WKPermissionDecision.Grant);
 
     public override bool RespondsToSelector(Selector? sel) =>
-        base.RespondsToSelector(sel) || (inner?.RespondsToSelector(sel) ?? false);
+        base.RespondsToSelector(sel) || (_inner?.RespondsToSelector(sel) ?? false);
 
     [Export("forwardingTargetForSelector:")]
     public NSObject? ForwardingTargetForSelector(Selector sel) =>
-        inner != null && inner.RespondsToSelector(sel) ? inner : null;
+        _inner != null && _inner.RespondsToSelector(sel) ? _inner : null;
 
     /// <summary>
     /// Installs the wrapper on <paramref name="webView"/>, capturing whatever delegate is
