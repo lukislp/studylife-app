@@ -1,0 +1,11 @@
+"NSHealthUpdateUsageDescription" = "StudyLife rejestruje ukończone sesje skupienia jako minuty uważności w aplikacji Zdrowie.";
+"NSHealthShareUsageDescription" = "StudyLife odczytuje zmienność rytmu serca, sen, liczbę kroków i kondycję krążeniowo-oddechową (VO2max), aby wyświetlić na Pulpicie osobistą ocenę gotowości do nauki i regularności snu, przypominać o przerwach na ruch podczas długich sesji skupienia oraz pokazywać postępy kondycyjne w Statystykach.";
+"NSMicrophoneUsageDescription" = "StudyLife nagrywa Twój głos, aby dyktować notatki za pomocą mowy.";
+"Fokus starten" = "Rozpocznij skupienie";
+"Direkt in den Fokus-Timer springen" = "Przejdź od razu do timera skupienia";
+"Neue Notiz" = "Nowa notatka";
+"Sofort eine neue Notiz anlegen" = "Od razu utwórz nową notatkę";
+"Kalender" = "Kalendarz";
+"Zur Wochenansicht" = "Przejdź do widoku tygodnia";
+"Statistiken" = "Statystyki";
+"Auswertung öffnen" = "Otwórz statystyki";
