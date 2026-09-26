@@ -1,0 +1,11 @@
+"NSHealthUpdateUsageDescription" = "StudyLife записує завершені сесії концентрації як хвилини усвідомленості в Health.";
+"NSHealthShareUsageDescription" = "StudyLife зчитує варіабельність серцевого ритму, сон, кількість кроків і кардіофітнес (VO2max), щоб показати персональну оцінку готовності до навчання та стабільності сну на панелі приладів, нагадувати про паузи на рух під час довгих сесій концентрації та відображати ваш прогрес у фітнесі в статистиці.";
+"NSMicrophoneUsageDescription" = "StudyLife записує ваш голос для диктування нотаток голосом.";
+"Fokus starten" = "Почати фокус";
+"Direkt in den Fokus-Timer springen" = "Перейти прямо до таймера фокусу";
+"Neue Notiz" = "Нова нотатка";
+"Sofort eine neue Notiz anlegen" = "Одразу створити нову нотатку";
+"Kalender" = "Календар";
+"Zur Wochenansicht" = "Перейти до тижневого вигляду";
+"Statistiken" = "Статистика";
+"Auswertung öffnen" = "Відкрити статистику";

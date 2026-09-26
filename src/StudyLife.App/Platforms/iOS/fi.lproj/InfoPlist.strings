@@ -1,0 +1,11 @@
+"NSHealthUpdateUsageDescription" = "StudyLife kirjaa valmiit keskittymisjaksot tietoisuusminuutteina Terveys-sovellukseen.";
+"NSHealthShareUsageDescription" = "StudyLife lukee sykevälivaihtelusi, unesi, askelmääräsi ja kuntoluokituksesi (VO2max) näyttääkseen henkilökohtaisen opiskeluvalmiuden ja unen säännöllisyyden arvion kojelaudalla, muistuttaakseen liiketaukoja pitkien keskittymisjaksojen aikana ja näyttääkseen kuntokehityksesi tilastoissa.";
+"NSMicrophoneUsageDescription" = "StudyLife tallentaa äänesi muistiinpanojen sanelua varten.";
+"Fokus starten" = "Aloita fokus";
+"Direkt in den Fokus-Timer springen" = "Siirry suoraan fokusajastimeen";
+"Neue Notiz" = "Uusi muistiinpano";
+"Sofort eine neue Notiz anlegen" = "Luo heti uusi muistiinpano";
+"Kalender" = "Kalenteri";
+"Zur Wochenansicht" = "Siirry viikkonäkymään";
+"Statistiken" = "Tilastot";
+"Auswertung öffnen" = "Avaa tilastot";

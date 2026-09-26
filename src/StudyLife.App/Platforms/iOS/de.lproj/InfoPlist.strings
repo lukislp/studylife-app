@@ -1,0 +1,11 @@
+"NSHealthUpdateUsageDescription" = "StudyLife protokolliert abgeschlossene Fokus-Sessions als Achtsamkeitsminuten in Health.";
+"NSHealthShareUsageDescription" = "StudyLife liest deine Herzratenvariabilität, Schlafzeiten, Schrittzahl und Cardio-Fitness (VO2max), um dir eine persönliche Lernbereitschafts- und Schlaf-Konsistenz-Einschätzung im Dashboard anzuzeigen, dich bei langen Fokus-Sessions an Bewegungspausen zu erinnern und deine Fitness-Entwicklung in der Auswertung darzustellen.";
+"NSMicrophoneUsageDescription" = "StudyLife nimmt deine Stimme auf, um Notizen per Spracheingabe zu diktieren.";
+"Fokus starten" = "Fokus starten";
+"Direkt in den Fokus-Timer springen" = "Direkt in den Fokus-Timer springen";
+"Neue Notiz" = "Neue Notiz";
+"Sofort eine neue Notiz anlegen" = "Sofort eine neue Notiz anlegen";
+"Kalender" = "Kalender";
+"Zur Wochenansicht" = "Zur Wochenansicht";
+"Statistiken" = "Statistiken";
+"Auswertung öffnen" = "Auswertung öffnen";
