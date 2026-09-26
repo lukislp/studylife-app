@@ -89,6 +89,11 @@
             if (el) el.scrollTop = 0;
         }
 
+        function scrollElementToBottom(id) {
+            var el = document.getElementById(id);
+            if (el) el.scrollTop = el.scrollHeight;
+        }
+
         function scrollElementToRight(id) {
             var el = document.getElementById(id);
             if (el) el.scrollLeft = el.scrollWidth;
@@ -365,6 +370,159 @@
             var scrollTo = targetOffsetInContent - container.clientHeight * 0.3;
             var maxScroll = container.scrollHeight - container.clientHeight;
             container.scrollTop = Math.max(0, Math.min(scrollTo, maxScroll));
+        }
+
+        // ============================================================================
+        // Notes voice features - 1:1 copy from StudyLife.Client/wwwroot/js/interop.js
+        // (see the comments there for the full rationale of each fallback).
+        // ============================================================================
+
+        function speakText(text, lang) {
+            if (!window.speechSynthesis) return false;
+            window.speechSynthesis.cancel();
+            var utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang;
+            window.speechSynthesis.speak(utterance);
+            return true;
+        }
+
+        let _dictationRecorder = null;
+        let _dictationChunks = [];
+
+        async function startDictationRecording() {
+            if (!navigator.mediaDevices || !window.MediaRecorder) return false;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                _dictationChunks = [];
+                _dictationRecorder = new MediaRecorder(stream);
+                _dictationRecorder.ondataavailable = function (e) {
+                    if (e.data.size > 0) _dictationChunks.push(e.data);
+                };
+                _dictationRecorder.start();
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        function stopDictationRecording() {
+            return new Promise(function (resolve, reject) {
+                if (!_dictationRecorder) { reject('not recording'); return; }
+                _dictationRecorder.onstop = async function () {
+                    _dictationRecorder.stream.getTracks().forEach(function (t) { t.stop(); });
+                    _dictationRecorder = null;
+                    try {
+                        const blob = new Blob(_dictationChunks, { type: 'audio/webm' });
+                        resolve(await blobToWavBase64(blob));
+                    } catch (err) {
+                        reject(String(err));
+                    }
+                };
+                _dictationRecorder.stop();
+            });
+        }
+
+        function cancelDictationRecording() {
+            if (!_dictationRecorder) return;
+            _dictationRecorder.onstop = null;
+            _dictationRecorder.stream.getTracks().forEach(function (t) { t.stop(); });
+            _dictationRecorder.stop();
+            _dictationRecorder = null;
+            _dictationChunks = [];
+        }
+
+        let _activeSpeechRecognition = null;
+
+        function startBrowserSpeechRecognition(lang) {
+            return new Promise(function (resolve, reject) {
+                const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognitionApi) { reject('not supported'); return; }
+                const recognition = new SpeechRecognitionApi();
+                recognition.lang = lang;
+                recognition.interimResults = false;
+                recognition.continuous = true;
+                let finalTranscript = '';
+                let started = false;
+                recognition.onresult = function (event) {
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + ' ';
+                    }
+                };
+                recognition.onstart = function () { started = true; resolve(true); };
+                recognition.onerror = function (event) {
+                    if (!started) resolve(false);
+                };
+                recognition.onend = function () {
+                    _activeSpeechRecognition = null;
+                    window._lastSpeechRecognitionResult = finalTranscript.trim();
+                };
+                _activeSpeechRecognition = recognition;
+                recognition.start();
+            });
+        }
+
+        async function stopBrowserSpeechRecognition() {
+            if (!_activeSpeechRecognition) return window._lastSpeechRecognitionResult || '';
+            _activeSpeechRecognition.stop();
+            for (let i = 0; i < 20 && _activeSpeechRecognition !== null; i++) {
+                await new Promise(function (r) { setTimeout(r, 100); });
+            }
+            const result = window._lastSpeechRecognitionResult || '';
+            window._lastSpeechRecognitionResult = undefined;
+            return result;
+        }
+
+        async function blobToWavBase64(blob) {
+            const arrayBuffer = await blob.arrayBuffer();
+            const decodeCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const decoded = await decodeCtx.decodeAudioData(arrayBuffer);
+            decodeCtx.close();
+
+            const targetRate = 16000;
+            const offlineCtx = new OfflineAudioContext(1, Math.ceil(decoded.duration * targetRate), targetRate);
+            const source = offlineCtx.createBufferSource();
+            source.buffer = decoded;
+            source.connect(offlineCtx.destination);
+            source.start();
+            const rendered = await offlineCtx.startRendering();
+            const samples = rendered.getChannelData(0);
+
+            let sumSquares = 0;
+            for (let i = 0; i < samples.length; i++) sumSquares += samples[i] * samples[i];
+            const rms = Math.sqrt(sumSquares / samples.length);
+            if (rms < 0.01) return null;
+
+            const wavBytes = encodeWavPcm16(samples, targetRate);
+            let binary = '';
+            for (let i = 0; i < wavBytes.length; i++) binary += String.fromCharCode(wavBytes[i]);
+            return window.btoa(binary);
+        }
+
+        function encodeWavPcm16(samples, sampleRate) {
+            const buffer = new ArrayBuffer(44 + samples.length * 2);
+            const view = new DataView(buffer);
+            function writeString(offset, str) {
+                for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+            }
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + samples.length * 2, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(36, 'data');
+            view.setUint32(40, samples.length * 2, true);
+            let offset = 44;
+            for (let i = 0; i < samples.length; i++, offset += 2) {
+                const s = Math.max(-1, Math.min(1, samples[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+            }
+            return new Uint8Array(buffer);
         }
     </script>
     <script>
