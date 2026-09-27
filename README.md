@@ -235,9 +235,11 @@ passed as the address instead - close enough to identify the function/file for t
 
 The Blazor UI (via the referenced Client project) is fully localized into 26 languages, same
 as the web app. Native-only surfaces added by this repo — home screen widgets, Live Activity,
-Siri Shortcuts, notification text, the Apple Watch companion app — are currently hardcoded in
-German, since that's this app's primary usage context. Contributions to localize these are
-welcome; see the web client's i18n setup in the main app repo for the established pattern.
+Siri Shortcuts, notification text, the Apple Watch companion app, and the iOS permission
+prompts/home-screen shortcuts — follow the OS's own system language, independently of the
+in-app language picker (which only affects the Blazor UI), using standard iOS/watchOS
+`.lproj`/`Localizable.strings` localization. Siri's spoken trigger phrases are the one
+exception, currently German/English only.
 
 ## License
 
@@ -246,3 +248,7 @@ Copyright (C) 2026 Lukas Koerber
 [AGPL-3.0](LICENSE) — consistent with the main [StudyLife](https://github.com/lukislp/studylife)
 repo, since this app is built directly on top of its (AGPL-3.0) Client project via a project
 reference.
+
+Music in the demo video above: "Happy Beats & Business Moves Vol. 12" by Sascha Ende
+([ende.app](https://ende.app/en/song/12881-happy-beats-business-moves-vol-12)), licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
