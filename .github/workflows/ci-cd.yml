@@ -157,7 +157,12 @@ jobs:
       # regex, so the substitution below was running in basic-regex mode without the author
       # noticing (it happened to still match, since the pattern doesn't need ERE syntax).
       - run: sed -i '' -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-maccatalyst</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
-      - run: dotnet workload install maui-maccatalyst
+      # Workload set 10.0.401.1 (2026-09-28) moved microsoft.net.sdk.maccatalyst to 27.0.10722,
+      # which hard-requires Xcode 27.0 - but macos-latest (macos-26-arm64) still ships Xcode 26.6
+      # as its newest Xcode, so an unpinned install fails at publish with "requires Xcode 27.0".
+      # 10.0.401 (maccatalyst 26.5.10318) is the last set that builds on that image. Drop the
+      # pin once the runner image lists an Xcode 27.x under /Applications.
+      - run: dotnet workload install maui-maccatalyst --version 10.0.401
       - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release
       # Unsigned .app bundle - recipients need to right-click "Open" (or `xattr -cr`)
       # once to bypass Gatekeeper, since no Apple Developer signing is involved.
