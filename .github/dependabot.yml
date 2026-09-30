@@ -9,7 +9,13 @@ updates:
       prefix: "fix(ci)"
     reviewers:
       - "lukislp"
-    open-pull-requests-limit: 2
+    # 10, not 2: this repo calls five lukislp/ci-workflows artifacts (auto-merge, dependency-review,
+    # lockfiles, semantic-release, deploy-key-push) that all move on every ci-workflows release.
+    # With a limit of 2 Dependabot could open only two of them per daily run - the rest waited
+    # for the next day even though auto-merge closes each PR within minutes - and on 2026-09-29
+    # the third bump of a run was reported "created" but never appeared at all. Every one of
+    # these PRs is a routine pin bump that auto-merge takes care of, so the limit protects nothing.
+    open-pull-requests-limit: 10
   - package-ecosystem: nuget
     directory: /
     schedule:
