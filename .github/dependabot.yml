@@ -16,6 +16,16 @@ updates:
     # the third bump of a run was reported "created" but never appeared at all. Every one of
     # these PRs is a routine pin bump that auto-merge takes care of, so the limit protects nothing.
     open-pull-requests-limit: 10
+    # GitHub applies a 3-day cooldown to github-actions updates by default (visible in the
+    # Dependabot job log as "cooldown days 3" even without this block). Kept for third-party
+    # actions - a freshly cut release of someone else's action should sit for a while - but
+    # pointless for our own lukislp/ci-workflows pins: those releases are our own merges, and
+    # the cooldown made Dependabot report v1.7.9 as "latest" while v1.7.15 was out, so the
+    # shared workflows lagged three days behind in every repo.
+    cooldown:
+      default-days: 3
+      exclude:
+        - "lukislp/ci-workflows/*"
   - package-ecosystem: nuget
     directory: /
     schedule:
