@@ -87,7 +87,7 @@ jobs:
       # Debug-signed, directly sideloadable APK (no Apple/Google account involved) -
       # see the README's Android build section.
       - run: cp src/StudyLife.App/bin/Release/net10.0-android/publish/*-Signed.apk StudyLife-android.apk
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: StudyLife-android
           path: StudyLife-android.apk
@@ -171,7 +171,7 @@ jobs:
           APP_PATH=$(find src/StudyLife.App/bin/Release/net10.0-maccatalyst -maxdepth 4 -name "*.app" -type d | head -1)
           echo "Found: $APP_PATH"
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" StudyLife-macos.zip
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: StudyLife-macos
           path: StudyLife-macos.zip
@@ -243,7 +243,7 @@ jobs:
         run: |
           $publishDir = Get-ChildItem -Path "src/StudyLife.App/bin/Release/net10.0-windows10.0.19041.0" -Recurse -Directory -Filter "publish" | Select-Object -First 1
           Compress-Archive -Path "$($publishDir.FullName)/*" -DestinationPath StudyLife-windows.zip
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: StudyLife-windows
           path: StudyLife-windows.zip
