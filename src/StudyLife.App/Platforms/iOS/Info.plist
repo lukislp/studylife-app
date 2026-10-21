@@ -73,6 +73,12 @@
             </array>
         </dict>
     </array>
+    <!-- Required next to CFBundleDocumentTypes (App Store Connect warning 90737). NO: the app
+         does not edit files in place; iOS hands it a copy (Documents/Inbox) and OpenUrl in
+         AppDelegate.cs reads the bytes once into the ICS import. NO is also what iOS assumed
+         while the key was missing, so behavior does not change. -->
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <false/>
     <!-- Return channel of the passkey login: the login page redirects, inside the system
          browser sheet, to studylife://auth?token=..., which ASWebAuthenticationSession
          intercepts. -->

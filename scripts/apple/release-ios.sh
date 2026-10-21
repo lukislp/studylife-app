@@ -63,6 +63,25 @@ SHELL_APP="native/ios-signing/build/Build/Products/Release-iphoneos/StudyLifeShe
 [ -d "$SHELL_APP/PlugIns" ] || fail "xcodebuild produced no app extensions"
 [ -d "$SHELL_APP/Watch" ] || fail "xcodebuild produced no Watch app"
 
+# App Store Connect rejects a watch app without the compiled launcher, notification and Short
+# Look icons (error 90394, e.g. "missing icon with name pattern '*98x98@2x.png'"). actool only
+# emits a size when its Contents.json entry has the matching role/size/subtype; a wrong subtype
+# is just an "unassigned child" warning. Fail here instead of after a 1.5 GB upload.
+check_watch_icons() {
+  local watch_app="$1" pattern missing=""
+  for pattern in 24x24@2x 27.5x27.5@2x 40x40@2x 44x44@2x 50x50@2x 86x86@2x 98x98@2x 108x108@2x; do
+    if [ -z "$(find "$watch_app" -maxdepth 1 -name "*$pattern.png" -print -quit)" ]; then
+      missing="$missing *$pattern.png"
+    fi
+  done
+  if [ -n "$missing" ]; then
+    echo "Icons in $watch_app:" >&2
+    find "$watch_app" -maxdepth 1 -name "*.png" >&2
+    fail "watch app lacks app icons:$missing (native/ios-signing/WatchShell/Assets.xcassets/AppIcon.appiconset)"
+  fi
+}
+for w in "$SHELL_APP"/Watch/*.app; do check_watch_icons "$w"; done
+
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 unzip -q "$IPA" -d "$WORK"

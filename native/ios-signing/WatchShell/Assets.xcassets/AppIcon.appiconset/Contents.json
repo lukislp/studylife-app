@@ -18,6 +18,14 @@
     },
     {
       "idiom": "watch",
+      "role": "notificationCenter",
+      "size": "33x33",
+      "scale": "2x",
+      "filename": "notificationCenter-45-2x.png",
+      "subtype": "45mm"
+    },
+    {
+      "idiom": "watch",
       "role": "companionSettings",
       "size": "29x29",
       "scale": "2x",
@@ -91,16 +99,8 @@
       "role": "quickLook",
       "size": "98x98",
       "scale": "2x",
-      "filename": "quickLook-40-2x.png",
-      "subtype": "40mm"
-    },
-    {
-      "idiom": "watch",
-      "role": "quickLook",
-      "size": "102x102",
-      "scale": "2x",
-      "filename": "quickLook-41-2x.png",
-      "subtype": "41mm"
+      "filename": "quickLook-42-2x.png",
+      "subtype": "42mm"
     },
     {
       "idiom": "watch",
