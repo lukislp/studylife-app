@@ -236,6 +236,113 @@ dotnet build -f net10.0-maccatalyst -c Release    # on the Mac
 dotnet build -f net10.0-windows10.0.19041.0       # on Windows (dev/test target)
 ```
 
+### Apple release signing (maintainers)
+
+Every release also builds the iPhone app (with its Apple Watch app) and the Mac app on a
+GitHub macOS runner, signs them and uploads them to **TestFlight** (internal testers only, no
+Beta App Review). The Mac release asset `StudyLife-macos.zip` is signed with Developer ID and
+notarized once the optional Developer ID secrets exist; until then it is ad-hoc signed as
+before. The local Mac pipeline above (direct device installs) is unchanged.
+
+| Job (`.github/workflows/ci-cd.yml`) | Runs on | What it does |
+| --- | --- | --- |
+| `test-ios` | every PR and push | builds the full iOS bundle (`scripts/apple/release-ios.sh`) and signs it ad hoc |
+| `test-maccatalyst` | every PR and push | builds the Mac app, signs both variants ad hoc with their real entitlements, launch-checks them (`scripts/apple/release-maccatalyst.sh`) |
+| `release-ios` | push to `main` with a release | App Store signature, upload of `StudyLife-ios.ipa` to TestFlight |
+| `release-macos` | push to `main` with a release | App Sandbox + Mac App Store profile + installer signature, upload of `StudyLife-macos.pkg` to TestFlight; `StudyLife-macos.zip` for the GitHub release |
+
+Both release jobs use the GitHub Environment **`release`** (required reviewer: the owner,
+deployment branches: `main` only). Its secrets never reach pull requests or other jobs, and
+each release waits until the owner approves the deployment (Actions run -> "Review
+deployments"). `semantic-release` waits for both jobs, like for `release-android`. A missing
+TestFlight secret fails the job and the release; nothing unsigned is uploaded.
+
+Versions: `CFBundleShortVersionString` is the release version, `CFBundleVersion` uses the
+Android versionCode formula (`major * 10000 + minor * 100 + patch`, 1.8.30 -> 10830), set on
+the app and on every embedded bundle (App Store Connect rejects mismatches). Each release
+therefore uploads a new, higher build number. `ITSAppUsesNonExemptEncryption` is `false` (the
+app only uses system TLS and hashing), so builds need no export-compliance answer.
+
+**Bundle identifiers and capabilities** (Certificates, Identifiers & Profiles -> Identifiers;
+the App Group is `group.app.studylife.mobile`):
+
+| Bundle ID | Bundle | Capabilities |
+| --- | --- | --- |
+| `app.studylife.mobile` | iOS app, also the Mac Catalyst app (same ID, one App Store Connect record with iOS and macOS) | App Groups, Push Notifications, HealthKit |
+| `app.studylife.mobile.widgets` | widgets / Live Activity extension | App Groups |
+| `app.studylife.mobile.share` | share extension | App Groups |
+| `app.studylife.mobile.watchkitapp` | Apple Watch app | App Groups |
+| `app.studylife.mobile.watchkitapp.widgets` | watch complications | App Groups |
+
+Associated Domains is not needed: the in-app passkey dialog is switched off (see "Paid
+developer account" above), so release builds do not carry that entitlement. The entitlements
+each bundle is signed with are in `scripts/apple/entitlements/` and
+`src/StudyLife.App/Platforms/MacCatalyst/Entitlements.plist`; `scripts/apple/signing.py`
+adds the identity keys from the profile and fails with the missing capability's name if a
+profile does not grant a declared entitlement.
+
+**Certificates and profiles:**
+
+| Item | Used for | Valid |
+| --- | --- | --- |
+| Apple Distribution certificate | iOS app + bundles, Mac TestFlight app | 1 year |
+| Mac Installer Distribution certificate (common name "3rd Party Mac Developer Installer") | the TestFlight `.pkg` | 1 year |
+| Developer ID Application certificate (optional) | notarized `StudyLife-macos.zip` | 5 years |
+| App Store profiles (iOS) for the five bundle IDs above | iOS | 1 year, or until the certificate is revoked |
+| Mac Catalyst App Store profile for `app.studylife.mobile` | Mac TestFlight | 1 year |
+| App Store Connect API key, role **Developer** (team key) | TestFlight upload (`altool`) and notarization (`notarytool`) | until revoked |
+
+Export each certificate with its private key as `.p12`. macOS only imports the legacy
+encryption: from OpenSSL 3 use `openssl pkcs12 -export -legacy ...` (Keychain Access exports
+are fine). `scripts/apple/keychain.sh` imports them into a temporary keychain together with
+Apple's intermediate certificates (downloaded, SHA-256 pinned) and deletes the keychain and
+every decoded file at the end of the job.
+
+**Secrets of the `release` environment** (all base64 values are single-line base64 of the
+file):
+
+| Secret | Content | Needed by |
+| --- | --- | --- |
+| `APPLE_TEAM_ID` | 10-character team ID | both |
+| `APPLE_DISTRIBUTION_P12_BASE64` / `APPLE_DISTRIBUTION_P12_PASSWORD` | Apple Distribution `.p12` and its password | both |
+| `APPLE_MAC_INSTALLER_P12_BASE64` / `APPLE_MAC_INSTALLER_P12_PASSWORD` | Mac Installer Distribution `.p12` | `release-macos` |
+| `APPLE_DEVELOPER_ID_P12_BASE64` / `APPLE_DEVELOPER_ID_P12_PASSWORD` | Developer ID Application `.p12` (optional, both or neither) | `release-macos` |
+| `APPLE_PROFILE_IOS_BASE64` | profile for `app.studylife.mobile` (iOS App Store) | `release-ios` |
+| `APPLE_PROFILE_IOS_WIDGETS_BASE64` | profile for `app.studylife.mobile.widgets` | `release-ios` |
+| `APPLE_PROFILE_IOS_SHARE_BASE64` | profile for `app.studylife.mobile.share` | `release-ios` |
+| `APPLE_PROFILE_WATCH_BASE64` | profile for `app.studylife.mobile.watchkitapp` | `release-ios` |
+| `APPLE_PROFILE_WATCH_WIDGETS_BASE64` | profile for `app.studylife.mobile.watchkitapp.widgets` | `release-ios` |
+| `APPLE_PROFILE_MAC_BASE64` | Mac Catalyst App Store profile for `app.studylife.mobile` | `release-macos` |
+| `ASC_API_KEY_P8_BASE64` | App Store Connect API key (`AuthKey_<id>.p8`) | both |
+| `ASC_API_KEY_ID` / `ASC_API_ISSUER_ID` | key ID and issuer ID of that key | both |
+
+The jobs check each profile before signing (team, bundle ID, platform, App Store type,
+expiry; a warning 30 days before it expires), so a wrong or expired file fails with a
+readable message instead of an App Store Connect rejection.
+
+**Mac sandbox.** The TestFlight Mac build runs in the App Sandbox with network client access,
+read access to files the user picks (`<InputFile>`: backup restore, ICS import) and printing.
+Voice dictation is not wired up on Mac Catalyst, so no microphone entitlement. The Developer ID
+build is not sandboxed (hardened runtime, `com.apple.security.cs.allow-jit` for the .NET
+runtime). The two Mac builds store their settings in different places (sandbox container vs.
+`~/Library`), so switching between them starts with a fresh server URL and sign-in.
+
+**Network egress.** The release jobs run Harden-Runner in block mode with Apple's upload,
+notary, timestamp and certificate hosts allowed. If Apple moves an upload host and a release
+job fails on a blocked domain ("Post Harden Runner" lists it), set the repository variable
+`APPLE_RELEASE_EGRESS_POLICY` to `audit`, re-run the failed job, add the host to the list and
+delete the variable again.
+
+**Re-runs.** TestFlight accepts each build number only once. If one release job succeeded and
+the other failed, use "Re-run failed jobs" - re-running a job that already uploaded fails with
+a duplicate build number.
+
+**Renewals.** Apple Distribution and Mac Installer certificates expire after a year; create new
+ones, regenerate all six profiles (a profile is bound to its certificate), and replace the
+`.p12`, password and profile secrets. Profiles alone also expire yearly - regenerate and
+replace them. The Developer ID certificate lasts five years. The API key stays valid until it
+is revoked.
+
 ## Architecture notes
 
 - `Components/AppRoot.razor` — root: first-launch dialog → boot sequence (session token,

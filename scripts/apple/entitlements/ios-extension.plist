@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Entitlements of every bundle embedded in the iOS app: widgets (app.studylife.mobile.widgets),
+     share extension (.share), watch app (.watchkitapp) and watch complications
+     (.watchkitapp.widgets). All of them only share the App Group with the phone app. -->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>group.app.studylife.mobile</string>
+    </array>
+</dict>
+</plist>
