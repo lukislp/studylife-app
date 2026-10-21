@@ -120,7 +120,9 @@ verify() {
     fail "$apk is signed with an Android debug certificate, not the given keystore."
   fi
   local cert_sha256
-  cert_sha256="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<< "$certs")"
+  # "Signer #1 certificate SHA-256 digest: ..." (older build-tools) or
+  # "V3.0 Signer: certificate SHA-256 digest: ..." (newer ones).
+  cert_sha256="$(sed -n -E 's/^(Signer #1|V[0-9.]+ Signer:) certificate SHA-256 digest: //p' <<< "$certs" | sed -n 1p)"
   [ -n "$cert_sha256" ] || fail "No signer certificate found in $apk."
 
   local badging
