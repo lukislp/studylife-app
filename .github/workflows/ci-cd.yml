@@ -97,7 +97,8 @@ jobs:
             -storepass throwaway-ci-only -keypass throwaway-ci-only
       - name: Build, sign and verify a test APK
         env:
-          APP_VERSION: 0.0.1
+          # Not 0.0.1: its versionCode 1 equals the csproj default and would prove nothing.
+          APP_VERSION: 9.87.65
           ANDROID_KEYSTORE: ${{ runner.temp }}/throwaway.keystore
           ANDROID_KEYSTORE_PASSWORD: throwaway-ci-only
           ANDROID_KEY_ALIAS: throwaway
