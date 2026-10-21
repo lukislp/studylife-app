@@ -114,6 +114,8 @@ jobs:
           # vars.APPLE_RELEASE_EGRESS_POLICY=audit is the escape hatch if Apple moves a host
           # (README, "Apple release signing"); a re-run of the failed job picks it up.
           egress-policy: ${{ vars.APPLE_RELEASE_EGRESS_POLICY || 'block' }}
+          # *.object-storage.apple.com: altool sends the binary to a regional host there
+          # (e.g. northamerica-1); blocked, the upload hangs without any output.
           allowed-endpoints: >
             aka.ms:443
             api.appstoreconnect.apple.com:443
@@ -128,6 +130,7 @@ jobs:
             github.com:22
             github.com:443
             *.githubapp.com:443
+            *.object-storage.apple.com:443
             ocsp.apple.com:80
             release-assets.githubusercontent.com:443
             results-receiver.actions.githubusercontent.com:443
@@ -198,9 +201,13 @@ jobs:
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
         run: bash scripts/apple/release-ios.sh
       - name: Upload to TestFlight
+        # upload-testflight.sh stops altool after 30 minutes with a clear error; this is the
+        # backstop (an ipa/pkg upload normally takes a few minutes).
+        timeout-minutes: 40
         env:
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+          UPLOAD_TIMEOUT_SECONDS: "1800"
         run: bash scripts/apple/upload-testflight.sh StudyLife-ios.ipa ios
       - name: Remove the signing keychain and decoded files
         if: always()
@@ -224,6 +231,9 @@ jobs:
           # vars.APPLE_RELEASE_EGRESS_POLICY=audit is the escape hatch if Apple moves a host
           # (README, "Apple release signing"); a re-run of the failed job picks it up.
           egress-policy: ${{ vars.APPLE_RELEASE_EGRESS_POLICY || 'block' }}
+          # *.object-storage.apple.com: altool sends the binary to a regional host there
+          # (e.g. northamerica-1); blocked, the upload hangs without any output.
+          # certs.apple.com:80: certificate chain lookups of productbuild/pkgutil for the .pkg.
           allowed-endpoints: >
             aka.ms:443
             api.apple-cloudkit.com:443
@@ -233,6 +243,7 @@ jobs:
             appstoreconnect.apple.com:443
             *.blob.core.windows.net:443
             builds.dotnet.microsoft.com:443
+            certs.apple.com:80
             contentdelivery.itunes.apple.com:443
             crl3.digicert.com:80
             dc.services.visualstudio.com:443
@@ -240,6 +251,7 @@ jobs:
             github.com:443
             *.githubapp.com:443
             notary-submissions-prod.s3-accelerate.amazonaws.com:443
+            *.object-storage.apple.com:443
             ocsp.apple.com:80
             release-assets.githubusercontent.com:443
             results-receiver.actions.githubusercontent.com:443
@@ -311,9 +323,13 @@ jobs:
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
         run: bash scripts/apple/release-maccatalyst.sh
       - name: Upload to TestFlight
+        # upload-testflight.sh stops altool after 30 minutes with a clear error; this is the
+        # backstop (an ipa/pkg upload normally takes a few minutes).
+        timeout-minutes: 40
         env:
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+          UPLOAD_TIMEOUT_SECONDS: "1800"
         run: bash scripts/apple/upload-testflight.sh StudyLife-macos.pkg macos
       # keychain.sh setup leaves DEVELOPER_ID_IDENTITY empty without the Developer ID secrets;
       # the ZIP is then ad-hoc signed and the release keeps the one ci-cd.yml attached.

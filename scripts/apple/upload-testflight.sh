@@ -7,6 +7,12 @@
 #
 # Environment: ASC_API_KEY_ID, ASC_API_ISSUER_ID, API_PRIVATE_KEYS_DIR (keychain.sh setup puts
 # AuthKey_<id>.p8 there; altool looks the key up by id in that directory).
+# Optional: UPLOAD_TIMEOUT_SECONDS (default 1800), ALTOOL_VERBOSE=1 (adds --verbose).
+#
+# altool retries a blocked or stalled connection silently for a very long time: with the
+# upload host northamerica-1.object-storage.apple.com blocked by the egress policy, a run
+# stayed silent for 26 minutes until it was cancelled. Hence no stdin, live output and a
+# hard time limit.
 set -euo pipefail
 
 file="${1:?file}"
@@ -15,30 +21,60 @@ platform="${2:?ios or macos}"
 [ -f "$file" ] || { echo "::error::$file does not exist"; exit 1; }
 [ -f "$API_PRIVATE_KEYS_DIR/AuthKey_$ASC_API_KEY_ID.p8" ] || { echo "::error::API key file missing"; exit 1; }
 
-out="$(mktemp)"
-trap 'rm -f "$out"' EXIT
-set +e
-xcrun altool --upload-app -f "$file" -t "$platform" \
-  --apiKey "$ASC_API_KEY_ID" --apiIssuer "$ASC_API_ISSUER_ID" --output-format json > "$out" 2>&1
-code=$?
-set -e
-cat "$out"
+timeout_s="${UPLOAD_TIMEOUT_SECONDS:-1800}"
+[[ "$timeout_s" =~ ^[1-9][0-9]*$ ]] || { echo "::error::UPLOAD_TIMEOUT_SECONDS must be a positive number"; exit 1; }
+verbose=()
+if [ "${ALTOOL_VERBOSE:-}" = 1 ]; then verbose=(--verbose); fi
 
-python3 - "$out" "$code" <<'PY'
+out="$(mktemp)"
+err="$(mktemp)"
+trap 'rm -f "$out" "$err"' EXIT
+echo "Uploading $file ($(du -h "$file" | cut -f1), $platform) with altool, time limit ${timeout_s}s ..."
+start=$SECONDS
+set +e
+# macOS has no GNU timeout: perl sets an alarm that survives exec, so SIGALRM ends altool
+# itself (xcrun execs the tool). Exit code 142 = 128 + SIGALRM. stdin from /dev/null so
+# nothing can wait for input; tee shows the output live instead of only at the end. stdout
+# (the JSON result) and stderr (log lines) go to separate files: altool's log lines landed in
+# the middle of the JSON before and made it unparseable.
+perl -e 'alarm shift @ARGV; exec @ARGV or die "exec failed: $!\n"' "$timeout_s" \
+  xcrun altool --upload-app -f "$file" -t "$platform" \
+  --apiKey "$ASC_API_KEY_ID" --apiIssuer "$ASC_API_ISSUER_ID" --output-format json \
+  "${verbose[@]+"${verbose[@]}"}" < /dev/null 2> >(tee "$err" >&2) | tee "$out"
+code=${PIPESTATUS[0]}
+set -e
+echo "altool finished after $((SECONDS - start))s with exit code $code"
+if [ "$code" -eq 142 ]; then
+  echo "::error::altool did not finish within ${timeout_s}s and was stopped. A silent hang usually" \
+    "means blocked network egress: check the Harden Runner insights of this job for dropped" \
+    "Apple hosts (allowed-endpoints in apple-testflight.yml), or re-run with ALTOOL_VERBOSE=1."
+  exit 1
+fi
+
+python3 - "$out" "$err" "$code" <<'PY'
 import json, re, sys
-text = open(sys.argv[1], encoding="utf-8", errors="replace").read()
-code = int(sys.argv[2])
-match = re.search(r"\{.*\}", text, re.S)
+texts = [open(f, encoding="utf-8", errors="replace").read() for f in sys.argv[1:3]]
+code = int(sys.argv[3])
 result = {}
-if match:
-    try:
-        result = json.loads(match.group(0))
-    except ValueError:
-        pass
+for text in texts:
+    # The pretty-printed result object: "{" and "}" at the start of a line (log lines, e.g.
+    # with --verbose, may contain braces of their own).
+    match = re.search(r"^\{.*^\}", text, re.S | re.M)
+    if match:
+        try:
+            result = json.loads(match.group(0))
+            break
+        except ValueError:
+            pass
+if not result:
+    # Unparseable: at least surface Apple's messages as annotations.
+    for text in texts:
+        for msg in sorted(set(re.findall(r'^\s*"message" : "(.*)",?$', text, re.M))):
+            print(f"::error::App Store Connect: {msg}")
 errors = result.get("product-errors") or []
 for e in errors:
     msg = e.get("message", "")
-    reason = (e.get("userInfo") or {}).get("NSLocalizedFailureReason", "")
+    reason = (e.get("user-info") or e.get("userInfo") or {}).get("NSLocalizedFailureReason", "")
     print(f"::error::App Store Connect: {msg} {reason}".strip())
 if code != 0 or errors or "success-message" not in result:
     if not errors:

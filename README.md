@@ -357,7 +357,10 @@ runtime). The two Mac builds store their settings in different places (sandbox c
 notary, timestamp and certificate hosts allowed. If Apple moves an upload host and a release
 job fails on a blocked domain ("Post Harden Runner" lists it), set the repository variable
 `APPLE_RELEASE_EGRESS_POLICY` to `audit`, re-run the failed job, add the host to the list in
-`apple-testflight.yml` and delete the variable again.
+`apple-testflight.yml` and delete the variable again. A blocked upload host does not fail fast:
+`altool` keeps retrying without output, so `upload-testflight.sh` stops it after 30 minutes
+(`UPLOAD_TIMEOUT_SECONDS`) with an error pointing here (run it with `ALTOOL_VERBOSE=1` for
+altool's own log).
 
 **Re-runs.** TestFlight accepts each build number only once. If one TestFlight job succeeded and
 the other failed, use "Re-run failed jobs". To upload a tag that already reached TestFlight
