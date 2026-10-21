@@ -202,7 +202,7 @@ jobs:
       # 10.0.401 (maccatalyst 26.5.10318) is the last set that builds on that image. Drop the
       # pin once the runner image lists an Xcode 27.x under /Applications.
       - run: dotnet workload install maui-maccatalyst --version 10.0.401
-      # The release path of release-macos with ad-hoc signatures: same build, inside-out
+      # The TestFlight path (apple-testflight.yml) with ad-hoc signatures: same build, inside-out
       # signing with the real entitlements (App Sandbox for TestFlight, hardened runtime for
       # the ZIP), a launch check of both variants and an unsigned .pkg - no secrets needed.
       - name: Build, sign ad hoc and launch-check both Mac variants
@@ -219,7 +219,7 @@ jobs:
           retention-days: 5
 
   # The whole iOS bundle (.NET app, Live Activity bridge, widgets, share extension, Apple
-  # Watch app) assembled and ad-hoc signed by the same script release-ios runs with the
+  # Watch app) assembled and ad-hoc signed by the same script testflight-ios runs with the
   # distribution certificate. Proves the build on every pull request without any secret.
   test-ios:
     if: github.event_name != 'workflow_dispatch'
@@ -537,158 +537,39 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
-  # TestFlight builds for iPhone (with the Apple Watch app) and Mac, signed in CI. Apple's
-  # secrets live only in the GitHub Environment "release" (required reviewer: the owner,
-  # deployment branches: main), so both jobs wait for that approval on every release.
-  # A missing TestFlight secret fails the job and with it the release, like release-android.
-  # CFBundleShortVersionString = the release version, CFBundleVersion = the Android
-  # versionCode formula (major * 10000 + minor * 100 + patch), unique per upload.
-  # Secrets, profiles and renewals: README, "Apple release signing".
-  release-ios:
-    needs: [get-version]
-    if: github.event_name == 'push' && needs.get-version.outputs.published == 'true'
-    runs-on: macos-latest
-    timeout-minutes: 90
-    environment: release
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
-        with:
-          # vars.APPLE_RELEASE_EGRESS_POLICY=audit is the escape hatch if Apple moves a host
-          # (README, "Apple release signing"); a re-run of the failed job picks it up.
-          egress-policy: ${{ vars.APPLE_RELEASE_EGRESS_POLICY || 'block' }}
-          allowed-endpoints: >
-            aka.ms:443
-            api.appstoreconnect.apple.com:443
-            api.github.com:443
-            api.nuget.org:443
-            appstoreconnect.apple.com:443
-            *.blob.core.windows.net:443
-            builds.dotnet.microsoft.com:443
-            contentdelivery.itunes.apple.com:443
-            crl3.digicert.com:80
-            dc.services.visualstudio.com:443
-            github.com:22
-            github.com:443
-            *.githubapp.com:443
-            ocsp.apple.com:80
-            release-assets.githubusercontent.com:443
-            results-receiver.actions.githubusercontent.com:443
-            run-actions-*.actions.githubusercontent.com:443
-            timestamp.apple.com:443
-            timestamp.apple.com:80
-            token.actions.githubusercontent.com:443
-            uploads.github.com:443
-            www.apple.com:443
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Apple signing secrets configured?
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
-          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
-          APPLE_PROFILE_IOS_BASE64: ${{ secrets.APPLE_PROFILE_IOS_BASE64 }}
-          APPLE_PROFILE_IOS_WIDGETS_BASE64: ${{ secrets.APPLE_PROFILE_IOS_WIDGETS_BASE64 }}
-          APPLE_PROFILE_IOS_SHARE_BASE64: ${{ secrets.APPLE_PROFILE_IOS_SHARE_BASE64 }}
-          APPLE_PROFILE_WATCH_BASE64: ${{ secrets.APPLE_PROFILE_WATCH_BASE64 }}
-          APPLE_PROFILE_WATCH_WIDGETS_BASE64: ${{ secrets.APPLE_PROFILE_WATCH_WIDGETS_BASE64 }}
-          ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
-          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
-          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
-        run: bash scripts/apple/keychain.sh check ios
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: lukislp/studylife
-          path: studylife
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
-        with:
-          dotnet-version: "10.0.x"
-      - run: sed -i '' -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-ios</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
-      - run: dotnet workload install maui-ios --version 10.0.401
-      - run: bash scripts/apple/install-xcodegen.sh
-      - name: Import certificates, profiles and the API key
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
-          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
-          APPLE_PROFILE_IOS_BASE64: ${{ secrets.APPLE_PROFILE_IOS_BASE64 }}
-          APPLE_PROFILE_IOS_WIDGETS_BASE64: ${{ secrets.APPLE_PROFILE_IOS_WIDGETS_BASE64 }}
-          APPLE_PROFILE_IOS_SHARE_BASE64: ${{ secrets.APPLE_PROFILE_IOS_SHARE_BASE64 }}
-          APPLE_PROFILE_WATCH_BASE64: ${{ secrets.APPLE_PROFILE_WATCH_BASE64 }}
-          APPLE_PROFILE_WATCH_WIDGETS_BASE64: ${{ secrets.APPLE_PROFILE_WATCH_WIDGETS_BASE64 }}
-          ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
-          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
-          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
-        run: bash scripts/apple/keychain.sh setup ios
-      - name: Build and sign for TestFlight
-        env:
-          SIGN_MODE: app-store
-          APP_VERSION: ${{ needs.get-version.outputs.version }}
-        run: bash scripts/apple/release-ios.sh
-      - name: Upload to TestFlight
-        env:
-          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
-          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
-        run: bash scripts/apple/upload-testflight.sh StudyLife-ios.ipa ios
-      - name: Remove the signing keychain and decoded files
-        if: always()
-        run: if [ -f scripts/apple/keychain.sh ]; then bash scripts/apple/keychain.sh cleanup; fi
-
-  # The Mac app: TestFlight (.pkg, App Sandbox) plus the StudyLife-macos.zip release asset -
-  # Developer ID signed and notarized once the optional Developer ID secrets exist, until then
-  # ad-hoc signed as before. Missing TestFlight secrets fail the release.
+  # The StudyLife-macos.zip release asset: the same build and inside-out signing as
+  # test-maccatalyst, ad hoc with the hardened runtime and the release version - no Apple
+  # secret, no environment, no approval, so a release never waits for the owner (Gatekeeper
+  # treats the app as unsigned, as before TestFlight existed). TestFlight builds and the
+  # Developer ID notarized ZIP are made on demand by .github/workflows/apple-testflight.yml,
+  # which replaces this ZIP in the release when it notarizes one (README, "Apple release signing").
   release-macos:
     needs: [get-version]
     if: github.event_name == 'push' && needs.get-version.outputs.published == 'true'
     runs-on: macos-latest
-    timeout-minutes: 90
-    environment: release
+    timeout-minutes: 30
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
         with:
-          # vars.APPLE_RELEASE_EGRESS_POLICY=audit is the escape hatch if Apple moves a host
-          # (README, "Apple release signing"); a re-run of the failed job picks it up.
-          egress-policy: ${{ vars.APPLE_RELEASE_EGRESS_POLICY || 'block' }}
+          egress-policy: block
           allowed-endpoints: >
+            *.githubapp.com:443
+            *.blob.core.windows.net:443
             aka.ms:443
-            api.apple-cloudkit.com:443
-            api.appstoreconnect.apple.com:443
             api.github.com:443
             api.nuget.org:443
-            appstoreconnect.apple.com:443
-            *.blob.core.windows.net:443
             builds.dotnet.microsoft.com:443
-            contentdelivery.itunes.apple.com:443
             crl3.digicert.com:80
             dc.services.visualstudio.com:443
             github.com:22
             github.com:443
-            *.githubapp.com:443
-            notary-submissions-prod.s3-accelerate.amazonaws.com:443
-            ocsp.apple.com:80
             release-assets.githubusercontent.com:443
             results-receiver.actions.githubusercontent.com:443
             run-actions-*.actions.githubusercontent.com:443
-            timestamp.apple.com:443
-            timestamp.apple.com:80
             token.actions.githubusercontent.com:443
             uploads.github.com:443
-            www.apple.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Apple signing secrets configured?
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
-          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
-          APPLE_MAC_INSTALLER_P12_BASE64: ${{ secrets.APPLE_MAC_INSTALLER_P12_BASE64 }}
-          APPLE_MAC_INSTALLER_P12_PASSWORD: ${{ secrets.APPLE_MAC_INSTALLER_P12_PASSWORD }}
-          APPLE_DEVELOPER_ID_P12_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_P12_BASE64 }}
-          APPLE_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
-          APPLE_PROFILE_MAC_BASE64: ${{ secrets.APPLE_PROFILE_MAC_BASE64 }}
-          ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
-          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
-          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
-        run: bash scripts/apple/keychain.sh check macos
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: lukislp/studylife
@@ -696,46 +577,23 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: "10.0.x"
+      # Same single-target patch and workload pin as test-maccatalyst (see the comments there).
       - run: sed -i '' -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-maccatalyst</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-maccatalyst --version 10.0.401
-      - name: Import certificates, profiles and the API key
+      - name: Build, sign ad hoc and launch-check the Mac app
         env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
-          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
-          APPLE_MAC_INSTALLER_P12_BASE64: ${{ secrets.APPLE_MAC_INSTALLER_P12_BASE64 }}
-          APPLE_MAC_INSTALLER_P12_PASSWORD: ${{ secrets.APPLE_MAC_INSTALLER_P12_PASSWORD }}
-          APPLE_DEVELOPER_ID_P12_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_P12_BASE64 }}
-          APPLE_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
-          APPLE_PROFILE_MAC_BASE64: ${{ secrets.APPLE_PROFILE_MAC_BASE64 }}
-          ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
-          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
-          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
-        run: bash scripts/apple/keychain.sh setup macos
-      - name: Build, sign, package (and notarize, if configured)
-        env:
-          SIGN_MODE: app-store
+          SIGN_MODE: adhoc
           APP_VERSION: ${{ needs.get-version.outputs.version }}
-          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
-          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
         run: bash scripts/apple/release-maccatalyst.sh
-      - name: Upload to TestFlight
-        env:
-          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
-          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
-        run: bash scripts/apple/upload-testflight.sh StudyLife-macos.pkg macos
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: StudyLife-macos
           path: StudyLife-macos.zip
           if-no-files-found: error
           retention-days: 5
-      - name: Remove the signing keychain and decoded files
-        if: always()
-        run: if [ -f scripts/apple/keychain.sh ]; then bash scripts/apple/keychain.sh cleanup; fi
 
   semantic-release:
-    needs: [get-version, release-android, release-ios, release-macos]
+    needs: [get-version, release-android, release-macos]
     if: github.event_name == 'push' && needs.get-version.outputs.published == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20

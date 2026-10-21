@@ -7,7 +7,8 @@
 #     signed exactly like the unsigned builds before (Gatekeeper asks once).
 #
 # Run from the repo root with ./studylife checked out and the csproj reduced to the single
-# net10.0-maccatalyst target (see test-maccatalyst / release-macos in ci-cd.yml).
+# net10.0-maccatalyst target (see test-maccatalyst / release-macos in ci-cd.yml and
+# testflight-macos in apple-testflight.yml).
 #
 # Environment:
 #   SIGN_MODE        app-store (release) or adhoc (pull requests: ad-hoc signatures with the
@@ -156,7 +157,7 @@ if [ -n "$DEVELOPER_ID_IDENTITY" ]; then
   smoke_launch "$ZIP_APP" "Developer ID, hardened runtime"
   summary_row "StudyLife-macos.zip" "Developer ID, notarized, stapled"
 else
-  [ "$SIGN_MODE" = app-store ] && echo "::notice::No Developer ID certificate configured - StudyLife-macos.zip is ad-hoc signed (unsigned for Gatekeeper), as before."
+  [ "$SIGN_MODE" = app-store ] && echo "::notice::No Developer ID certificate configured - StudyLife-macos.zip is ad-hoc signed (unsigned for Gatekeeper); the release keeps its own ad-hoc signed ZIP."
   # Ad hoc, with the hardened runtime, so pull requests prove the Developer ID entitlements
   # suffice; Gatekeeper treats the result as unsigned either way.
   sign_app "$ZIP_APP" - "$DEVID_ENTITLEMENTS" yes

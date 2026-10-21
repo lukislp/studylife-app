@@ -1,0 +1,406 @@
+name: Apple TestFlight
+
+# On demand only (Actions -> "Apple TestFlight" -> Run workflow): builds the iPhone app (with
+# the Apple Watch app) and the Mac app of an EXISTING release, signs them with the Apple
+# secrets of the GitHub Environment "release" and uploads them to TestFlight. Releases
+# themselves (ci-cd.yml) never wait for this workflow or for an approval; the owner decides
+# when a release goes to TestFlight. With the optional Developer ID secrets the Mac job also
+# notarizes StudyLife-macos.zip, and publish-notarized-zip replaces the ad-hoc signed ZIP of
+# that release with it. README, "Apple release signing".
+#
+# Only a tag of the form vX.Y.Z that has a GitHub release and whose commit is on main is
+# accepted; the jobs check out exactly that commit (no free-form ref, no caches).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to ship, e.g. v1.8.30. Empty means the latest release."
+        required: false
+        default: ""
+        type: string
+      rebuild:
+        description: "Only to upload the same tag again: 1-99 turns the build number into <code>.<n> (e.g. 10830.1). Empty for the first upload."
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  group: apple-testflight
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    # The environment "release" only deploys from main anyway; this fails a dispatch from
+    # another branch right away instead of after the approval.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      sha: ${{ steps.tag.outputs.sha }}
+      version: ${{ steps.tag.outputs.version }}
+      rebuild: ${{ steps.tag.outputs.rebuild }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+      - name: Resolve and validate the release tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_REBUILD: ${{ inputs.rebuild }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$*"; exit 1; }
+          TAG="$INPUT_TAG"
+          if [ -z "$TAG" ]; then
+            TAG="$(gh release view --repo "$REPO" --json tagName --jq .tagName)" || fail "There is no release yet."
+          fi
+          # Minor and patch stay below 100: the build number formula (scripts/build-android-apk.sh).
+          [[ "$TAG" =~ ^v(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]?)\.(0|[1-9][0-9]?)$ ]] \
+            || fail "'$TAG' is not a release tag of the form vMAJOR.MINOR.PATCH."
+          [[ "$INPUT_REBUILD" =~ ^([1-9][0-9]?)?$ ]] || fail "rebuild must be empty or a number from 1 to 99."
+          gh api "repos/$REPO/git/ref/tags/$TAG" --silent || fail "Tag $TAG does not exist."
+          gh release view "$TAG" --repo "$REPO" --json tagName --jq .tagName > /dev/null \
+            || fail "Tag $TAG has no GitHub release."
+          # The commit the tag points to (annotated tags are peeled).
+          SHA="$(gh api "repos/$REPO/commits/tags/$TAG" --jq .sha)"
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || fail "Could not resolve $TAG to a commit."
+          STATUS="$(gh api "repos/$REPO/compare/$SHA...main" --jq .status)"
+          case "$STATUS" in
+            ahead | identical) ;;
+            *) fail "$TAG ($SHA) is not on main." ;;
+          esac
+          {
+            echo "tag=$TAG"
+            echo "sha=$SHA"
+            echo "version=${TAG#v}"
+            echo "rebuild=$INPUT_REBUILD"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### TestFlight run"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Tag | \`$TAG\` |"
+            echo "| Commit | \`$SHA\` |"
+            echo "| Rebuild | \`${INPUT_REBUILD:-none}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # CFBundleShortVersionString = the release version, CFBundleVersion = the Android versionCode
+  # formula (major * 10000 + minor * 100 + patch), with ".<rebuild>" appended on a repeat upload.
+  testflight-ios:
+    needs: [resolve]
+    runs-on: macos-latest
+    timeout-minutes: 90
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          # vars.APPLE_RELEASE_EGRESS_POLICY=audit is the escape hatch if Apple moves a host
+          # (README, "Apple release signing"); a re-run of the failed job picks it up.
+          egress-policy: ${{ vars.APPLE_RELEASE_EGRESS_POLICY || 'block' }}
+          allowed-endpoints: >
+            aka.ms:443
+            api.appstoreconnect.apple.com:443
+            api.github.com:443
+            api.nuget.org:443
+            appstoreconnect.apple.com:443
+            *.blob.core.windows.net:443
+            builds.dotnet.microsoft.com:443
+            contentdelivery.itunes.apple.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            github.com:22
+            github.com:443
+            *.githubapp.com:443
+            ocsp.apple.com:80
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.apple.com:443
+            timestamp.apple.com:80
+            token.actions.githubusercontent.com:443
+            uploads.github.com:443
+            www.apple.com:443
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+      - name: Apple signing secrets configured?
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
+          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
+          APPLE_PROFILE_IOS_BASE64: ${{ secrets.APPLE_PROFILE_IOS_BASE64 }}
+          APPLE_PROFILE_IOS_WIDGETS_BASE64: ${{ secrets.APPLE_PROFILE_IOS_WIDGETS_BASE64 }}
+          APPLE_PROFILE_IOS_SHARE_BASE64: ${{ secrets.APPLE_PROFILE_IOS_SHARE_BASE64 }}
+          APPLE_PROFILE_WATCH_BASE64: ${{ secrets.APPLE_PROFILE_WATCH_BASE64 }}
+          APPLE_PROFILE_WATCH_WIDGETS_BASE64: ${{ secrets.APPLE_PROFILE_WATCH_WIDGETS_BASE64 }}
+          ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: bash scripts/apple/keychain.sh check ios
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: lukislp/studylife
+          path: studylife
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+      # Same single-target patch and workload pin as test-ios in ci-cd.yml (see the comments there).
+      - run: sed -i '' -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-ios</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
+      - run: dotnet workload install maui-ios --version 10.0.401
+      - run: bash scripts/apple/install-xcodegen.sh
+      - name: Build number
+        id: build
+        env:
+          APP_VERSION: ${{ needs.resolve.outputs.version }}
+          REBUILD: ${{ needs.resolve.outputs.rebuild }}
+        run: |
+          set -euo pipefail
+          code="$(bash scripts/build-android-apk.sh version-code "$APP_VERSION")"
+          echo "number=$code${REBUILD:+.$REBUILD}" >> "$GITHUB_OUTPUT"
+      - name: Import certificates, profiles and the API key
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
+          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
+          APPLE_PROFILE_IOS_BASE64: ${{ secrets.APPLE_PROFILE_IOS_BASE64 }}
+          APPLE_PROFILE_IOS_WIDGETS_BASE64: ${{ secrets.APPLE_PROFILE_IOS_WIDGETS_BASE64 }}
+          APPLE_PROFILE_IOS_SHARE_BASE64: ${{ secrets.APPLE_PROFILE_IOS_SHARE_BASE64 }}
+          APPLE_PROFILE_WATCH_BASE64: ${{ secrets.APPLE_PROFILE_WATCH_BASE64 }}
+          APPLE_PROFILE_WATCH_WIDGETS_BASE64: ${{ secrets.APPLE_PROFILE_WATCH_WIDGETS_BASE64 }}
+          ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: bash scripts/apple/keychain.sh setup ios
+      - name: Build and sign for TestFlight
+        env:
+          SIGN_MODE: app-store
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_VERSION: ${{ needs.resolve.outputs.version }}
+          BUILD_NUMBER: ${{ steps.build.outputs.number }}
+        run: bash scripts/apple/release-ios.sh
+      - name: Upload to TestFlight
+        env:
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: bash scripts/apple/upload-testflight.sh StudyLife-ios.ipa ios
+      - name: Remove the signing keychain and decoded files
+        if: always()
+        run: if [ -f scripts/apple/keychain.sh ]; then bash scripts/apple/keychain.sh cleanup; fi
+
+  # The Mac app: TestFlight (.pkg, App Sandbox). With the optional Developer ID secrets also the
+  # notarized StudyLife-macos.zip, handed to publish-notarized-zip as an artifact.
+  testflight-macos:
+    needs: [resolve]
+    runs-on: macos-latest
+    timeout-minutes: 90
+    environment: release
+    permissions:
+      contents: read
+    outputs:
+      notarized: ${{ steps.zip.outputs.notarized }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          # vars.APPLE_RELEASE_EGRESS_POLICY=audit is the escape hatch if Apple moves a host
+          # (README, "Apple release signing"); a re-run of the failed job picks it up.
+          egress-policy: ${{ vars.APPLE_RELEASE_EGRESS_POLICY || 'block' }}
+          allowed-endpoints: >
+            aka.ms:443
+            api.apple-cloudkit.com:443
+            api.appstoreconnect.apple.com:443
+            api.github.com:443
+            api.nuget.org:443
+            appstoreconnect.apple.com:443
+            *.blob.core.windows.net:443
+            builds.dotnet.microsoft.com:443
+            contentdelivery.itunes.apple.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            github.com:22
+            github.com:443
+            *.githubapp.com:443
+            notary-submissions-prod.s3-accelerate.amazonaws.com:443
+            ocsp.apple.com:80
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.apple.com:443
+            timestamp.apple.com:80
+            token.actions.githubusercontent.com:443
+            uploads.github.com:443
+            www.apple.com:443
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+      - name: Apple signing secrets configured?
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
+          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
+          APPLE_MAC_INSTALLER_P12_BASE64: ${{ secrets.APPLE_MAC_INSTALLER_P12_BASE64 }}
+          APPLE_MAC_INSTALLER_P12_PASSWORD: ${{ secrets.APPLE_MAC_INSTALLER_P12_PASSWORD }}
+          APPLE_DEVELOPER_ID_P12_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_P12_BASE64 }}
+          APPLE_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
+          APPLE_PROFILE_MAC_BASE64: ${{ secrets.APPLE_PROFILE_MAC_BASE64 }}
+          ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: bash scripts/apple/keychain.sh check macos
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: lukislp/studylife
+          path: studylife
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+      # Same single-target patch and workload pin as test-maccatalyst in ci-cd.yml.
+      - run: sed -i '' -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-maccatalyst</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
+      - run: dotnet workload install maui-maccatalyst --version 10.0.401
+      - name: Build number
+        id: build
+        env:
+          APP_VERSION: ${{ needs.resolve.outputs.version }}
+          REBUILD: ${{ needs.resolve.outputs.rebuild }}
+        run: |
+          set -euo pipefail
+          code="$(bash scripts/build-android-apk.sh version-code "$APP_VERSION")"
+          echo "number=$code${REBUILD:+.$REBUILD}" >> "$GITHUB_OUTPUT"
+      - name: Import certificates, profiles and the API key
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_DISTRIBUTION_P12_BASE64: ${{ secrets.APPLE_DISTRIBUTION_P12_BASE64 }}
+          APPLE_DISTRIBUTION_P12_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_P12_PASSWORD }}
+          APPLE_MAC_INSTALLER_P12_BASE64: ${{ secrets.APPLE_MAC_INSTALLER_P12_BASE64 }}
+          APPLE_MAC_INSTALLER_P12_PASSWORD: ${{ secrets.APPLE_MAC_INSTALLER_P12_PASSWORD }}
+          APPLE_DEVELOPER_ID_P12_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_P12_BASE64 }}
+          APPLE_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
+          APPLE_PROFILE_MAC_BASE64: ${{ secrets.APPLE_PROFILE_MAC_BASE64 }}
+          ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: bash scripts/apple/keychain.sh setup macos
+      - name: Build, sign, package (and notarize, if configured)
+        env:
+          SIGN_MODE: app-store
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_VERSION: ${{ needs.resolve.outputs.version }}
+          BUILD_NUMBER: ${{ steps.build.outputs.number }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: bash scripts/apple/release-maccatalyst.sh
+      - name: Upload to TestFlight
+        env:
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: bash scripts/apple/upload-testflight.sh StudyLife-macos.pkg macos
+      # keychain.sh setup leaves DEVELOPER_ID_IDENTITY empty without the Developer ID secrets;
+      # the ZIP is then ad-hoc signed and the release keeps the one ci-cd.yml attached.
+      - name: Notarized ZIP for the release?
+        id: zip
+        run: |
+          if [ -n "${DEVELOPER_ID_IDENTITY:-}" ]; then
+            echo "notarized=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "notarized=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.zip.outputs.notarized == 'true'
+        with:
+          name: notarized-macos-zip
+          path: StudyLife-macos.zip
+          if-no-files-found: error
+          retention-days: 1
+      - name: Remove the signing keychain and decoded files
+        if: always()
+        run: if [ -f scripts/apple/keychain.sh ]; then bash scripts/apple/keychain.sh cleanup; fi
+
+  # Replaces the release's ad-hoc signed StudyLife-macos.zip with the notarized one, signed the
+  # way ci-cd.yml signs release assets: a keyless Sigstore bundle (identity: this workflow on
+  # main) and a build provenance attestation, both uploaded next to the ZIP. No Apple secret
+  # and no checkout here; the only job with write access to the repository.
+  publish-notarized-zip:
+    needs: [resolve, testflight-macos]
+    if: needs.testflight-macos.outputs.notarized == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            *.githubapp.com:443
+            *.blob.core.windows.net:443
+            api.github.com:443
+            fulcio.sigstore.dev:443
+            github.com:443
+            rekor.sigstore.dev:443
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.sigstore.dev:443
+            token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
+            uploads.github.com:443
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: notarized-macos-zip
+          path: release-assets
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - name: Sign the notarized ZIP
+        run: |
+          set -euo pipefail
+          f=release-assets/StudyLife-macos.zip
+          cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"
+          cosign verify-blob --bundle "$f.sigstore.json" \
+            --certificate-identity-regexp '^https://github.com/lukislp/studylife-app/\.github/workflows/apple-testflight\.yml@refs/heads/main$' \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com "$f"
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        id: provenance
+        with:
+          subject-path: release-assets/StudyLife-macos.zip
+      - name: Replace the ZIP in the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+        run: |
+          set -euo pipefail
+          cp "$BUNDLE" release-assets/StudyLife-macos.zip.intoto.jsonl
+          gh release upload "$TAG" --repo "$REPO" --clobber \
+            "release-assets/StudyLife-macos.zip#macOS (Mac Catalyst, Developer ID signed and notarized)" \
+            release-assets/StudyLife-macos.zip.sigstore.json \
+            release-assets/StudyLife-macos.zip.intoto.jsonl
+          {
+            echo "### Release $TAG"
+            echo ""
+            echo "StudyLife-macos.zip replaced with the notarized build:"
+            echo "\`$(sha256sum release-assets/StudyLife-macos.zip | cut -d' ' -f1)\`"
+          } >> "$GITHUB_STEP_SUMMARY"

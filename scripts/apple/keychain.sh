@@ -1,6 +1,6 @@
 #!/bin/bash
-# Signing material for the Apple release jobs (.github/workflows/ci-cd.yml: release-ios,
-# release-macos). Everything lands in one throwaway directory under RUNNER_TEMP and in a
+# Signing material for the TestFlight jobs (.github/workflows/apple-testflight.yml: testflight-ios,
+# testflight-macos). Everything lands in one throwaway directory under RUNNER_TEMP and in a
 # temporary keychain; "cleanup" removes both and runs in an always() step.
 #
 #   scripts/apple/keychain.sh check  <ios|macos>   fail if a required secret is empty
@@ -14,7 +14,7 @@
 #   APPLE_MAC_INSTALLER_P12_BASE64      "Mac Installer Distribution" (macos only)
 #   APPLE_MAC_INSTALLER_P12_PASSWORD
 #   APPLE_DEVELOPER_ID_P12_BASE64       "Developer ID Application" (macos, OPTIONAL: without it
-#   APPLE_DEVELOPER_ID_P12_PASSWORD       StudyLife-macos.zip stays unsigned, TestFlight still runs)
+#   APPLE_DEVELOPER_ID_P12_PASSWORD       no notarized StudyLife-macos.zip, TestFlight still runs)
 #   APPLE_PROFILE_IOS_BASE64            App Store profiles, base64 (ios only) for
 #   APPLE_PROFILE_IOS_WIDGETS_BASE64      app.studylife.mobile, .widgets, .share,
 #   APPLE_PROFILE_IOS_SHARE_BASE64        .watchkitapp and .watchkitapp.widgets
@@ -67,7 +67,7 @@ check() {
     elif [ -n "${APPLE_DEVELOPER_ID_P12_BASE64:-}${APPLE_DEVELOPER_ID_P12_PASSWORD:-}" ]; then
       fail "Only one of APPLE_DEVELOPER_ID_P12_BASE64 / APPLE_DEVELOPER_ID_P12_PASSWORD is set - set both or neither."
     else
-      echo "::notice::No Developer ID secrets: StudyLife-macos.zip stays unsigned (as before), TestFlight upload is unaffected."
+      echo "::notice::No Developer ID secrets: no notarized StudyLife-macos.zip (the release keeps its ad-hoc signed one), TestFlight upload is unaffected."
     fi
   fi
 }
