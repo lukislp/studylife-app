@@ -622,6 +622,7 @@ jobs:
       - name: Build and sign for TestFlight
         env:
           SIGN_MODE: app-store
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APP_VERSION: ${{ needs.get-version.outputs.version }}
         run: bash scripts/apple/release-ios.sh
       - name: Upload to TestFlight
@@ -715,6 +716,7 @@ jobs:
       - name: Build, sign, package (and notarize, if configured)
         env:
           SIGN_MODE: app-store
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APP_VERSION: ${{ needs.get-version.outputs.version }}
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
