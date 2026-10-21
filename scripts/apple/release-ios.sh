@@ -63,22 +63,43 @@ SHELL_APP="native/ios-signing/build/Build/Products/Release-iphoneos/StudyLifeShe
 [ -d "$SHELL_APP/PlugIns" ] || fail "xcodebuild produced no app extensions"
 [ -d "$SHELL_APP/Watch" ] || fail "xcodebuild produced no Watch app"
 
-# App Store Connect rejects a watch app without the compiled launcher, notification and Short
-# Look icons (error 90394, e.g. "missing icon with name pattern '*98x98@2x.png'"). actool only
-# emits a size when its Contents.json entry has the matching role/size/subtype; a wrong subtype
-# is just an "unassigned child" warning. Fail here instead of after a 1.5 GB upload.
+# App Store Connect rejects a watch app without the launcher, notification and Short Look
+# icons (error 90394, e.g. "missing icon with name pattern '*98x98@2x.png' (Short Look 42mm)").
+# actool compiles a watch app's icons into Assets.car (no loose PNGs in the bundle) and only
+# for Contents.json entries with a valid role/size/subtype; a wrong subtype is merely an
+# "unassigned child" warning. So read the compiled catalog with assetutil and require the
+# pixel sizes below; fail here instead of after the upload.
 check_watch_icons() {
-  local watch_app="$1" pattern missing=""
-  for pattern in 24x24@2x 27.5x27.5@2x 40x40@2x 44x44@2x 50x50@2x 86x86@2x 98x98@2x 108x108@2x; do
-    if [ -z "$(find "$watch_app" -maxdepth 1 -name "*$pattern.png" -print -quit)" ]; then
-      missing="$missing *$pattern.png"
-    fi
-  done
-  if [ -n "$missing" ]; then
-    echo "Icons in $watch_app:" >&2
-    find "$watch_app" -maxdepth 1 -name "*.png" >&2
-    fail "watch app lacks app icons:$missing (native/ios-signing/WatchShell/Assets.xcassets/AppIcon.appiconset)"
-  fi
+  local watch_app="$1" info
+  info="$(mktemp)"
+  echo "Watch app $watch_app: CFBundleIconName=$(plutil -extract CFBundleIconName raw -o - "$watch_app/Info.plist" 2>/dev/null || echo '<none>')"
+  [ -f "$watch_app/Assets.car" ] || fail "watch app has no Assets.car (actool did not run for the watch target)"
+  xcrun assetutil --info "$watch_app/Assets.car" > "$info" || fail "assetutil could not read $watch_app/Assets.car"
+  python3 - "$info" "$watch_app" <<'PY' || fail "watch app icons incomplete (native/ios-signing/WatchShell/Assets.xcassets/AppIcon.appiconset)"
+import glob, json, os, re, sys
+entries = json.load(open(sys.argv[1]))
+icons = set()
+for e in entries if isinstance(entries, list) else []:
+    if isinstance(e, dict) and e.get("Name") == "AppIcon" and e.get("PixelWidth"):
+        icons.add(int(e["PixelWidth"]))
+# Loose PNGs count as well (older toolchains copy them next to the catalog).
+for f in glob.glob(os.path.join(sys.argv[2], "*.png")):
+    m = re.search(r"(\d+(?:\.\d+)?)x\1@(\d)x\.png$", f)
+    if m:
+        icons.add(round(float(m.group(1)) * int(m.group(2))))
+print("AppIcon pixel sizes in the watch app:", sorted(icons) or "none")
+required = {  # pixels: what App Store Connect names in 90394
+    48: "Notification Center 38mm (24x24@2x)", 55: "Notification Center 42mm (27.5x27.5@2x)",
+    80: "Home Screen 38mm (40x40@2x)", 88: "Home Screen 40mm (44x44@2x)",
+    100: "Home Screen 44mm (50x50@2x)", 172: "Short Look 38mm (86x86@2x)",
+    196: "Short Look 42mm (98x98@2x)", 216: "Short Look 44mm (108x108@2x)",
+}
+missing = [name for px, name in sorted(required.items()) if px not in icons]
+if missing:
+    print("::error::watch app lacks app icons: " + ", ".join(missing))
+    sys.exit(1)
+PY
+  rm -f "$info"
 }
 for w in "$SHELL_APP"/Watch/*.app; do check_watch_icons "$w"; done
 

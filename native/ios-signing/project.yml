@@ -72,6 +72,10 @@ targets:
       path: WidgetShell/Info.plist
       properties:
         CFBundleDisplayName: StudyLife
+        # XcodeGen writes CFBundleVersion "1" otherwise; the bundles must carry the parent app's
+        # build number (xcodebuild warns, App Store Connect rejects a mismatch).
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -100,6 +104,10 @@ targets:
       path: ShareShell/Info.plist
       properties:
         CFBundleDisplayName: StudyLife
+        # XcodeGen writes CFBundleVersion "1" otherwise; the bundles must carry the parent app's
+        # build number (xcodebuild warns, App Store Connect rejects a mismatch).
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -144,6 +152,10 @@ targets:
       path: WatchShell/Info.plist
       properties:
         CFBundleDisplayName: StudyLife
+        # XcodeGen writes CFBundleVersion "1" otherwise; the bundles must carry the parent app's
+        # build number (xcodebuild warns, App Store Connect rejects a mismatch).
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
         WKApplication: true
         WKCompanionAppBundleIdentifier: app.studylife.mobile
     settings:
@@ -180,6 +192,10 @@ targets:
       path: WatchWidgetsShell/Info.plist
       properties:
         CFBundleDisplayName: StudyLife
+        # XcodeGen writes CFBundleVersion "1" otherwise; the bundles must carry the parent app's
+        # build number (xcodebuild warns, App Store Connect rejects a mismatch).
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
