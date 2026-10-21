@@ -83,14 +83,32 @@ jobs:
       # command-line selection at all, and it's still just a local edit to this one file.
       - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-android</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-android
-      - run: dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release
-      # Debug-signed, directly sideloadable APK (no Apple/Google account involved) -
-      # see the README's Android build section.
-      - run: cp src/StudyLife.App/bin/Release/net10.0-android/publish/*-Signed.apk StudyLife-android.apk
+      # Runs the release build script (scripts/build-android-apk.sh) end to end - version
+      # injection, signing through env: password references, apksigner/aapt2 verification -
+      # with a throwaway key generated here, because release-android only runs after a merge.
+      # The resulting APK is a test build: its key exists for this run only, so it can never
+      # update an installed release. It stays downloadable for trying out a pull request,
+      # under an artifact name the release job's "StudyLife-*" download pattern does not match.
+      - name: Generate a throwaway signing key
+        run: |
+          keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/throwaway.keystore" \
+            -alias throwaway -keyalg RSA -keysize 2048 -validity 1 \
+            -dname "CN=StudyLife CI test build, O=not for distribution" \
+            -storepass throwaway-ci-only -keypass throwaway-ci-only
+      - name: Build, sign and verify a test APK
+        env:
+          APP_VERSION: 0.0.1
+          ANDROID_KEYSTORE: ${{ runner.temp }}/throwaway.keystore
+          ANDROID_KEYSTORE_PASSWORD: throwaway-ci-only
+          ANDROID_KEY_ALIAS: throwaway
+          APK_OUTPUT: StudyLife-android-test.apk
+          APK_SUMMARY_TITLE: test build, throwaway key
+        run: bash scripts/build-android-apk.sh build
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: StudyLife-android
-          path: StudyLife-android.apk
+          name: android-test-apk
+          path: StudyLife-android-test.apk
+          if-no-files-found: error
           retention-days: 5
 
   # Pure text comparison, no dotnet/workload install needed - catches the "works on web,
@@ -114,6 +132,20 @@ jobs:
           repository: lukislp/studylife
           path: studylife
       - run: bash scripts/check-native-parity.sh
+      # The Android versionCode formula must never go backwards (scripts/build-android-apk.sh).
+      - name: Check the Android versionCode scheme
+        run: |
+          set -euo pipefail
+          check() { [ "$(bash scripts/build-android-apk.sh version-code "$1")" = "$2" ] || { echo "::error::$1 should map to $2"; exit 1; }; }
+          check 1.8.28 10828
+          check 1.9.0 10900
+          check 2.0.0 20000
+          check 1.99.99 19999
+          for bad in 1.100.0 1.0.100 1.2 v1.2.3; do
+            if bash scripts/build-android-apk.sh version-code "$bad" 2>/dev/null; then
+              echo "::error::$bad must be rejected"; exit 1
+            fi
+          done
 
   test-maccatalyst:
     if: github.event_name != 'workflow_dispatch'
@@ -314,6 +346,7 @@ jobs:
       contents: write
     outputs:
       published: ${{ steps.semrel.outputs.new_release_published }}
+      version: ${{ steps.semrel.outputs.new_release_version }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
@@ -364,8 +397,89 @@ jobs:
         run: |
           echo "No releasable commits since the last tag (e.g. docs/ci/chore-only) - this is the expected, common case with Conventional Commits, not a failure. Downstream jobs below skip themselves via needs.get-version.outputs.published." | tee -a "$GITHUB_STEP_SUMMARY"
 
-  semantic-release:
+  # The release APK. Built only after get-version has determined the next version, so the
+  # app carries it (ApplicationDisplayVersion = versionName, ApplicationVersion = versionCode),
+  # and signed with the project's own release key, so every release installs as an update over
+  # the previous one. Android only accepts an update when the signing certificate is identical
+  # and the versionCode is higher - the per-runner debug key of test-android and the fixed
+  # versionCode 1 broke both. Secrets (README, "Release signing"): ANDROID_KEYSTORE_BASE64,
+  # ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and the optional ANDROID_KEY_PASSWORD
+  # (defaults to the keystore password). A missing secret fails this job and with it the
+  # release - a debug-signed APK is never published again.
+  release-android:
     needs: [get-version]
+    if: github.event_name == 'push' && needs.get-version.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            *.githubapp.com:443
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            github.com:22
+            github.com:443
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            token.actions.githubusercontent.com:443
+            uploads.github.com:443
+      - name: Release keystore configured?
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          missing=""
+          [ -n "$ANDROID_KEYSTORE_BASE64" ] || missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -n "$ANDROID_KEYSTORE_PASSWORD" ] || missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -n "$ANDROID_KEY_ALIAS" ] || missing="$missing ANDROID_KEY_ALIAS"
+          if [ -n "$missing" ]; then
+            echo "::error::Release signing secrets missing:$missing. No release is published without a release-signed APK (README, \"Release signing\")."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: lukislp/studylife
+          path: studylife
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+      # Same single-target patch as test-android (see the comment there).
+      - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-android</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
+      - run: dotnet workload install maui-android
+      # versionName = the release version, versionCode = major * 10000 + minor * 100 + patch
+      # (scripts/build-android-apk.sh documents the limits). The script decodes the keystore
+      # into RUNNER_TEMP, deletes it on exit, and fails on a debug certificate or a version
+      # mismatch; the job summary lists the signer certificate's SHA-256.
+      - name: Build, sign and verify the release APK
+        env:
+          APP_VERSION: ${{ needs.get-version.outputs.version }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          APK_OUTPUT: StudyLife-android.apk
+          APK_SUMMARY_TITLE: release
+        run: bash scripts/build-android-apk.sh build
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: StudyLife-android
+          path: StudyLife-android.apk
+          if-no-files-found: error
+          retention-days: 5
+
+  semantic-release:
+    needs: [get-version, release-android]
     if: github.event_name == 'push' && needs.get-version.outputs.published == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -449,6 +563,17 @@ jobs:
         uses: lukislp/ci-workflows/.github/actions/semantic-release@b27ffa9b31b66e8cd301c8188371a35ac95c67d8 # v1.7.38
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+      # The APK was built with the version get-version predicted. Only an out-of-band push that
+      # changes the bump level between the two jobs (the retry above) can make them differ.
+      - name: Check the published version against the APK's
+        if: steps.semrel.outcome == 'success' || steps.semrel_retry.outcome == 'success'
+        env:
+          PREDICTED: ${{ needs.get-version.outputs.version }}
+          PUBLISHED: ${{ steps.semrel.outputs.new_release_version || steps.semrel_retry.outputs.new_release_version }}
+        run: |
+          if [ "$PREDICTED" != "$PUBLISHED" ]; then
+            echo "::warning::Released $PUBLISHED, but the attached APK was built as $PREDICTED. The next release corrects it."
+          fi
       # Signed release assets (OpenSSF Scorecard "Signed-Releases"): a keyless Sigstore
       # signature bundle per asset plus one GitHub build-provenance attestation, uploaded next
       # to the assets so a download can be verified offline:

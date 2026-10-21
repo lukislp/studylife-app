@@ -70,6 +70,54 @@ Known limitation: "Add an additional passkey on THIS device" from Settings
 use the device-link flow (`/link`) instead, which works fully. Releasing/managing
 passkeys in Settings works normally (plain HTTP).
 
+## Installing on Android
+
+Every [release](https://github.com/lukislp/studylife-app/releases/latest) attaches
+`StudyLife-android.apk`, signed with the project's release key. Its versionName is the
+release version and its versionCode is derived from it (see
+[Release signing](#android-release-signing-maintainers)), so each newer release installs as
+an update over the previous one and keeps the app's data.
+
+1. Download `StudyLife-android.apk` from the latest release.
+2. Optionally verify it (next section).
+3. Open it on the phone and allow installing from this source when Android asks.
+
+To update, install the APK of a newer release the same way.
+
+> **One-time step for builds up to v1.8.28.** Those releases were debug-signed with a key
+> that changed on every build and all had versionCode 1, so Android refuses to update them
+> ("App not installed"). Uninstall that build once, then install the current release.
+> Uninstalling deletes the app's local data on the phone (server address, sign-in, local
+> settings); everything stored on your StudyLife server stays. From then on every update
+> installs in place.
+
+### Verifying the download
+
+Each asset has a keyless Sigstore signature bundle (`<asset>.sigstore.json`) and the release
+carries a build provenance attestation (`provenance.intoto.jsonl`), both minted by this
+repository's release workflow on `main`:
+
+```bash
+gh release download --repo lukislp/studylife-app --pattern 'StudyLife-android.apk*'
+cosign verify-blob --bundle StudyLife-android.apk.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/lukislp/studylife-app/\.github/workflows/ci-cd\.yml@refs/heads/main$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com StudyLife-android.apk
+gh attestation verify StudyLife-android.apk --repo lukislp/studylife-app
+sha256sum StudyLife-android.apk
+```
+
+The release run's job summary ("Android APK (release)") lists the APK's SHA-256 and the
+SHA-256 fingerprint of the signing certificate. The certificate is the same for every
+release; check it with either of:
+
+```bash
+apksigner verify --print-certs StudyLife-android.apk   # Android SDK build-tools
+keytool -printcert -jarfile StudyLife-android.apk      # any JDK
+```
+
+A different fingerprint than the previous release means the APK was not signed with the
+project's key - do not install it.
+
 ## Building
 
 Prerequisite: .NET 10 SDK + MAUI workloads (`dotnet workload restore` in the project
@@ -83,8 +131,54 @@ dotnet publish -f net10.0-android -c Release
 # APK: bin/Release/net10.0-android/publish/app.studylife.mobile-Signed.apk
 ```
 
-The APK is debug-signed and directly sideloadable (allow "unknown sources" on the
-device).
+A local build is signed with your machine's Android debug key: fine for sideloading onto your
+own device, but it cannot update a release install (and a release cannot update it), because
+Android only accepts an update signed with the same certificate.
+
+### Android release signing (maintainers)
+
+Pull requests build and sign a test APK with a throwaway key generated on the runner
+(artifact `android-test-apk`), which exercises the release path without any secret. Releases
+are built by the `release-android` job of `.github/workflows/ci-cd.yml` with
+`scripts/build-android-apk.sh` after semantic-release has determined the version:
+
+- versionName = the release version, e.g. `1.8.29`
+- versionCode = `major * 10000 + minor * 100 + patch` (1.8.29 -> 10829). Monotonic while minor
+  and patch stay below 100; the script rejects anything else instead of producing a lower
+  code. Android's limit (2100000000) leaves room up to major 209999. Builds up to v1.8.28 all
+  had versionCode 1.
+
+The job reads four repository secrets and fails - and with it the whole release - when one of
+the first three is missing; a debug-signed APK is never published:
+
+| Secret | Content |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | the keystore file, base64 encoded |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore password |
+| `ANDROID_KEY_ALIAS` | alias of the key inside the keystore |
+| `ANDROID_KEY_PASSWORD` | optional, key password; defaults to the keystore password |
+
+Creating the key once (any JDK's `keytool`; PKCS12 keystores use the store password for the
+key as well, so `ANDROID_KEY_PASSWORD` stays unset):
+
+```bash
+keytool -genkeypair -v -keystore studylife-release.jks -storetype PKCS12 \
+  -alias studylife -keyalg RSA -keysize 4096 -validity 10000 \
+  -dname "CN=StudyLife"
+keytool -list -v -keystore studylife-release.jks -alias studylife | grep SHA256   # fingerprint
+
+base64 -w0 studylife-release.jks | gh secret set ANDROID_KEYSTORE_BASE64 --repo lukislp/studylife-app
+gh secret set ANDROID_KEYSTORE_PASSWORD --repo lukislp/studylife-app   # prompts for the value
+gh secret set ANDROID_KEY_ALIAS --repo lukislp/studylife-app --body studylife
+```
+
+Keep the keystore file and its password backed up outside GitHub (a secret cannot be read
+back). Losing the key means no release can ever update existing installs again - every user
+would have to uninstall once more. `-validity 10000` (about 27 years) keeps the certificate
+valid for the app's lifetime.
+
+The job summary of each release run lists the signer certificate's SHA-256; it must match the
+fingerprint printed above.
 
 ### iOS — the production path (own signing pipeline on the Mac)
 
