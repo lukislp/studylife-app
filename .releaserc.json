@@ -15,7 +15,7 @@
           },
           {
             "path": "release-assets/StudyLife-macos.zip",
-            "label": "macOS (Mac Catalyst; Developer ID notarized once configured, otherwise unsigned - then right-click \"Open\" once, or `xattr -cr`)"
+            "label": "macOS (Mac Catalyst, unsigned for Gatekeeper - right-click \"Open\" once, or `xattr -cr`)"
           },
           {
             "path": "release-assets/StudyLife-windows.zip",

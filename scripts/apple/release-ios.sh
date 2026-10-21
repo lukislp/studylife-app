@@ -5,7 +5,8 @@
 # as it is; this script reuses build-ios-ipa.sh and the same xcodegen project.
 #
 # Run from the repo root with ./studylife checked out, the csproj reduced to the single
-# net10.0-ios target and XcodeGen installed (see test-ios / release-ios in ci-cd.yml).
+# net10.0-ios target and XcodeGen installed (see test-ios in ci-cd.yml and testflight-ios in
+# apple-testflight.yml).
 #
 # Environment:
 #   SIGN_MODE        app-store (TestFlight) or adhoc (pull requests, nothing secret needed)

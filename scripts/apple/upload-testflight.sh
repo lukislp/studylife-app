@@ -43,6 +43,10 @@ for e in errors:
 if code != 0 or errors or "success-message" not in result:
     if not errors:
         print(f"::error::altool upload failed (exit code {code}); see the output above")
+    # The build number comes from the release tag, so a second upload of the same tag is
+    # rejected as a duplicate (README, "Apple release signing", "Re-runs").
+    print("::notice::If App Store Connect rejected the build number as already used, this tag "
+          "was uploaded before: run 'Apple TestFlight' again with 'rebuild' set to 1 (then 2, ...).")
     sys.exit(1)
 print(result["success-message"])
 PY
