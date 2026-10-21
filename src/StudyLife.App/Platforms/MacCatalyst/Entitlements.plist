@@ -1,7 +1,8 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-    <!-- See https://aka.ms/maui-publish-app-store#add-entitlements for more information about adding entitlements.-->
+    <!-- See https://aka.ms/maui-publish-app-store#add-entitlements for more information about adding entitlements.
+         Also the entitlements of the TestFlight/Mac App Store build (scripts/apple/release-maccatalyst.sh). -->
     <dict>
         <!-- App Sandbox must be enabled to distribute a MacCatalyst app through the Mac App Store. -->
         <key>com.apple.security.app-sandbox</key>
@@ -9,6 +10,12 @@
         <!-- When App Sandbox is enabled, this value is required to open outgoing network connections. -->
         <key>com.apple.security.network.client</key>
         <true/>
+        <!-- <InputFile> in the shared UI (backup restore, ICS import) opens the system file panel;
+             the sandbox only lets the app read what the user picked there. -->
+        <key>com.apple.security.files.user-selected.read-only</key>
+        <true/>
+        <!-- Native print dialog (NativeBridge.PrintAsync, UIPrintInteractionController). -->
+        <key>com.apple.security.print</key>
+        <true/>
     </dict>
 </plist>
-

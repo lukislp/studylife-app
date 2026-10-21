@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Entitlements of the notarized Mac build (StudyLife-macos.zip, Developer ID, hardened
+     runtime, no App Sandbox). The TestFlight/Mac App Store build uses
+     src/StudyLife.App/Platforms/MacCatalyst/Entitlements.plist instead. -->
+<plist version="1.0">
+<dict>
+    <!-- The .NET runtime generates code at run time; the hardened runtime forbids that
+         without this entitlement. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+</dict>
+</plist>

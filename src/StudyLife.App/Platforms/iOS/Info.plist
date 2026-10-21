@@ -4,6 +4,10 @@
 <dict>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <!-- Only standard HTTPS (system TLS) and hashing, no own cryptography: exempt from export
+         compliance, so TestFlight builds need no manual answer. -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>UIDeviceFamily</key>
     <array>
         <integer>1</integer>

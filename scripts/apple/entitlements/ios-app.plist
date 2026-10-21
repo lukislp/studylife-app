@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Entitlements of the iOS app (app.studylife.mobile) in TestFlight/App Store builds.
+     scripts/apple/signing.py adds the identity keys from the App Store profile and fails if
+     the profile does not grant one of these. Mirrors native/ios-signing/project.yml, minus
+     associated-domains: the in-app passkey dialog is switched off (README, "Passkey login"),
+     so the App ID needs no Associated Domains capability. -->
+<plist version="1.0">
+<dict>
+    <!-- Live Activity remote push (NativePush, ApnsTokenStore). TestFlight uses production APNs. -->
+    <key>aps-environment</key>
+    <string>production</string>
+    <!-- HealthBridge.swift: Mindful Minutes (write), HRV/sleep/steps/VO2max (read). -->
+    <key>com.apple.developer.healthkit</key>
+    <true/>
+    <!-- Widget snapshot and share inbox shared with the extensions. -->
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>group.app.studylife.mobile</string>
+    </array>
+</dict>
+</plist>

@@ -9,7 +9,14 @@ bash native/ios-liveactivity/build.sh
 
 export PATH="$HOME/.dotnet:$PATH"
 cd src/StudyLife.App
-dotnet publish -f net10.0-ios -c Release -p:RuntimeIdentifier=ios-arm64 -p:EnableCodeSigning=false
+# CI (scripts/apple/release-ios.sh) reduces the csproj to the single net10.0-ios target first
+# (see test-ios in ci-cd.yml); -f would then only push TargetFramework into the referenced
+# projects as a global property, so it is left out there. IOS_PUBLISH_EXTRA_ARGS carries the
+# release version properties from the same script; empty on the Mac.
+FRAMEWORK_ARG="-f net10.0-ios"
+grep -q '<TargetFramework>net10.0-ios</TargetFramework>' StudyLife.App.csproj && FRAMEWORK_ARG=""
+# shellcheck disable=SC2086
+dotnet publish $FRAMEWORK_ARG -c Release -p:RuntimeIdentifier=ios-arm64 -p:EnableCodeSigning=false ${IOS_PUBLISH_EXTRA_ARGS:-}
 
 IPA="bin/Release/net10.0-ios/ios-arm64/publish/StudyLife.App.ipa"
 
