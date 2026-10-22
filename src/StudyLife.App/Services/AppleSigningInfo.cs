@@ -14,8 +14,13 @@ namespace StudyLife.App.Services;
 ///
 /// Mechanics: dev/ad-hoc/sideload builds carry their provisioning profile as
 /// embedded.mobileprovision in the bundle (a CMS-signed plist); we search it for the
-/// entitlement markers. App Store/TestFlight builds have no embedded profile - that case is
-/// irrelevant here, because an App Store build requires a paid account anyway.
+/// entitlement markers. App Store/TestFlight builds have NO embedded profile: Apple removes
+/// embedded.mobileprovision when it re-signs a build for distribution. On a real device a
+/// missing profile therefore means "installed from TestFlight/the App Store", and those builds
+/// are always signed by scripts/apple/release-ios.sh with the entitlements of
+/// scripts/apple/entitlements/ios-app.plist (aps-environment production, NO associated-domains).
+/// So HasPushEntitlement is true there, HasAssociatedDomains stays false. The simulator has no
+/// profile either and is treated like before (no push).
 /// For Associated Domains, the mere presence of the key as a marker is enough (not its value) -
 /// Apple never embeds the actual domain in the downloaded profile, it always just contains
 /// the placeholder "*" (the real domain is only added during local codesigning, see
@@ -50,13 +55,18 @@ public static class AppleSigningInfo
 
     /// <summary>True = signed with the aps-environment entitlement (remote push/APNs; also
     /// only possible with a paid developer account) - unlocks the app's APNs channel
-    /// (NativePush); free-signed builds don't even attempt registration.</summary>
+    /// (NativePush); free-signed builds don't even attempt registration. TestFlight/App Store
+    /// installs (no embedded profile on a real device) count as true.</summary>
     public static bool HasPushEntitlement
     {
         get
         {
 #if IOS
-            return _hasPushEntitlement ??= ProfileContainsMarkers("aps-environment");
+            // TestFlight/App Store builds carry no embedded.mobileprovision (see above) but are
+            // always signed with aps-environment - without this, NativePush never registered.
+            return _hasPushEntitlement ??= ReadProfile() is { } profile
+                ? profile.Contains("aps-environment")
+                : !IsSimulator;
 #else
             return false;
 #endif
@@ -64,22 +74,30 @@ public static class AppleSigningInfo
     }
 
 #if IOS
+    private static bool IsSimulator => ObjCRuntime.Runtime.Arch == ObjCRuntime.Arch.SIMULATOR;
+
     private static bool ProfileContainsMarkers(params string[] markers)
+        => ReadProfile() is { } profile && markers.All(profile.Contains);
+
+    /// <summary>embedded.mobileprovision as text, or null if the bundle has none (TestFlight/
+    /// App Store install or simulator); "" if it exists but cannot be read.</summary>
+    private static string? ReadProfile()
     {
         try
         {
             var path = NSBundle.MainBundle.PathForResource("embedded", "mobileprovision");
             if (path == null)
-                return false;
+                return null;
 
             // Latin1 = lossless byte-to-char mapping; the entitlements plist sits inside the
             // CMS container as plaintext XML, so a marker search is enough.
-            var raw = File.ReadAllText(path, System.Text.Encoding.Latin1);
-            return markers.All(raw.Contains);
+            return File.ReadAllText(path, System.Text.Encoding.Latin1);
         }
         catch
         {
-            return false; // when in doubt: treat like a free account (web/browser paths always work)
+            // A profile exists but cannot be read: not a TestFlight/App Store install, so
+            // treat it like a free account (web/browser paths always work).
+            return "";
         }
     }
 #endif

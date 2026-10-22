@@ -215,6 +215,8 @@ automatically fall back, no switch to forget and no separate code paths to maint
 - **Live Activity remote push** (lock screen countdown keeps updating through phase
   changes even while the app is fully terminated, via APNs) activates automatically once
   built with a paid, push-capable provisioning profile (`AppleSigningInfo.HasPushEntitlement`)
+  or installed from TestFlight/the App Store (Apple strips `embedded.mobileprovision` there;
+  those builds are always signed with `aps-environment`, `scripts/apple/entitlements/ios-app.plist`)
   and the server has an APNs key configured (`Apns__*`, see the main app repo's
   [`docs/ARCHITECTURE.md`](https://github.com/lukislp/studylife/blob/main/docs/ARCHITECTURE.md)). Live Activities themselves (the lock screen card while the
   app is open/backgrounded) work on **any** signing tier — only the remote-push keep-alive
