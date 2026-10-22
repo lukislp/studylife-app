@@ -48,9 +48,67 @@ echo "Mac Catalyst build: version $APP_VERSION, build $BUILD_NUMBER, signing $SI
 dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release \
   -p:ApplicationDisplayVersion="$APP_VERSION" -p:ApplicationVersion="$BUILD_NUMBER" \
   -p:EnableCodeSigning=false -p:CreatePackage=false
-BUILT_APP="$(find src/StudyLife.App/bin/Release/net10.0-maccatalyst -maxdepth 4 -name "*.app" -type d | head -1)"
-[ -n "$BUILT_APP" ] || fail "dotnet publish produced no .app"
+# Release builds for both RuntimeIdentifiers (maccatalyst-x64;maccatalyst-arm64, the MAUI
+# default): each RID gets an inner build under <rid>/ with only its thin executable and no
+# compiled asset catalog; the outer build merges them into the universal app directly under
+# net10.0-maccatalyst/ and compiles the icons (Assets.car, .icns, CFBundleIconName).
+# Picking an inner one shipped an x86_64-only app without icons (App Store Connect 90236,
+# 90794, 91167).
+OUT_DIR="src/StudyLife.App/bin/Release/net10.0-maccatalyst"
+echo "App bundles built:"
+find "$OUT_DIR" -maxdepth 3 -name "*.app" -type d | sed 's/^/  /'
+BUILT_APP="$(find "$OUT_DIR" -mindepth 1 -maxdepth 1 -name "*.app" -type d | head -1)"
+[ -n "$BUILT_APP" ] || fail "dotnet publish produced no universal .app directly in $OUT_DIR"
 echo "Built: $BUILT_APP"
+
+# The .icns. actool gets the complete mac icon set (Platforms/MacCatalyst/Assets.xcassets,
+# 16-512 pt at 1x/2x) and puts every size into Assets.car, but for Mac Catalyst
+# (--platform macosx --ui-framework-family uikit) it writes appicon.icns with only the
+# 16/32/128/256 px images. App Store Connect requires the 512pt@2x image in the .icns (90236),
+# so build it with iconutil from the same PNGs and replace actool's file.
+ICONSET_SRC="src/StudyLife.App/Platforms/MacCatalyst/Assets.xcassets/appicon.appiconset"
+icon_file="$(plutil -extract CFBundleIconFile raw -o - "$BUILT_APP/Contents/Info.plist" 2>/dev/null || echo appicon)"
+icon_file="${icon_file%.icns}"
+ICONSET_DIR="$(mktemp -d)/$icon_file.iconset"
+mkdir -p "$ICONSET_DIR"
+for pt in 16 32 128 256 512; do
+  cp "$ICONSET_SRC/mac-$pt@1x.png" "$ICONSET_DIR/icon_${pt}x${pt}.png"
+  cp "$ICONSET_SRC/mac-$pt@2x.png" "$ICONSET_DIR/icon_${pt}x${pt}@2x.png"
+done
+iconutil -c icns -o "$BUILT_APP/Contents/Resources/$icon_file.icns" "$ICONSET_DIR"
+plutil -replace CFBundleIconFile -string "$icon_file" "$BUILT_APP/Contents/Info.plist"
+
+# App Store Connect requirements for a Mac Catalyst app, checked before anything is signed:
+# an arm64 slice (91167), CFBundleIconName (90794) and an .icns with the 512pt@2x image (90236).
+check_mac_bundle() {
+  local app="$1" exe archs icon_name
+  exe="$app/Contents/MacOS/$(plutil -extract CFBundleExecutable raw -o - "$app/Contents/Info.plist")"
+  archs="$(lipo -archs "$exe")"
+  icon_name="$(plutil -extract CFBundleIconName raw -o - "$app/Contents/Info.plist" 2>/dev/null || true)"
+  echo "Executable architectures: $archs; CFBundleIconName: ${icon_name:-<none>}"
+  [[ " $archs " == *" arm64 "* ]] || fail "$exe has no arm64 slice ($archs) - App Store builds must be universal"
+  [[ " $archs " == *" x86_64 "* ]] || fail "$exe has no x86_64 slice ($archs) - Intel Macs could not run it"
+  [ -n "$icon_name" ] || fail "Info.plist has no CFBundleIconName (app icon not compiled into the asset catalog)"
+  [ -f "$app/Contents/Resources/Assets.car" ] || fail "the app has no Assets.car"
+  python3 - "$app/Contents/Resources" <<'PY' || fail "no .icns with a 1024x1024 (512pt@2x) image in $app/Contents/Resources"
+import glob, os, struct, sys
+found = {}
+for path in glob.glob(os.path.join(sys.argv[1], "*.icns")):
+    data = open(path, "rb").read()
+    types, pos = [], 8
+    while data[:4] == b"icns" and pos + 8 <= len(data):
+        kind, size = struct.unpack(">4sI", data[pos:pos + 8])
+        types.append(kind.decode("latin1"))
+        if size < 8:
+            break
+        pos += size
+    found[os.path.basename(path)] = types
+print("icns files:", found or "none")
+# ic10 = 1024x1024 (512x512@2x)
+sys.exit(0 if any("ic10" in t for t in found.values()) else 1)
+PY
+}
+check_mac_bundle "$BUILT_APP"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
