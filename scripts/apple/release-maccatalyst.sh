@@ -47,7 +47,11 @@ echo "Mac Catalyst build: version $APP_VERSION, build $BUILD_NUMBER, signing $SI
 # --- 1. One unsigned universal build ---
 dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release \
   -p:ApplicationDisplayVersion="$APP_VERSION" -p:ApplicationVersion="$BUILD_NUMBER" \
-  -p:EnableCodeSigning=false -p:CreatePackage=false
+  -p:EnableCodeSigning=false -p:CreatePackage=false   "-flp:LogFile=$ROOT/maccatalyst-build.log;Verbosity=detailed"
+# TEMPORARY DEBUG: how the app icon is compiled
+echo "::group::actool / app icon (debug)"
+grep -n -iE "actool|appicon|xcassets|XSAppIconAssets|AppIconSet|_AppIconName|ImageAsset" "$ROOT/maccatalyst-build.log" | cut -c1-600 | head -300 || true
+echo "::endgroup::"
 # Release builds for both RuntimeIdentifiers (maccatalyst-x64;maccatalyst-arm64, the MAUI
 # default): each RID gets an inner build under <rid>/ with only its thin executable and no
 # compiled asset catalog; the outer build merges them into the universal app directly under
@@ -73,6 +77,14 @@ check_mac_bundle() {
   [[ " $archs " == *" x86_64 "* ]] || fail "$exe has no x86_64 slice ($archs) - Intel Macs could not run it"
   [ -n "$icon_name" ] || fail "Info.plist has no CFBundleIconName (MauiIcon not compiled into the asset catalog)"
   [ -f "$app/Contents/Resources/Assets.car" ] || fail "the app has no Assets.car"
+  # Diagnostics: which icon sets went into the build, and what the compiled catalog holds.
+  find src/StudyLife.App/obj src/StudyLife.App/Platforms/MacCatalyst -path "*appiconset/Contents.json" 2>/dev/null \
+    | while read -r f; do
+        echo "Icon set $f:"
+        python3 -c 'import json,sys; [print("  ", i.get("idiom"), i.get("size"), i.get("scale"), i.get("filename")) for i in json.load(open(sys.argv[1])).get("images", [])]' "$f"
+      done
+  xcrun assetutil --info "$app/Contents/Resources/Assets.car" 2>/dev/null \
+    | python3 -c 'import json,sys; [print("  car:", e.get("Name"), e.get("AssetType"), e.get("Idiom"), e.get("PixelWidth")) for e in json.load(sys.stdin) if isinstance(e, dict) and e.get("PixelWidth")]' || true
   python3 - "$app/Contents/Resources" <<'PY' || fail "no .icns with a 1024x1024 (512pt@2x) image in $app/Contents/Resources"
 import glob, os, struct, sys
 found = {}
