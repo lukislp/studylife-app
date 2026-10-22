@@ -28,6 +28,9 @@ public static class AppLaunchTiming
     /// that part was ~0.5 s of dark screen the Stopwatch below reported as 200 ms.</summary>
     private static double? SinceProcessStartMs()
     {
+        // iOS doesn't implement Process.StartTime (it throws PlatformNotSupportedException);
+        // Mac Catalyst, Android and Windows do.
+        if (OperatingSystem.IsIOS() && !OperatingSystem.IsMacCatalyst()) return null;
         try
         {
             return (DateTime.Now - Process.GetCurrentProcess().StartTime).TotalMilliseconds;
