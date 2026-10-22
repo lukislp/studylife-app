@@ -44,7 +44,10 @@
 
     <ItemGroup>
         <!-- App icon and splash: same icon as the PWA (icon-512.png), background = app dark tone -->
-        <MauiIcon Include="Resources\AppIcon\appicon.png" Color="#0e0e0f" />
+        <!-- Mac Catalyst uses its own icon set (Platforms/MacCatalyst/Assets.xcassets, same art):
+             the MauiIcon-generated set has no mac image above 256 px, so actool built an
+             appicon.icns without the 512pt@2x image App Store Connect requires (90236). -->
+        <MauiIcon Include="Resources\AppIcon\appicon.png" Color="#0e0e0f" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'maccatalyst'" />
         <MauiSplashScreen Include="Resources\Splash\splash.png" Color="#0e0e0f" BaseSize="128,128" />
 
         <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
