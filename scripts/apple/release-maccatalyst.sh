@@ -47,11 +47,7 @@ echo "Mac Catalyst build: version $APP_VERSION, build $BUILD_NUMBER, signing $SI
 # --- 1. One unsigned universal build ---
 dotnet publish src/StudyLife.App/StudyLife.App.csproj -c Release \
   -p:ApplicationDisplayVersion="$APP_VERSION" -p:ApplicationVersion="$BUILD_NUMBER" \
-  -p:EnableCodeSigning=false -p:CreatePackage=false   "-flp:LogFile=$ROOT/maccatalyst-build.log;Verbosity=detailed"
-# TEMPORARY DEBUG: how the app icon is compiled
-echo "::group::actool / app icon (debug)"
-grep -n -iE "actool|appicon|xcassets|XSAppIconAssets|AppIconSet|_AppIconName|ImageAsset" "$ROOT/maccatalyst-build.log" | cut -c1-600 | head -300 || true
-echo "::endgroup::"
+  -p:EnableCodeSigning=false -p:CreatePackage=false
 # Release builds for both RuntimeIdentifiers (maccatalyst-x64;maccatalyst-arm64, the MAUI
 # default): each RID gets an inner build under <rid>/ with only its thin executable and no
 # compiled asset catalog; the outer build merges them into the universal app directly under
@@ -65,6 +61,23 @@ BUILT_APP="$(find "$OUT_DIR" -mindepth 1 -maxdepth 1 -name "*.app" -type d | hea
 [ -n "$BUILT_APP" ] || fail "dotnet publish produced no universal .app directly in $OUT_DIR"
 echo "Built: $BUILT_APP"
 
+# The .icns. actool gets the complete mac icon set (Platforms/MacCatalyst/Assets.xcassets,
+# 16-512 pt at 1x/2x) and puts every size into Assets.car, but for Mac Catalyst
+# (--platform macosx --ui-framework-family uikit) it writes appicon.icns with only the
+# 16/32/128/256 px images. App Store Connect requires the 512pt@2x image in the .icns (90236),
+# so build it with iconutil from the same PNGs and replace actool's file.
+ICONSET_SRC="src/StudyLife.App/Platforms/MacCatalyst/Assets.xcassets/appicon.appiconset"
+icon_file="$(plutil -extract CFBundleIconFile raw -o - "$BUILT_APP/Contents/Info.plist" 2>/dev/null || echo appicon)"
+icon_file="${icon_file%.icns}"
+ICONSET_DIR="$(mktemp -d)/$icon_file.iconset"
+mkdir -p "$ICONSET_DIR"
+for pt in 16 32 128 256 512; do
+  cp "$ICONSET_SRC/mac-$pt@1x.png" "$ICONSET_DIR/icon_${pt}x${pt}.png"
+  cp "$ICONSET_SRC/mac-$pt@2x.png" "$ICONSET_DIR/icon_${pt}x${pt}@2x.png"
+done
+iconutil -c icns -o "$BUILT_APP/Contents/Resources/$icon_file.icns" "$ICONSET_DIR"
+plutil -replace CFBundleIconFile -string "$icon_file" "$BUILT_APP/Contents/Info.plist"
+
 # App Store Connect requirements for a Mac Catalyst app, checked before anything is signed:
 # an arm64 slice (91167), CFBundleIconName (90794) and an .icns with the 512pt@2x image (90236).
 check_mac_bundle() {
@@ -75,16 +88,8 @@ check_mac_bundle() {
   echo "Executable architectures: $archs; CFBundleIconName: ${icon_name:-<none>}"
   [[ " $archs " == *" arm64 "* ]] || fail "$exe has no arm64 slice ($archs) - App Store builds must be universal"
   [[ " $archs " == *" x86_64 "* ]] || fail "$exe has no x86_64 slice ($archs) - Intel Macs could not run it"
-  [ -n "$icon_name" ] || fail "Info.plist has no CFBundleIconName (MauiIcon not compiled into the asset catalog)"
+  [ -n "$icon_name" ] || fail "Info.plist has no CFBundleIconName (app icon not compiled into the asset catalog)"
   [ -f "$app/Contents/Resources/Assets.car" ] || fail "the app has no Assets.car"
-  # Diagnostics: which icon sets went into the build, and what the compiled catalog holds.
-  find src/StudyLife.App/obj src/StudyLife.App/Platforms/MacCatalyst -path "*appiconset/Contents.json" 2>/dev/null \
-    | while read -r f; do
-        echo "Icon set $f:"
-        python3 -c 'import json,sys; [print("  ", i.get("idiom"), i.get("size"), i.get("scale"), i.get("filename")) for i in json.load(open(sys.argv[1])).get("images", [])]' "$f"
-      done
-  xcrun assetutil --info "$app/Contents/Resources/Assets.car" 2>/dev/null \
-    | python3 -c 'import json,sys; [print("  car:", e.get("Name"), e.get("AssetType"), e.get("Idiom"), e.get("PixelWidth")) for e in json.load(sys.stdin) if isinstance(e, dict) and e.get("PixelWidth")]' || true
   python3 - "$app/Contents/Resources" <<'PY' || fail "no .icns with a 1024x1024 (512pt@2x) image in $app/Contents/Resources"
 import glob, os, struct, sys
 found = {}
