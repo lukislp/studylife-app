@@ -26,9 +26,10 @@ public class AppDelegate : MauiUIApplicationDelegate
         return result;
     }
 
-    // Spotlight hit tapped (SpotlightIndexer): navigate to the matching list.
-    [Export("application:continueUserActivity:restorationHandler:")]
-    public bool ContinueUserActivity(UIApplication application, NSUserActivity userActivity, UIApplicationRestorationHandler completionHandler)
+    // Spotlight hit tapped (SpotlightIndexer): navigate to the matching list. Overrides MAUI's
+    // delegate method (which already carries the export); other activities go to the base
+    // implementation so MAUI's lifecycle handlers still see them.
+    public override bool ContinueUserActivity(UIApplication application, NSUserActivity userActivity, UIApplicationRestorationHandler completionHandler)
     {
         if (userActivity.ActivityType == CoreSpotlight.CSSearchableItem.ActionType
             && userActivity.UserInfo?[CoreSpotlight.CSSearchableItem.ActivityIdentifier] is NSString identifier)
@@ -39,7 +40,7 @@ public class AppDelegate : MauiUIApplicationDelegate
             IPlatformApplication.Current?.Services.GetService<DeepLinkService>()?.Dispatch(route);
             return true;
         }
-        return false;
+        return base.ContinueUserActivity(application, userActivity, completionHandler);
     }
 
     // Shared/opened .ics files ("Open with StudyLife", CFBundleDocumentTypes):
