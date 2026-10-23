@@ -25,6 +25,13 @@ private final class LiveActivityController {
 
     func update(title: String, state: TimerActivityAttributes.ContentState) {
         Task {
+            // Fresh process while a card is still on the lock screen (iOS terminated the
+            // suspended app, or the user swiped it away mid-session): take that card over
+            // instead of requesting a second one next to it. Otherwise the old card keeps its
+            // own push token, the server only knows the new one, and the old card freezes as a
+            // duplicate.
+            if self.activity == nil { self.adoptRunningActivity() }
+
             // Mode change = new title: end the old activity, request a new one (the title
             // is part of the immutable attributes).
             if let current = self.activity, self.activityTitle != title {
@@ -44,7 +51,9 @@ private final class LiveActivityController {
                 state: state,
                 staleDate: state.isPaused ? nil : state.endsAt.addingTimeInterval(12))
 
-            if let current = self.activity, current.activityState == .active {
+            // .stale counts as alive: the card is still shown, and an update brings it back
+            // from stale. Requesting a new one here would leave the stale card behind.
+            if let current = self.activity, Self.isShown(current) {
                 await current.update(content)
             } else {
                 do {
@@ -62,6 +71,24 @@ private final class LiveActivityController {
                 }
                 self.activityTitle = title
             }
+        }
+    }
+
+    private static func isShown(_ activity: Activity<TimerActivityAttributes>) -> Bool {
+        activity.activityState == .active || activity.activityState == .stale
+    }
+
+    /// Takes over a timer card that survived the previous app process and re-subscribes to
+    /// its push token, so the server keeps pushing to the card the user actually sees. Any
+    /// further cards (left over from older launches) are ended.
+    private func adoptRunningActivity() {
+        let shown = Activity<TimerActivityAttributes>.activities.filter(Self.isShown)
+        guard let survivor = shown.first else { return }
+        activity = survivor
+        activityTitle = survivor.attributes.title
+        observePushTokenUpdates()
+        for extra in shown.dropFirst() {
+            Task { await extra.end(nil, dismissalPolicy: .immediate) }
         }
     }
 
