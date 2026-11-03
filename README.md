@@ -257,7 +257,7 @@ unchanged.
 | `test-maccatalyst` | `ci-cd.yml`, every PR and push | builds the Mac app, signs both variants ad hoc with their real entitlements, launch-checks them (`scripts/apple/release-maccatalyst.sh`) |
 | `release-macos` | `ci-cd.yml`, push to `main` with a release | the same build with the release version, ad hoc signed (hardened runtime): `StudyLife-macos.zip` for the GitHub release |
 | `resolve` | `apple-testflight.yml`, manual | checks the chosen tag (form `vX.Y.Z`, has a GitHub release, its commit is on `main`) and resolves it to that commit |
-| `testflight-ios` | `apple-testflight.yml`, manual, approval | App Store signature, upload of `StudyLife-ios.ipa` to TestFlight |
+| `testflight-ios` | `apple-testflight.yml`, manual, approval | App Store signature, upload of `StudyLife-ios.ipa` to TestFlight (skipped with `macos_zip_only`) |
 | `testflight-macos` | `apple-testflight.yml`, manual, approval | App Sandbox + Mac App Store profile + installer signature, upload of `StudyLife-macos.pkg` to TestFlight; with the Developer ID secrets also a notarized `StudyLife-macos.zip` |
 | `publish-notarized-zip` | `apple-testflight.yml`, after `testflight-macos` | only with a notarized ZIP: signs it (Sigstore), attests its provenance and replaces the release's ad-hoc signed ZIP |
 
@@ -284,6 +284,64 @@ and `publish-notarized-zip` uploads it over the ZIP of that release together wit
 the other assets, and `gh attestation verify StudyLife-macos.zip --repo lukislp/studylife-app`
 finds the new attestation. Without the Developer ID secrets the run leaves the release
 untouched (notice in the run).
+
+*Only the notarized ZIP.* For a release that is already in TestFlight (or when only the Mac
+download matters), start "Apple TestFlight" with **`macos_zip_only`** ticked: `testflight-ios`
+is skipped, `testflight-macos` builds and signs the Mac app as usual but uploads nothing to
+TestFlight (so no `rebuild` is needed), and `publish-notarized-zip` replaces the release's ZIP.
+Approve the one `release` deployment. In this mode the Developer ID secrets are mandatory: the
+job fails at "Apple signing secrets configured?" with the names of the missing secrets
+instead of quietly falling back to the ad-hoc ZIP. The TestFlight secrets of `testflight-macos`
+are still needed, because the same script also builds the `.pkg`.
+
+*What the job checks before publishing.* `scripts/apple/release-maccatalyst.sh` signs the
+app inside out with the Developer ID Application identity, hardened runtime and secure
+timestamp (entitlements: `scripts/apple/entitlements/maccatalyst-developer-id.plist`),
+submits it with `xcrun notarytool submit --wait` (authenticated with the App Store Connect API
+key `ASC_API_KEY_*`; on rejection the notary log is printed), staples the ticket and then
+runs `codesign --verify --deep --strict`, `xcrun stapler validate` and
+`spctl -a -vvv -t exec` (must report `source=Notarized Developer ID`), launches the app once,
+zips it with `ditto -c -k --sequesterRsrc --keepParent`, unpacks that ZIP again and repeats the
+three checks on the unpacked app. Its SHA-256 is in the job summary of both jobs.
+
+No Developer ID provisioning profile is needed: the Mac app uses no capability that requires
+one (push, App Groups, HealthKit, Associated Domains and the widget/share/watch extensions
+exist on iOS only; the Mac build is a single bundle).
+
+*Verifying the notarized ZIP on a Mac:*
+
+```bash
+gh release download v1.8.46 --repo lukislp/studylife-app --pattern 'StudyLife-macos.zip*'
+cosign verify-blob --bundle StudyLife-macos.zip.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/lukislp/studylife-app/\.github/workflows/apple-testflight\.yml@refs/heads/main$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com StudyLife-macos.zip
+gh attestation verify StudyLife-macos.zip --repo lukislp/studylife-app
+shasum -a 256 StudyLife-macos.zip                  # matches the job summary
+mkdir unpacked && ditto -x -k StudyLife-macos.zip unpacked
+APP="$(find unpacked -maxdepth 1 -name '*.app' | head -1)"
+codesign --verify --deep --strict --verbose=2 "$APP"
+codesign -dvv "$APP" 2>&1 | grep -E '^(Authority|TeamIdentifier)='   # Developer ID Application: ..., team ID
+xcrun stapler validate "$APP"                      # "The validate action worked!"
+spctl -a -vvv -t exec "$APP"                       # "accepted", "source=Notarized Developer ID"
+```
+
+(Use the tag you want to check.) Opening the app by double-click must then work without any
+Gatekeeper warning, also offline (stapled ticket).
+
+*Rotating the Developer ID certificate.* Developer ID Application certificates are valid for
+several years (the expiry date is shown in Certificates, Identifiers & Profiles); renew it
+before it expires or right away if its key may have leaked. Create a new certificate signing
+request (Keychain Access or `openssl req -new -newkey rsa:2048 -nodes`), create a new
+**Developer ID Application** certificate from it in the portal (Account Holder role), export
+certificate + private key as `.p12` (legacy encryption, see below), and replace
+`APPLE_DEVELOPER_ID_P12_BASE64` (`base64 -i developer-id.p12 | tr -d '\n'`) and
+`APPLE_DEVELOPER_ID_P12_PASSWORD` in the environment `release`. Then run the workflow with
+`macos_zip_only` for the latest release to prove the new certificate. Already published ZIPs
+stay valid after the old certificate expires (the signature has a secure timestamp and the
+notarization ticket stays); only on a suspected key leak revoke the old certificate, which
+makes Gatekeeper reject everything signed with it, then republish the ZIPs that are still
+offered with a `macos_zip_only` run per release. Nothing else (profiles, API key) depends on
+this certificate.
 
 Versions: `CFBundleShortVersionString` is the release version, `CFBundleVersion` uses the
 Android versionCode formula (`major * 10000 + minor * 100 + patch`, 1.8.30 -> 10830), set on
@@ -315,7 +373,7 @@ profile does not grant a declared entitlement.
 | --- | --- | --- |
 | Apple Distribution certificate | iOS app + bundles, Mac TestFlight app | 1 year |
 | Mac Installer Distribution certificate (common name "3rd Party Mac Developer Installer") | the TestFlight `.pkg` | 1 year |
-| Developer ID Application certificate (optional) | notarized `StudyLife-macos.zip` | 5 years |
+| Developer ID Application certificate (optional; required for `macos_zip_only`) | notarized `StudyLife-macos.zip` | several years (see the portal) |
 | App Store profiles (iOS) for the five bundle IDs above | iOS | 1 year, or until the certificate is revoked |
 | Mac Catalyst App Store profile for `app.studylife.mobile` | Mac TestFlight | 1 year |
 | App Store Connect API key, role **Developer** (team key) | TestFlight upload (`altool`) and notarization (`notarytool`) | until revoked |
@@ -334,7 +392,7 @@ file):
 | `APPLE_TEAM_ID` | 10-character team ID | both |
 | `APPLE_DISTRIBUTION_P12_BASE64` / `APPLE_DISTRIBUTION_P12_PASSWORD` | Apple Distribution `.p12` and its password | both |
 | `APPLE_MAC_INSTALLER_P12_BASE64` / `APPLE_MAC_INSTALLER_P12_PASSWORD` | Mac Installer Distribution `.p12` | `testflight-macos` |
-| `APPLE_DEVELOPER_ID_P12_BASE64` / `APPLE_DEVELOPER_ID_P12_PASSWORD` | Developer ID Application `.p12` (optional, both or neither) | `testflight-macos` |
+| `APPLE_DEVELOPER_ID_P12_BASE64` / `APPLE_DEVELOPER_ID_P12_PASSWORD` | Developer ID Application `.p12` (optional, both or neither; required with `macos_zip_only`) | `testflight-macos` |
 | `APPLE_PROFILE_IOS_BASE64` | profile for `app.studylife.mobile` (iOS App Store) | `testflight-ios` |
 | `APPLE_PROFILE_IOS_WIDGETS_BASE64` | profile for `app.studylife.mobile.widgets` | `testflight-ios` |
 | `APPLE_PROFILE_IOS_SHARE_BASE64` | profile for `app.studylife.mobile.share` | `testflight-ios` |
@@ -375,8 +433,8 @@ points to `rebuild`.
 **Renewals.** Apple Distribution and Mac Installer certificates expire after a year; create new
 ones, regenerate all six profiles (a profile is bound to its certificate), and replace the
 `.p12`, password and profile secrets. Profiles alone also expire yearly - regenerate and
-replace them. The Developer ID certificate lasts five years. The API key stays valid until it
-is revoked.
+replace them. The Developer ID certificate lives longer and needs no profile (see "Rotating
+the Developer ID certificate" above). The API key stays valid until it is revoked.
 
 ## Architecture notes
 

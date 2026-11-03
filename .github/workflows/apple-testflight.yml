@@ -6,7 +6,9 @@ name: Apple TestFlight
 # themselves (ci-cd.yml) never wait for this workflow or for an approval; the owner decides
 # when a release goes to TestFlight. With the optional Developer ID secrets the Mac job also
 # notarizes StudyLife-macos.zip, and publish-notarized-zip replaces the ad-hoc signed ZIP of
-# that release with it. README, "Apple release signing".
+# that release with it. With macos_zip_only the run uploads nothing to TestFlight and only
+# produces that notarized ZIP (the Developer ID secrets are then required). README, "Apple
+# release signing".
 #
 # Only a tag of the form vX.Y.Z that has a GitHub release and whose commit is on main is
 # accepted; the jobs check out exactly that commit (no free-form ref, no caches).
@@ -23,6 +25,11 @@ on:
         required: false
         default: ""
         type: string
+      macos_zip_only:
+        description: "Only the notarized StudyLife-macos.zip for the release: no TestFlight upload, no iPhone build. Needs the Developer ID secrets."
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: apple-testflight
@@ -60,6 +67,7 @@ jobs:
           REPO: ${{ github.repository }}
           INPUT_TAG: ${{ inputs.tag }}
           INPUT_REBUILD: ${{ inputs.rebuild }}
+          ZIP_ONLY: ${{ inputs.macos_zip_only }}
         run: |
           set -euo pipefail
           fail() { echo "::error::$*"; exit 1; }
@@ -96,12 +104,14 @@ jobs:
             echo "| Tag | \`$TAG\` |"
             echo "| Commit | \`$SHA\` |"
             echo "| Rebuild | \`${INPUT_REBUILD:-none}\` |"
+            echo "| Notarized macOS ZIP only | \`$ZIP_ONLY\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # CFBundleShortVersionString = the release version, CFBundleVersion = the Android versionCode
   # formula (major * 10000 + minor * 100 + patch), with ".<rebuild>" appended on a repeat upload.
   testflight-ios:
     needs: [resolve]
+    if: ${{ !inputs.macos_zip_only }}
     runs-on: macos-latest
     timeout-minutes: 90
     environment: release
@@ -214,7 +224,9 @@ jobs:
         run: if [ -f scripts/apple/keychain.sh ]; then bash scripts/apple/keychain.sh cleanup; fi
 
   # The Mac app: TestFlight (.pkg, App Sandbox). With the optional Developer ID secrets also the
-  # notarized StudyLife-macos.zip, handed to publish-notarized-zip as an artifact.
+  # notarized StudyLife-macos.zip, handed to publish-notarized-zip as an artifact. With
+  # macos_zip_only the .pkg is still built and signed (same script) but not uploaded, and
+  # REQUIRE_DEVELOPER_ID fails the job right away if the Developer ID secrets are missing.
   testflight-macos:
     needs: [resolve]
     runs-on: macos-latest
@@ -278,6 +290,7 @@ jobs:
           ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+          REQUIRE_DEVELOPER_ID: ${{ inputs.macos_zip_only }}
         run: bash scripts/apple/keychain.sh check macos
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -312,6 +325,7 @@ jobs:
           ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+          REQUIRE_DEVELOPER_ID: ${{ inputs.macos_zip_only }}
         run: bash scripts/apple/keychain.sh setup macos
       - name: Build, sign, package (and notarize, if configured)
         env:
@@ -321,8 +335,10 @@ jobs:
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+          REQUIRE_DEVELOPER_ID: ${{ inputs.macos_zip_only }}
         run: bash scripts/apple/release-maccatalyst.sh
       - name: Upload to TestFlight
+        if: ${{ !inputs.macos_zip_only }}
         # upload-testflight.sh stops altool after 30 minutes with a clear error; this is the
         # backstop (an ipa/pkg upload normally takes a few minutes).
         timeout-minutes: 40

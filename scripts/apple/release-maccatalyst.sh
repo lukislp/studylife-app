@@ -164,6 +164,19 @@ smoke_launch() {
   echo "Launch check passed ($2)"
 }
 
+# verify_notarized <app> <label>: the checks a user's Mac makes - a valid, strict signature of
+# every nested bundle, a stapled ticket, and Gatekeeper accepting it as notarized Developer ID.
+verify_notarized() {
+  local app="$1" label="$2"
+  echo "Verifying $label"
+  codesign --verify --deep --strict --verbose=2 "$app" || fail "codesign rejects the $label"
+  codesign -dvv "$app" 2>&1 | grep -E "^(Authority|TeamIdentifier|Runtime Version|Timestamp)=" || true
+  xcrun stapler validate "$app" || fail "the $label carries no valid notarization ticket"
+  spctl -a -vvv -t exec "$app" 2>&1 | tee "$WORK/spctl.log"
+  grep -q "source=Notarized Developer ID" "$WORK/spctl.log" \
+    || fail "Gatekeeper does not accept the $label as notarized Developer ID"
+}
+
 summary_row() { [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "| $1 | $2 |" >> "$GITHUB_STEP_SUMMARY" || true; }
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
   { echo "### macOS ($SIGN_MODE)"; echo ""; echo "| | |"; echo "| --- | --- |"; } >> "$GITHUB_STEP_SUMMARY"
@@ -209,12 +222,12 @@ if [ -n "$DEVELOPER_ID_IDENTITY" ]; then
     fail "notarization did not succeed (status '${status:-none}')"
   fi
   xcrun stapler staple "$ZIP_APP"
-  xcrun stapler validate "$ZIP_APP"
-  spctl -a -vv -t exec "$ZIP_APP" 2>&1 | tee "$WORK/spctl.log"
-  grep -q "source=Notarized Developer ID" "$WORK/spctl.log" || fail "Gatekeeper does not accept the app as notarized"
+  verify_notarized "$ZIP_APP" "stapled app"
   smoke_launch "$ZIP_APP" "Developer ID, hardened runtime"
   summary_row "StudyLife-macos.zip" "Developer ID, notarized, stapled"
 else
+  [ "${REQUIRE_DEVELOPER_ID:-}" = true ] \
+    && fail "REQUIRE_DEVELOPER_ID=true but no Developer ID identity was imported (APPLE_DEVELOPER_ID_P12_BASE64 / APPLE_DEVELOPER_ID_P12_PASSWORD)"
   [ "$SIGN_MODE" = app-store ] && echo "::notice::No Developer ID certificate configured - StudyLife-macos.zip is ad-hoc signed (unsigned for Gatekeeper); the release keeps its own ad-hoc signed ZIP."
   # Ad hoc, with the hardened runtime, so pull requests prove the Developer ID entitlements
   # suffice; Gatekeeper treats the result as unsigned either way.
@@ -224,5 +237,12 @@ else
 fi
 rm -f "$ZIP_OUTPUT"
 ditto -c -k --sequesterRsrc --keepParent "$ZIP_APP" "$ZIP_OUTPUT"
+if [ -n "$DEVELOPER_ID_IDENTITY" ]; then
+  # What a user gets: unpack the published ZIP again and check the app inside it, so a ZIP
+  # that lost the stapled ticket or broke the signature never reaches the release.
+  mkdir -p "$WORK/unzipped"
+  ditto -x -k "$ZIP_OUTPUT" "$WORK/unzipped"
+  verify_notarized "$WORK/unzipped/$(basename "$ZIP_APP")" "app unpacked from StudyLife-macos.zip"
+fi
 summary_row "StudyLife-macos.zip SHA-256" "\`$(shasum -a 256 "$ZIP_OUTPUT" | cut -d' ' -f1)\`"
 echo "Done: $PKG_OUTPUT, $ZIP_OUTPUT"
