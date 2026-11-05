@@ -64,7 +64,7 @@ jobs:
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "10.0.x"
       # maui-ios/maui-maccatalyst aren't even installable on Linux ("Workload ID maui-ios
@@ -188,7 +188,7 @@ jobs:
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "10.0.x"
       # BSD/macOS sed requires -i to take an explicit backup-suffix argument (even '') -
@@ -255,7 +255,7 @@ jobs:
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "10.0.x"
       # Same single-target patch and workload pin as test-maccatalyst (see the comments there).
@@ -304,7 +304,7 @@ jobs:
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "10.0.x"
       # The Windows TFM is added by a *second*, conditional <TargetFrameworks> element
@@ -378,7 +378,7 @@ jobs:
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "10.0.x"
       - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-android</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
@@ -510,7 +510,7 @@ jobs:
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "10.0.x"
       # Same single-target patch as test-android (see the comment there).
@@ -574,7 +574,7 @@ jobs:
         with:
           repository: lukislp/studylife
           path: studylife
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "10.0.x"
       # Same single-target patch and workload pin as test-maccatalyst (see the comments there).
