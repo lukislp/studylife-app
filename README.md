@@ -142,7 +142,7 @@ Android only accepts an update signed with the same certificate.
 Pull requests build and sign a test APK with a throwaway key generated on the runner
 (artifact `android-test-apk`), which exercises the release path without any secret. Releases
 are built by the `release-android` job of `.github/workflows/ci-cd.yml` with
-`scripts/build-android-apk.sh` after semantic-release has determined the version:
+`scripts/build-android-apk.sh` after the dry run of the lktec-bot release module has determined the version:
 
 - versionName = the release version, e.g. `1.8.29`
 - versionCode = `major * 10000 + minor * 100 + patch` (1.8.29 -> 10829). Monotonic while minor

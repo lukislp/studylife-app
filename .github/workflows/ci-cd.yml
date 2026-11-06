@@ -19,6 +19,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -391,71 +392,17 @@ jobs:
   get-version:
     needs: [test-android, test-ios, test-maccatalyst, test-windows, test-lint, test-native-parity]
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Dry run: works out the next version from the Conventional Commits (rules in
+    # .github/lktec-bot.yml) and creates nothing. `release` below cuts the tag.
     concurrency:
       group: studylife-app-release-chain
       cancel-in-progress: false
-    # @semantic-release/github's verifyConditions step checks the token has repo push access
-    # (contents: write) even during a dry run - a read-only token fails that check outright.
-    # issues:write/pull-requests:write are NOT needed here: those only get exercised by the
-    # publish/success/fail lifecycle steps, which dry_run: true skips entirely - confirmed
-    # live on the studylife-ai sibling repo (2026-08-12).
-    permissions:
-      contents: write
-    outputs:
-      published: ${{ steps.semrel.outputs.new_release_published }}
-      version: ${{ steps.semrel.outputs.new_release_version }}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
-        with:
-          egress-policy: block
-          allowed-endpoints: >
-            *.githubapp.com:443
-            *.blob.core.windows.net:443
-            aka.ms:443
-            api.github.com:443
-            api.nuget.org:443
-            builds.dotnet.microsoft.com:443
-            crl3.digicert.com:80
-            dc.services.visualstudio.com:443
-            fulcio.sigstore.dev:443
-            github.com:22
-            github.com:443
-            registry.npmjs.org:443
-            rekor.sigstore.dev:443
-            release-assets.githubusercontent.com:443
-            results-receiver.actions.githubusercontent.com:443
-            run-actions-*.actions.githubusercontent.com:443
-            timestamp.sigstore.dev:443
-            token.actions.githubusercontent.com:443
-            tuf-repo-cdn.sigstore.dev:443
-            uploads.github.com:443
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      # Ruleset bypass for the release commit (2026-09-11 main-protection rollout): main is
-      # protected by a ruleset (pull request + green test stage) that the GitHub Actions app
-      # cannot be a bypass actor for on a personal repository, so semantic-release pushes over
-      # SSH as a write-enabled DEPLOY KEY instead, which can. No-op while the secret is unset -
-      # the push then goes through the GITHUB_TOKEN https remote exactly as before. Needed in
-      # get-version too: @semantic-release/git's verifyConditions runs `git push --dry-run`
-      # even in dry-run mode. Same mechanism as lukislp/studylife's ci-cd.yml.
-      - name: Push as the semantic-release deploy key (if configured)
-        uses: lukislp/ci-workflows/.github/actions/deploy-key-push@ea532e9b173cf0e512c9d54c18886eebd0b0d1ab # v1.8.24
-        with:
-          deploy-key: ${{ secrets.SEMANTIC_RELEASE_DEPLOY_KEY }}
-      - id: semrel
-        uses: lukislp/ci-workflows/.github/actions/semantic-release@ea532e9b173cf0e512c9d54c18886eebd0b0d1ab # v1.8.24
-        with:
-          dry-run: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: No release needed for this push
-        if: steps.semrel.outputs.new_release_published != 'true'
-        run: |
-          echo "No releasable commits since the last tag (e.g. docs/ci/chore-only) - this is the expected, common case with Conventional Commits, not a failure. Downstream jobs below skip themselves via needs.get-version.outputs.published." | tee -a "$GITHUB_STEP_SUMMARY"
-
+    uses: lukislp/lktec-bot/.github/workflows/release.yml@0c0eccf67f1f06f21fd110626322a92c92e4cb82 # v0.1.1
+    with:
+      dry-run: true
+    secrets:
+      app-id: ${{ secrets.LKTEC_BOT_APP_ID }}
+      private-key: ${{ secrets.LKTEC_BOT_PRIVATE_KEY }}
   # The release APK. Built only after get-version has determined the next version, so the
   # app carries it (ApplicationDisplayVersion = versionName, ApplicationVersion = versionCode),
   # and signed with the project's own release key, so every release installs as an update over
@@ -467,7 +414,7 @@ jobs:
   # release - a debug-signed APK is never published again.
   release-android:
     needs: [get-version]
-    if: github.event_name == 'push' && needs.get-version.outputs.published == 'true'
+    if: github.event_name == 'push' && needs.get-version.outputs.released == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -545,7 +492,7 @@ jobs:
   # which replaces this ZIP in the release when it notarizes one (README, "Apple release signing").
   release-macos:
     needs: [get-version]
-    if: github.event_name == 'push' && needs.get-version.outputs.published == 'true'
+    if: github.event_name == 'push' && needs.get-version.outputs.released == 'true'
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
@@ -592,18 +539,28 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
-  semantic-release:
+  release:
+    # Tags and publishes the GitHub release once both release builds exist. The assets are
+    # attached by release-assets below.
     needs: [get-version, release-android, release-macos]
-    if: github.event_name == 'push' && needs.get-version.outputs.published == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    if: github.event_name == 'push' && needs.get-version.outputs.released == 'true'
     concurrency:
       group: studylife-app-release-chain
       cancel-in-progress: false
+    uses: lukislp/lktec-bot/.github/workflows/release.yml@0c0eccf67f1f06f21fd110626322a92c92e4cb82 # v0.1.1
+    secrets:
+      app-id: ${{ secrets.LKTEC_BOT_APP_ID }}
+      private-key: ${{ secrets.LKTEC_BOT_PRIVATE_KEY }}
+
+  # Attaches the build artifacts to the release the job above created, then signs them and
+  # attaches the build provenance.
+  release-assets:
+    needs: [get-version, release]
+    if: github.event_name == 'push' && needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
-      issues: write
-      pull-requests: write
       # Keyless signing + build provenance for the release assets (see the last steps).
       id-token: write
       attestations: write
@@ -633,57 +590,27 @@ jobs:
             token.actions.githubusercontent.com:443
             tuf-repo-cdn.sigstore.dev:443
             uploads.github.com:443
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      # Ruleset bypass for the release commit (2026-09-11 main-protection rollout): main is
-      # protected by a ruleset (pull request + green test stage) that the GitHub Actions app
-      # cannot be a bypass actor for on a personal repository, so semantic-release pushes over
-      # SSH as a write-enabled DEPLOY KEY instead, which can. No-op while the secret is unset -
-      # the push then goes through the GITHUB_TOKEN https remote exactly as before. Needed in
-      # get-version too: @semantic-release/git's verifyConditions runs `git push --dry-run`
-      # even in dry-run mode. Same mechanism as lukislp/studylife's ci-cd.yml.
-      - name: Push as the semantic-release deploy key (if configured)
-        uses: lukislp/ci-workflows/.github/actions/deploy-key-push@ea532e9b173cf0e512c9d54c18886eebd0b0d1ab # v1.8.24
-        with:
-          deploy-key: ${{ secrets.SEMANTIC_RELEASE_DEPLOY_KEY }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: StudyLife-*
           path: release-assets
           merge-multiple: true
-      - id: semrel
-        uses: lukislp/ci-workflows/.github/actions/semantic-release@ea532e9b173cf0e512c9d54c18886eebd0b0d1ab # v1.8.24
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-      # Retry once for the narrow window where an out-of-band push to main landed between
-      # this job's checkout and its own push (the concurrency group above already serializes
-      # overlapping runs of this workflow, so this only guards against a genuinely external push).
-      - if: steps.semrel.outcome == 'failure'
-        name: "Diagnose before retrying (expected: an out-of-band push landed since checkout)"
+      - name: Attach the release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release.outputs.tag }}
         run: |
-          git fetch origin main
-          BEFORE_SHA="$(git rev-parse HEAD)"
-          AFTER_SHA="$(git rev-parse origin/main)"
-          if [ "$BEFORE_SHA" != "$AFTER_SHA" ]; then
-            echo "origin/main moved since checkout ($BEFORE_SHA -> $AFTER_SHA) - this matches the out-of-band-push race this retry is designed for."
-          else
-            echo "::warning::origin/main did NOT move since checkout - this failure is likely NOT the expected out-of-band-push race. Retrying anyway, but check the semantic-release log above for the real cause before assuming this is just a race."
-          fi
-          git checkout -B main origin/main
-      - if: steps.semrel.outcome == 'failure'
-        id: semrel_retry
-        uses: lukislp/ci-workflows/.github/actions/semantic-release@ea532e9b173cf0e512c9d54c18886eebd0b0d1ab # v1.8.24
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh release upload "$TAG" --clobber \
+            "release-assets/StudyLife-android.apk#Android (.apk, release-signed, sideload - updates install over the previous release)" \
+            "release-assets/StudyLife-macos.zip#macOS (Mac Catalyst, unsigned for Gatekeeper - right-click \"Open\" once, or xattr -cr)" \
+            "release-assets/StudyLife-windows.zip#Windows (unsigned - SmartScreen warning expected, click \"More info\" -> \"Run anyway\")"
       # The APK was built with the version get-version predicted. Only an out-of-band push that
-      # changes the bump level between the two jobs (the retry above) can make them differ.
-      - name: Check the published version against the APK's
-        if: steps.semrel.outcome == 'success' || steps.semrel_retry.outcome == 'success'
+      # changes the bump level between the two jobs can make them differ.
+      - name: Check the released version against the APK's
         env:
           PREDICTED: ${{ needs.get-version.outputs.version }}
-          PUBLISHED: ${{ steps.semrel.outputs.new_release_version || steps.semrel_retry.outputs.new_release_version }}
+          PUBLISHED: ${{ needs.release.outputs.version }}
         run: |
           if [ "$PREDICTED" != "$PUBLISHED" ]; then
             echo "::warning::Released $PUBLISHED, but the attached APK was built as $PREDICTED. The next release corrects it."
@@ -695,12 +622,11 @@ jobs:
       #     --certificate-identity-regexp '^https://github.com/lukislp/studylife-app/' \
       #     --certificate-oidc-issuer https://token.actions.githubusercontent.com <asset>
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        if: steps.semrel.outcome == 'success' || steps.semrel_retry.outcome == 'success'
       - name: Sign the release assets and attach the signature bundles
-        if: steps.semrel.outcome == 'success' || steps.semrel_retry.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.semrel.outputs.new_release_git_tag || steps.semrel_retry.outputs.new_release_git_tag }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release.outputs.tag }}
         run: |
           for f in release-assets/StudyLife-*; do
             cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"
@@ -710,20 +636,18 @@ jobs:
             gh release upload "$TAG" "$f.sigstore.json" --clobber
           done
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        if: steps.semrel.outcome == 'success' || steps.semrel_retry.outcome == 'success'
         id: provenance
         with:
           subject-path: |
             release-assets/StudyLife-*
       - name: Attach the build provenance to the release
-        if: steps.semrel.outcome == 'success' || steps.semrel_retry.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.semrel.outputs.new_release_git_tag || steps.semrel_retry.outputs.new_release_git_tag }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release.outputs.tag }}
         run: |
           cp "${{ steps.provenance.outputs.bundle-path }}" provenance.intoto.jsonl
           gh release upload "$TAG" provenance.intoto.jsonl --clobber
-
   # ---------------------------------------------------------------------
   # Signature backfill for older releases - manual dispatch only
   # ---------------------------------------------------------------------
