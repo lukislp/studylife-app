@@ -169,6 +169,12 @@
             return document.hidden;
         }
 
+        // Read by the Setup page's "Report a problem" link (reduced to browser family, major
+        // version and OS there; the raw string is never sent anywhere).
+        function getUserAgent() {
+            return navigator.userAgent;
+        }
+
         function playCompletionSound() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
