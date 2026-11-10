@@ -48,7 +48,7 @@ public static class NativeBridge
             {
                 if (_webView == null || !_webView.TryGetTarget(out var webView))
                 {
-                    _ = ShowNotificationAsync("Print diagnostics", "No WebView reference (SetWebView never called?)");
+                    DeveloperDiagnostics.Error("print", "print_no_webview", "No WebView reference (SetWebView never called?)");
                     completion.TrySetResult(false);
                     return;
                 }
@@ -72,15 +72,15 @@ public static class NativeBridge
                 var presented = controller.Present(true, (printController, completed, error) =>
                 {
                     if (error != null)
-                        _ = ShowNotificationAsync("Print diagnostics", $"Print error: {error.LocalizedDescription}");
+                        DeveloperDiagnostics.Error("print", "print_failed", $"Print error: {error.LocalizedDescription}");
                 });
                 if (!presented)
-                    _ = ShowNotificationAsync("Print diagnostics", "Present() returned false - print dialog not shown");
+                    DeveloperDiagnostics.Error("print", "print_not_presented", "Present() returned false - print dialog not shown");
                 completion.TrySetResult(presented);
             }
             catch (Exception ex)
             {
-                _ = ShowNotificationAsync("Print diagnostics", $"Exception: {ex.Message}");
+                DeveloperDiagnostics.Error("print", "print_exception", $"Exception: {ex.Message}", ex);
                 completion.TrySetResult(false);
             }
         });
@@ -193,6 +193,13 @@ public static class NativeBridge
         return await Task.FromResult("unsupported");
 #endif
     }
+
+    /// <summary>Unexpected error caught by the web view's window error/unhandledrejection
+    /// handlers (index.html). Returns true when a developer banner showed it, false when the
+    /// page should show the app's normal error UI - see DeveloperDiagnostics.</summary>
+    [JSInvokable("NativeReportJsError")]
+    public static bool ReportJsError(string errorType, string message, string? stack) =>
+        DeveloperDiagnostics.ReportJsError(errorType, message, stack);
 
     [JSInvokable("NativeShowNotification")]
     public static async Task ShowNotificationAsync(string title, string body)

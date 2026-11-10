@@ -98,9 +98,12 @@ else if (_needsServerUrl)
         TelemetryBridge.Start();
         DeepLinks.OnNavigate += HandleDeepLink;
         // Focus timer -> lock screen Live Activity (iOS; a no-op everywhere else).
-        // Diagnostics reporter: DOM banner (window.alert would be a silent no-op in the WKWebView).
-        _liveActivity = new TimerLiveActivityCoordinator(Timer, Http,
-            message => _ = InvokeAsync(() => JS.InvokeVoidAsync("showLiveActivityDiag", message).AsTask()));
+        // Developer diagnostics (DEBUG / DEVELOPER_DIAGNOSTICS builds only): DOM banner
+        // (window.alert would be a silent no-op in the WKWebView). Release builds never wire it.
+        if (DeveloperDiagnostics.ShowToDeveloper)
+            DeveloperDiagnostics.DeveloperBanner = message =>
+                _ = InvokeAsync(() => JS.InvokeVoidAsync("showDiagnosticsBanner", message).AsTask());
+        _liveActivity = new TimerLiveActivityCoordinator(Timer, Http);
         // Siri/Shortcuts "Open Focus": deliberately navigates ONLY to the focus page
         // (no blind start of a timer mode) - buffering is handled by the Swift hub.
         TimerLiveActivity.RegisterOpenFocusHandler();

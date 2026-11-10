@@ -511,6 +511,11 @@ This app implements the studylife repo's client telemetry contract
   sample/night count, and never any health value itself.
 - `push` — `registered` (APNs token registration succeeded) / `received` (a notification arrived
   while foregrounded, or was tapped) - no push payload content.
+- `error` with `kind: dotnet | js` — unexpected failures the app caught itself (a print dialog
+  that could not be shown, a Live Activity that did not come up although the device said it
+  supports one, an unhandled JavaScript error in the web view): only a short code or the error
+  type and a sanitized stack, never a message. At most 5 per code and app run. See
+  "Developer diagnostics" below.
 
 **Consent and network egress:** this app never sends anything over the network itself. Every
 event above is written to `NativeTelemetry`'s on-device queue (a small JSON file in
@@ -519,6 +524,27 @@ event above is written to `NativeTelemetry`'s on-device queue (a small JSON file
 that queue on its own flush cycle and is the only thing that ever calls `POST /api/telemetry`,
 gated on the same `UserSettings.TelemetryConsent` toggle as the browser client's own telemetry
 (off/undecided ⇒ nothing native leaves the device either).
+
+### Developer diagnostics
+
+Nothing diagnostic is ever shown to a user of a release build. `Services/DeveloperDiagnostics.cs`
+is the single place that decides what happens to a diagnostic; printing (`NativeBridge`), the
+Live Activity self-check (`TimerLiveActivity`) and unexpected JavaScript errors (`wwwroot/index.html`
+-> `NativeBridge.ReportJsError`) all go through it:
+
+| Build | Platform log | Telemetry queue (`error` event) | Red banner + notification | JS error |
+|---|---|---|---|---|
+| Release / store / CI | yes | yes (sent only after consent, to your own server) | never | the normal Blazor error bar ("An unhandled error has occurred." + Reload), no stack |
+| `Debug`, or `-p:DeveloperDiagnostics=true` | yes | yes | yes | developer banner with message and stack instead of the error bar |
+
+"Not supported here" is not a diagnostic: Live Activities are unavailable on Mac Catalyst, on
+iPad, below iOS 16.1 and when the user switched them off, and in all of these the timer just
+runs without a lock screen card, silently.
+
+To chase a problem on your own phone with a release-configuration build, add
+`-p:DeveloperDiagnostics=true` to the build. The platform log of a release build is visible with
+`xcrun devicectl device process launch --console ...` or in Console.app (lines start with
+`[Diag:`).
 
 **Finding crashes:** native crashes land in Grafana/Loki as `ClientError` log events with
 `kind=native_crash` (or `native_hang`), tagged with `platform`/`appVersion`/`stackHash` - query
