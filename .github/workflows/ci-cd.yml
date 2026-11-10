@@ -155,6 +155,59 @@ jobs:
             fi
           done
 
+  # Licence gate for the bundle: resolves the NuGet graph of the iOS and Mac Catalyst targets
+  # (dotnet restore, no build), reads every package's licence from its nuspec and fails on a
+  # GPL/AGPL/LGPL family, an unreadable licence, or a THIRD-PARTY-NOTICES.md that no longer
+  # matches. The one policy file is scripts/licences/policy.toml. macOS because restoring the
+  # ios/maccatalyst targets needs their workloads, same as test-ios/test-maccatalyst.
+  test-licences:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            *.githubapp.com:443
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            fulcio.sigstore.dev:443
+            github.com:22
+            github.com:443
+            rekor.sigstore.dev:443
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.sigstore.dev:443
+            token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
+            uploads.github.com:443
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: lukislp/studylife
+          path: studylife
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+      # Same workload pin as test-maccatalyst/test-ios (see the comments there).
+      - run: dotnet workload install maui-ios maui-maccatalyst --version 10.0.401
+      - name: Unit tests of the licence script
+        run: |
+          python3 --version
+          python3 -m unittest discover -s scripts/licences -v
+      - name: Check the licence policy and THIRD-PARTY-NOTICES.md
+        run: python3 scripts/licences/check.py
+
   test-maccatalyst:
     if: github.event_name != 'workflow_dispatch'
     runs-on: macos-latest
@@ -390,7 +443,7 @@ jobs:
   # Version / release — push to main only
   # ---------------------------------------------------------------------
   get-version:
-    needs: [test-android, test-ios, test-maccatalyst, test-windows, test-lint, test-native-parity]
+    needs: [test-android, test-ios, test-maccatalyst, test-windows, test-lint, test-native-parity, test-licences]
     if: github.event_name == 'push'
     # Dry run: works out the next version from the Conventional Commits (rules in
     # .github/lktec-bot.yml) and creates nothing. `release` below cuts the tag.

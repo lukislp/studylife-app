@@ -47,6 +47,14 @@ services and packaging.
   Catalyst or Windows is caught by the matching job. iOS is built from the Mac by hand
   (`scripts/build-ios-ipa.sh`), not in CI, so iOS-specific code needs a device build before the
   PR is merged.
+- **Licences.** `test-licences` restores the iOS and Mac Catalyst NuGet graph and checks it
+  against `scripts/licences/policy.toml` (no GPL/AGPL/LGPL, no unreadable licence). Version
+  bumps and new copyright years never need a change. When a package is added or removed or a
+  licence or copyright holder changes, run
+  `python3 scripts/licences/check.py --update` (needs the .NET SDK with the iOS and Mac
+  Catalyst workloads, which also works on Windows) and commit the regenerated
+  `THIRD-PARTY-NOTICES.md`; a new licence needs an entry in the policy file and its text under
+  `scripts/licences/texts/`.
 - **Formatting.** `test-lint` runs
   `dotnet format src/StudyLife.App/StudyLife.App.csproj --verify-no-changes` against the Android
   target framework, which stands in for all of them because `dotnet format` cannot be scoped to
