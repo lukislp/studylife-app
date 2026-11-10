@@ -71,6 +71,17 @@ public sealed class NativeAppAuth : INativeAppAuth
 #endif
     }
 
+    /// <summary>The account was deleted on the server (Setup, "Delete account"): wipe the copies this
+    /// app keeps outside the web view - widget snapshot (and its Watch/Live Activity relatives) and the
+    /// Spotlight index. The session token and the offline caches are already gone (the client clears
+    /// them the way a logout does); the server URL preference stays, it belongs to the device, not
+    /// the account. Logout deliberately does not wipe these.</summary>
+    public async Task AccountDeletedAsync()
+    {
+        await HomeWidgetSnapshot.ClearAsync();
+        await SpotlightIndexer.ClearAsync();
+    }
+
     public bool IsAvailable => _urls.IsConfigured
         && (DeviceInfo.Platform == DevicePlatform.iOS
             || DeviceInfo.Platform == DevicePlatform.Android

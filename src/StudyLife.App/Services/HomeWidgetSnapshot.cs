@@ -27,6 +27,71 @@ public static class HomeWidgetSnapshot
     private static DateTime? _upcomingActivityStartsAt;
 #endif
 
+    /// <summary>
+    /// Wipes what the app keeps about the user outside the web view's own storage after their
+    /// account was deleted (INativeAppAuth.AccountDeletedAsync): the snapshot behind the home
+    /// screen widget (iOS App Group container / Android app data), the copy relayed to a paired
+    /// Apple Watch, and the "next session starts soon" Live Activity. Signing out does not call
+    /// this - those copies belong to the device - but a deleted account must not keep showing its
+    /// courses and sessions on the lock screen. Best effort like <see cref="UpdateAsync"/>.
+    /// </summary>
+    public static async Task ClearAsync()
+    {
+#if IOS || ANDROID
+        try
+        {
+#if IOS
+            var container = Foundation.NSFileManager.DefaultManager.GetContainerUrl(AppGroupId);
+            if (container?.Path is string dir)
+            {
+                var path = Path.Combine(dir, SnapshotFileName);
+                if (File.Exists(path)) File.Delete(path);
+            }
+            TimerLiveActivity.ReloadHomeWidgets();
+            WatchBridge.PushSnapshot(EmptySnapshot());
+            if (_upcomingActivityStartsAt != null)
+            {
+                UpcomingSessionActivity.End();
+                _upcomingActivityStartsAt = null;
+            }
+#else
+            var path = Path.Combine(Microsoft.Maui.Storage.FileSystem.AppDataDirectory, SnapshotFileName);
+            if (File.Exists(path)) File.Delete(path);
+            StudyTodayWidgetProvider.UpdateAll(global::Android.App.Application.Context);
+#endif
+        }
+        catch { /* best effort - see the summary */ }
+#endif
+        await Task.CompletedTask;
+    }
+
+#if IOS
+    /// <summary>A snapshot with every number at zero and every list empty, so a Watch that still
+    /// holds the last real one replaces it (the Watch has no "delete" message, only contexts).</summary>
+    private static byte[] EmptySnapshot()
+    {
+        using var stream = new MemoryStream();
+        using (var json = new Utf8JsonWriter(stream))
+        {
+            json.WriteStartObject();
+            json.WriteString("day", DateTime.Now.ToString("yyyy-MM-dd"));
+            foreach (var name in new[]
+            {
+                "todayMinutes", "weekMinutes", "weeklyGoalMinutes", "streakDays", "ectsEarned",
+                "ectsTotal", "weekMinutesPrevious", "allTimeHours",
+            })
+                json.WriteNumber(name, 0);
+            foreach (var name in new[] { "modes", "recentSessions", "courses", "upcomingSessions", "dailyMinutes" })
+            {
+                json.WriteStartArray(name);
+                json.WriteEndArray();
+            }
+            json.WriteEndObject();
+        }
+        return stream.ToArray();
+    }
+#endif
+
     public static async Task UpdateAsync(AppStateService state, TimerService? timer = null, bool justCompleted = false, bool standNudge = false)
     {
 #if IOS || ANDROID
