@@ -546,3 +546,38 @@ reference.
 Music in the demo video above: "Happy Beats & Business Moves Vol. 12" by Sascha Ende
 ([ende.app](https://ende.app/en/song/12881-happy-beats-business-moves-vol-12)), licensed under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+### What is in the bundle
+
+- **Own code, AGPL-3.0.** The app's C# and Swift code in this repository and the
+  `StudyLife.Client` / `StudyLife.Shared` libraries compiled into it from the
+  [studylife](https://github.com/lukislp/studylife) repository (including its `wwwroot`). All of
+  it is copyright Lukas Koerber, the sole copyright holder, under AGPL-3.0.
+- **Third-party packages.** NuGet packages (the .NET MAUI and ASP.NET Core Blazor libraries under
+  MIT, Markdig under BSD-2-Clause), the .NET/Mono runtime (MIT) and the DM Sans / DM Mono web
+  fonts (SIL OFL-1.1). There is no GPL, AGPL or LGPL third-party code in the bundle.
+- **One file-level copyleft component.** `Toolbelt.Blazor.I18nText` is MPL-2.0. The licence only
+  covers that package's own files, which are used unmodified; its source is at
+  <https://github.com/jsakamoto/Toolbelt.Blazor.I18nText/>.
+
+[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) lists every third-party package with its
+version, licence, project and copyright, and carries the licence texts. It is generated and ships
+inside the app as the raw asset `THIRD-PARTY-NOTICES.md`.
+
+### Licence gate
+
+`scripts/licences/check.py` resolves the NuGet graph of the iOS and Mac Catalyst targets
+(`dotnet restore`), reads each package's licence from its `.nuspec` and compares it with
+[`scripts/licences/policy.toml`](scripts/licences/policy.toml), the single place that says which
+licences are allowed, which families are denied (GPL, AGPL, LGPL) and which packages are
+exceptions, each with a written reason. A licence that cannot be read counts as unknown and
+fails. The CI job `test-licences` fails on a violation and on a notices file that is out of date;
+after a dependency change, regenerate it with `python3 scripts/licences/check.py --update`. The
+`dependency-review` check additionally refuses GPL/AGPL/LGPL dependencies on a pull request.
+
+### App Store distribution
+
+The FSF's position is that GPL/AGPL/LGPL-licensed third-party code cannot be distributed through
+the App Store. As things stand, the bundle contains AGPL-3.0 code of a single copyright holder
+and no GPL/AGPL/LGPL third-party code, plus the MPL-2.0 component above. This section states
+facts only; it grants no additional permission.

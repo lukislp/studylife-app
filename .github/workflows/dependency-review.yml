@@ -20,6 +20,15 @@ permissions:
 jobs:
   review:
     uses: lukislp/ci-workflows/.github/workflows/dependency-review.yml@9b5de8d751efb4a3f0392a967e7b56db85263789 # v1.11.0
+    # Third-party code under the GPL, AGPL or LGPL families cannot go through the App Store (see
+    # README "License"). The shared workflow takes SPDX ids without wildcards, so every id of the
+    # three families is listed. THIRD-PARTY-NOTICES.md and the test-licences job cover the NuGet
+    # graph of the bundle itself; this one covers what the dependency graph reports on a PR.
+    with:
+      deny-licenses: >-
+        GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later,
+        LGPL-2.1-only, LGPL-2.1-or-later, LGPL-3.0-only, LGPL-3.0-or-later,
+        AGPL-3.0-only, AGPL-3.0-or-later
     # pull-requests: write is what the summary comment needs; the called workflow keeps
     # contents at read.
     permissions:

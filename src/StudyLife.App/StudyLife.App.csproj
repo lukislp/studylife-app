@@ -52,6 +52,9 @@
         <MauiSplashScreen Include="Resources\Splash\splash.png" Color="#0e0e0f" BaseSize="128,128" />
 
         <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+        <!-- Third-party notices: the one generated file at the repository root (scripts/licences,
+             see README "License"), shipped inside every bundle as a raw asset instead of a copy. -->
+        <MauiAsset Include="..\..\THIRD-PARTY-NOTICES.md" Link="Resources\Raw\THIRD-PARTY-NOTICES.md" LogicalName="THIRD-PARTY-NOTICES.md" />
     </ItemGroup>
 
     <ItemGroup>
