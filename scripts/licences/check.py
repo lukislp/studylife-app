@@ -43,6 +43,10 @@ def load_policy(path: Path) -> dict:
             raise ValueError(f"policy: missing [{key}]")
     policy.setdefault("exception", [])
     policy.setdefault("component", [])
+    policy.setdefault("sdk_package", [])
+    for sdk in policy["sdk_package"]:
+        if not sdk.get("package") or not sdk.get("reason"):
+            raise ValueError("policy: every sdk_package needs 'package' and 'reason'")
     for exc in policy["exception"]:
         for key in ("package", "license", "reason", "source"):
             if not exc.get(key):
@@ -213,13 +217,22 @@ def resolve_license(meta: dict, package_dir: Path) -> tuple[str, str | None, str
     return UNKNOWN, "no licence information in the nuspec", None
 
 
-def build_inventory(assets: dict[str, Path]) -> list[dict]:
-    """assets: framework -> project.assets.json. One entry per (id, version)."""
+SDK_VERSION = "(SDK)"
+
+
+def build_inventory(assets: dict[str, Path], sdk_packages: frozenset[str] = frozenset()) -> list[dict]:
+    """assets: framework -> project.assets.json. One entry per (id, version).
+
+    Packages named in `sdk_packages` (lower case) are implicit references whose version follows
+    the installed .NET SDK; they are recorded as "(SDK)" so the notices file does not depend on
+    the SDK patch level of the machine that generates it. Their licence is still read and checked.
+    """
     merged: dict[tuple[str, str], dict] = {}
     for tfm, path in assets.items():
         packages, folders = read_assets(path)
         for pkg in packages:
-            key = (pkg["id"].lower(), pkg["version"])
+            shown = SDK_VERSION if pkg["id"].lower() in sdk_packages else pkg["version"]
+            key = (pkg["id"].lower(), shown)
             if key in merged:
                 merged[key]["frameworks"].add(tfm)
                 continue
@@ -231,7 +244,7 @@ def build_inventory(assets: dict[str, Path]) -> list[dict]:
             spdx, note, file_text = resolve_license(meta, pdir)
             merged[key] = {
                 "id": pkg["id"],
-                "version": pkg["version"],
+                "version": shown,
                 "license": spdx,
                 "license_note": note,
                 "license_file_text": file_text,
@@ -378,7 +391,8 @@ def main(argv: list[str] | None = None) -> int:
             copy.write_bytes(path.read_bytes())
             assets[tfm] = copy
 
-    inventory = build_inventory(assets)
+    sdk_packages = frozenset(e["package"].lower() for e in policy["sdk_package"])
+    inventory = build_inventory(assets, sdk_packages)
     problems = check_inventory(inventory, policy, texts_dir)
     problems += check_asset_declared(csproj.read_text(encoding="utf-8"), policy["bundle"]["asset_logical_name"])
     if problems:

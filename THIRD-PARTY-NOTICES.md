@@ -55,7 +55,7 @@ No third-party package in this list is under a GPL, AGPL or LGPL licence.
 | Microsoft.Maui.Essentials | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
 | Microsoft.Maui.Graphics | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
 | Microsoft.Maui.Resizetizer | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
-| Microsoft.NET.ILLink.Tasks | 10.0.12 | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.NET.ILLink.Tasks | (SDK) | MIT | https://dot.net/ | Mac Catalyst, iOS |
 | Toolbelt.Blazor.I18nText | 14.1.1 | MPL-2.0 | https://github.com/jsakamoto/Toolbelt.Blazor.I18nText/ | Mac Catalyst, iOS |
 | Toolbelt.Blazor.I18nText.SourceGenerator | 14.1.1 | MPL-2.0 | https://github.com/jsakamoto/Toolbelt.Blazor.I18nText/ | Mac Catalyst, iOS |
 
@@ -132,7 +132,7 @@ Applies to:
 - Microsoft.Maui.Essentials 10.0.20 - © Microsoft Corporation. All rights reserved.
 - Microsoft.Maui.Graphics 10.0.20 - © Microsoft Corporation. All rights reserved.
 - Microsoft.Maui.Resizetizer 10.0.20 - © Microsoft Corporation. All rights reserved.
-- Microsoft.NET.ILLink.Tasks 10.0.12 - © Microsoft Corporation. All rights reserved.
+- Microsoft.NET.ILLink.Tasks (SDK) - © Microsoft Corporation. All rights reserved.
 
 ```text
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and

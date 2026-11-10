@@ -25,6 +25,13 @@ allowed = ["MIT", "BSD-2-Clause"]
 # cannot lift a denied id.
 denied = ["GPL-*", "AGPL-*", "LGPL-*"]
 
+# Implicit package references whose version follows the installed .NET SDK, not this repository:
+# they are listed without a version so the notices file is the same on every machine. The licence
+# is still read and checked on each run.
+[[sdk_package]]
+package = "Microsoft.NET.ILLink.Tasks"
+reason = "Added implicitly by the SDK (10.0.12 on one machine, 10.0.15 on the CI runner). Build-time linker task, not part of the bundle."
+
 [[exception]]
 package = "Toolbelt.Blazor.I18nText"
 license = "MPL-2.0"

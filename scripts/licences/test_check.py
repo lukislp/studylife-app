@@ -145,6 +145,26 @@ class NuspecAndAssets(unittest.TestCase):
         self.assertEqual(inv[0]["frameworks"], {"net10.0-ios", "net10.0-maccatalyst"})
 
 
+class SdkPackages(unittest.TestCase):
+    def test_version_follows_the_sdk_and_is_not_recorded(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            files = []
+            for version in ("10.0.12", "10.0.15"):
+                pdir = root / "cache" / "tool" / version
+                pdir.mkdir(parents=True)
+                (pdir / "tool.nuspec").write_text(
+                    f'<package {NuspecAndAssets.NS}><metadata><license type="expression">MIT</license>'
+                    "</metadata></package>")
+                assets = root / f"{version}.json"
+                assets.write_text(json.dumps({
+                    "packageFolders": {str(root / "cache"): {}},
+                    "libraries": {f"Tool/{version}": {"type": "package", "path": f"tool/{version}"}}}))
+                files.append(assets)
+            inv = check.build_inventory({"a": files[0], "b": files[1]}, frozenset({"tool"}))
+        self.assertEqual([(p["id"], p["version"]) for p in inv], [("Tool", check.SDK_VERSION)])
+
+
 class Rendering(unittest.TestCase):
     def test_notices_are_deterministic_and_complete(self):
         exc = {"package": "Tool", "license": "MPL-2.0", "reason": "file-level copyleft", "source": "https://src"}
