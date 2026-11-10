@@ -2,6 +2,7 @@
 @using System.Net.Http.Json
 @using StudyLife.Shared
 @using StudyLife.Client.I18nText
+@using StudyLife.Client.Services
 @inject ServerUrlStore ServerUrls
 @inject SessionTokenStore TokenStore
 @inject IJSRuntime JS
@@ -13,7 +14,7 @@
 @inject Toolbelt.Blazor.I18nText.I18nText I18nText
 
 @* Root component of the native app: takes over the boot sequence from
-   StudyLife.Client/Program.cs (load session token, set language default) and inserts the
+   StudyLife.Client/Program.cs (load session token, decide the UI language) and inserts the
    first-run server URL dialog before it. Only once both are done is the unmodified
    client app rendered - which means the scoped HttpClient doesn't exist until its
    BaseAddress is settled. The dialog uses the same CSS classes as the login page
@@ -54,15 +55,23 @@ else if (_needsServerUrl)
     private string _urlInput = "";
     private string? _urlError;
     private AppFirstRunText T = new();
+    private NativeNotificationText N = new();
 
     protected override async Task OnInitializedAsync()
     {
+        // The UI language is decided BEFORE the first-run dialog's texts are loaded, so the dialog
+        // already shows the device language (before, it used the library's detection while the
+        // rest of the app was forced to German). Same rule as the browser client (UiLanguage).
+        await ApplyLanguageAsync();
+
         // Fetch EARLY, before the boot branch - the dialog can already appear on the first
         // render (with empty T defaults), but gets populated correctly on the second render
         // (after this await). Purely client-side lookup (localStorage + bundled JSON), needs
         // no server connection - so this is unproblematic even though the server URL dialog
         // itself isn't configured yet.
         T = await I18nText.GetTextTableAsync<AppFirstRunText>(this);
+        N = await I18nText.GetTextTableAsync<NativeNotificationText>(this);
+        NativeNotificationTexts.Provider = () => N;
 
         if (!ServerUrls.IsConfigured)
         {
@@ -163,6 +172,7 @@ else if (_needsServerUrl)
         Timer.OnBreakStarted -= HandleFocusRoundCompleteForHealth;
         Timer.OnTick -= HandleTimerTickForStandNudge;
         _watchTimer?.Dispose();
+        NativeNotificationTexts.Provider = null;
         BackgroundRefresh.SetHandler(null);
         _liveActivity?.Dispose();
     }
@@ -215,28 +225,33 @@ else if (_needsServerUrl)
         var slot = elapsedMinutes / StandNudgeIntervalMinutes;
         if (slot == 0 || slot == _lastStandNudgeSlot) return;
         _lastStandNudgeSlot = slot;
-        _ = NativeBridge.ShowNotificationAsync("Kurz aufstehen?",
-            $"Du bist schon {slot * StandNudgeIntervalMinutes} Minuten am Stück fokussiert - kurz strecken tut gut.");
+        _ = NativeBridge.ShowNotificationAsync(N.StandTitle,
+            string.Format(N.StandBody, slot * StandNudgeIntervalMinutes));
         _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, standNudge: true));
     }
 
     private void HandleDeepLink(string route) => _ = InvokeAsync(() => Nav.NavigateTo(route));
 
+    /// <summary>Decides the UI language of this start with the shared rule (stored choice, else the
+    /// system languages the web view reports, else English) and stores it like a manual choice,
+    /// then syncs html-lang. An install that already has a server URL but no stored language
+    /// predates this rule and has only ever been shown German, so it keeps it (the browser client
+    /// uses its session token for the same purpose).</summary>
+    private async Task ApplyLanguageAsync()
+    {
+        try
+        {
+            var language = await UiLanguageStartup.ApplyAsync(JS, I18nText.SetCurrentLanguageAsync, ServerUrls.IsConfigured);
+            await JS.InvokeVoidAsync("setDocumentLanguage", language);
+        }
+        catch { /* localStorage not available - app continues with the library's auto-detection */ }
+    }
+
     /// <summary>Boot sequence as in StudyLife.Client/Program.cs: load the token before the
-    /// first render, set the first-run language default "de", sync html-lang.</summary>
+    /// first render (the language was already decided in OnInitializedAsync).</summary>
     private async Task BootAsync()
     {
         await TokenStore.InitializeAsync();
-        try
-        {
-            var storedLanguage = await JS.InvokeAsync<string?>("localStorage.getItem", "Toolbelt.Blazor.I18nText.CurrentLanguage");
-            if (string.IsNullOrEmpty(storedLanguage))
-                await I18nText.SetCurrentLanguageAsync("de");
-
-            var currentLanguage = await I18nText.GetCurrentLanguageAsync();
-            await JS.InvokeVoidAsync("setDocumentLanguage", currentLanguage);
-        }
-        catch { /* localStorage not available - app continues with the library's auto-detection */ }
 
         _ready = true;
 
