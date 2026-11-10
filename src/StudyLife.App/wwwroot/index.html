@@ -47,40 +47,39 @@
         // exist in native WebViews (Wake Lock, Notifications, Badge, Push).
         // ============================================================================
 
-        // Diagnostic banner for unhandled JS/.NET errors - 1:1 copy from
-        // StudyLife.Client/wwwroot/index.html (see the comment there). Especially important in the
-        // app's WKWebView: no Safari Web Inspector access possible over SSH, this is
-        // the only way to see actual error text instead of just "An unhandled error has occurred."
+        // Unexpected JS errors (window error / unhandledrejection) are handed to the native
+        // side (NativeBridge.ReportJsError -> DeveloperDiagnostics), which logs them and queues
+        // a sanitized telemetry event. It answers true only in a DEBUG/DEVELOPER_DIAGNOSTICS
+        // build, where it shows the developer banner (showDiagnosticsBanner, bottom of this
+        // file) instead; in every other build the page shows the app's normal error UI (the
+        // #blazor-error-ui bar, no stack trace, no message). This replaces the former red
+        // banner, which every user saw.
         (function () {
-            function showDiag(text) {
-                var el = document.getElementById('js-error-diag');
-                if (!el) {
-                    el = document.createElement('div');
-                    el.id = 'js-error-diag';
-                    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;' +
-                        'background:#7a1f1f;color:#fff;font:12px monospace;padding:8px;' +
-                        'max-height:40vh;overflow:auto;white-space:pre-wrap;word-break:break-all;';
-                    var dismiss = document.createElement('div');
-                    dismiss.textContent = '✕ close';
-                    dismiss.style.cssText = 'text-align:right;cursor:pointer;font-weight:bold;';
-                    dismiss.onclick = function () { el.remove(); };
-                    el.appendChild(dismiss);
-                    var content = document.createElement('div');
-                    content.id = 'js-error-diag-content';
-                    el.appendChild(content);
-                    document.body.appendChild(el);
+            function showErrorUi() {
+                var ui = document.getElementById('blazor-error-ui');
+                if (ui) ui.style.display = 'block';
+            }
+            function report(errorType, message, stack) {
+                try {
+                    DotNet.invokeMethodAsync('StudyLife.App', 'NativeReportJsError',
+                        String(errorType || 'Error'), String(message || ''), stack ? String(stack) : null)
+                        .then(function (shownToDeveloper) { if (!shownToDeveloper) showErrorUi(); },
+                            showErrorUi);
+                } catch (ex) {
+                    showErrorUi(); // bridge not up yet - still no raw details on screen
                 }
-                var content = document.getElementById('js-error-diag-content');
-                content.textContent += (content.textContent ? '\n---\n' : '') + text;
             }
             window.addEventListener('error', function (e) {
-                showDiag('error: ' + (e.message || e) + '\n' + (e.filename || '') + ':' + (e.lineno || '') +
-                    (e.error && e.error.stack ? '\n' + e.error.stack : ''));
+                // Benign browser notification, not a failure: nothing to show or report.
+                if (e.message && e.message.indexOf('ResizeObserver loop') === 0) return;
+                report(e.error && e.error.name, e.message || e,
+                    (e.error && e.error.stack) || ((e.filename || '') + ':' + (e.lineno || '')));
             });
             window.addEventListener('unhandledrejection', function (e) {
                 var reason = e.reason;
-                showDiag('unhandledrejection: ' + (reason && reason.message ? reason.message : reason) +
-                    (reason && reason.stack ? '\n' + reason.stack : ''));
+                report(reason && reason.name || 'UnhandledRejection',
+                    reason && reason.message ? reason.message : reason,
+                    reason && reason.stack);
             });
         })();
 
@@ -600,21 +599,22 @@
             };
         })();
 
-        // Diagnostic banner (Live Activity debugging): window.alert is a silent no-op in
-        // WKWebView, hence a direct DOM display - can't fail and needs no
-        // permission at all. Tapping to close removes the banner.
-        function showLiveActivityDiag(text) {
-            var el = document.getElementById('la-diag');
+        // Developer banner - only ever called from DeveloperDiagnostics in DEBUG /
+        // DEVELOPER_DIAGNOSTICS builds (AppRoot wires it up only there). window.alert is a
+        // silent no-op in WKWebView, hence a direct DOM display. Entries are appended;
+        // tapping the banner removes it.
+        function showDiagnosticsBanner(text) {
+            var el = document.getElementById('dev-diag');
             if (!el) {
                 el = document.createElement('div');
-                el.id = 'la-diag';
+                el.id = 'dev-diag';
                 el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;' +
-                    'background:#b3261e;color:#fff;font:12px/1.4 monospace;padding:10px 12px;' +
-                    'word-break:break-all;white-space:pre-wrap;';
+                    'background:#7a1f1f;color:#fff;font:12px/1.4 monospace;padding:10px 12px;' +
+                    'max-height:40vh;overflow:auto;white-space:pre-wrap;word-break:break-all;';
                 el.addEventListener('click', function () { el.remove(); });
                 document.body.appendChild(el);
             }
-            el.textContent = 'LiveActivity diagnostics (tap to close):\n' + text;
+            el.textContent += (el.textContent ? '\n---\n' : 'Developer diagnostics (tap to close):\n') + text;
         }
     </script>
 </body>

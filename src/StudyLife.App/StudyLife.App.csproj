@@ -111,6 +111,14 @@
         </NativeReference>
     </ItemGroup>
 
+    <!-- Developer diagnostics (Services/DeveloperDiagnostics.cs): the red banner and the
+         diagnostic notifications exist only in DEBUG builds, or in a build made with
+         -p:DeveloperDiagnostics=true (e.g. a release-configuration build on the maintainer's own
+         phone to chase a Live Activity problem). Never set for CI or store builds. -->
+    <PropertyGroup Condition="'$(DeveloperDiagnostics)' == 'true'">
+        <DefineConstants>$(DefineConstants);DEVELOPER_DIAGNOSTICS</DefineConstants>
+    </PropertyGroup>
+
     <!-- Visibility in the build log of whether the Live Activity was really compiled in -
          otherwise lib-linked-but-define-missing would be a silent half-state (ForceLoad pulls
          the symbols into the binary even without the define). -->

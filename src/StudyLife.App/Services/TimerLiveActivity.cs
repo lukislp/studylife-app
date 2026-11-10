@@ -125,7 +125,7 @@ public static class TimerLiveActivity
     private static void OnNativeOpenFocus() => OpenFocusRequested?.Invoke();
 #endif
 
-    /// <summary>Diagnostics: is an activity actually active after an update?</summary>
+    /// <summary>Self-check: is an activity actually active after an update?</summary>
     public static bool HasActive
     {
         get
@@ -149,7 +149,7 @@ public static class TimerLiveActivity
 #endif
     }
 
-    /// <summary>Diagnostics: last error from Activity.request ("" = none).</summary>
+    /// <summary>Self-check: last error from Activity.request ("" = none).</summary>
     public static string LastError
     {
         get
@@ -204,16 +204,14 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
 {
     private readonly TimerService _timer;
     private readonly HttpClient? _http;
-    private readonly Action<string>? _diagnosticsReporter;
     private (bool IsBreak, int Round, bool IsPaused)? _lastState;
     private DateTimeOffset _lastEndsAt;
-    private bool _diagnosticsShown;
+    private bool _selfCheckDone;
 
-    public TimerLiveActivityCoordinator(TimerService timer, HttpClient? http = null, Action<string>? diagnosticsReporter = null)
+    public TimerLiveActivityCoordinator(TimerService timer, HttpClient? http = null)
     {
         _timer = timer;
         _http = http;
-        _diagnosticsReporter = diagnosticsReporter;
         _timer.OnTick += HandleTick;
         _timer.OnSessionComplete += HandleComplete;
         TimerLiveActivity.RegisterToggleHandler();
@@ -263,13 +261,10 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
 #if ANDROID
         HandleTickAndroid(secondsLeft, isBreak, round, isRunning);
 #else
-        if (!TimerLiveActivity.IsSupported)
-        {
-            // Diagnostics also for the "support check fails" case - previously this branch
-            // was silent and indistinguishable from "extension doesn't render".
-            if (isRunning) ReportDiagnosticsOnce("is_supported=false (LIVE_ACTIVITY define missing, P/Invoke error, or areActivitiesEnabled=false)");
-            return;
-        }
+        // Not supported (Mac Catalyst, iPad, iOS 15, Live Activities switched off in Settings,
+        // or a build without the Swift bridge) is a normal state, not an error: the timer simply
+        // runs without a lock screen card, and nothing is shown or reported.
+        if (!TimerLiveActivity.IsSupported) return;
         var mode = _timer.CurrentMode;
         if (mode == null) return;
 
@@ -302,19 +297,20 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
         _lastState = state;
         _lastEndsAt = endsAt;
 
-        // One-time self-diagnostic per app run - only reports on REAL failures
-        // (activity fails to come up); the success case stays silent.
-        if (!_diagnosticsShown)
+        // One-time self-check per app run - only reports REAL failures (activity fails to come
+        // up although the platform said it is supported); the success case stays silent.
+        if (!_selfCheckDone)
         {
-            _diagnosticsShown = true;
+            _selfCheckDone = true;
             _ = Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromSeconds(3));
                 if (TimerLiveActivity.HasActive) return;
                 var error = TimerLiveActivity.LastError;
-                Report(error.Length > 0
-                    ? $"request error: {error}"
-                    : "Live Activity did not come up (no error reported)");
+                DeveloperDiagnostics.Error("LiveActivity", "live_activity_failed",
+                    error.Length > 0
+                        ? $"request error: {error}"
+                        : "Live Activity did not come up (no error reported)");
             });
         }
 #endif
@@ -322,21 +318,6 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
 
     private static int PhaseTotalSeconds(StudyLife.Client.Models.TimerMode mode, bool isBreak)
         => (isBreak ? mode.BreakMinutes : mode.FocusMinutes) * 60;
-
-    private void ReportDiagnosticsOnce(string message)
-    {
-        if (_diagnosticsShown) return;
-        _diagnosticsShown = true;
-        Report(message);
-    }
-
-    private void Report(string message)
-    {
-        // Both channels: alert in the WebView (needs no permission) + notification
-        // (visible if the app is currently in the background).
-        _diagnosticsReporter?.Invoke(message);
-        _ = NativeBridge.ShowNotificationAsync("Live Activity diagnostics", message);
-    }
 
     private void HandleComplete()
     {
