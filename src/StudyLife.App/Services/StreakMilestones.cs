@@ -17,14 +17,19 @@ public static class StreakMilestones
     {
         try
         {
+            // The texts come from the app root (NativeNotificationText, in the UI language); without
+            // them nothing is recorded, so the milestone is celebrated on a later update instead.
+            var texts = NativeNotificationTexts.Current;
+            if (texts is null || string.IsNullOrEmpty(texts.StreakTitle)) return;
+
             var last = Preferences.Default.Get(LastCelebratedKey, 0);
             var reached = Milestones.Where(m => m <= streakDays && m > last).OrderByDescending(m => m).FirstOrDefault();
             if (reached == 0) return;
 
             Preferences.Default.Set(LastCelebratedKey, reached);
             await NativeBridge.ShowNotificationAsync(
-                $"\U0001F525 {reached} Tage Lernserie!",
-                $"Du hast eine {reached}-Tage-Serie in StudyLife erreicht. Weiter so!");
+                string.Format(texts.StreakTitle, reached),
+                string.Format(texts.StreakBody, reached));
         }
         catch { /* best effort - a missed celebration must never break the widget update */ }
     }
