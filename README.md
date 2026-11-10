@@ -53,6 +53,13 @@ and validates it via a `manifest.json` request. The URL is stored in the native 
 preferences. To change it: clear app data (iOS: reinstall the app, Android: "Clear
 storage") and restart.
 
+The dialog and the rest of the app open in the **device language**: the shared rule
+`UiLanguage` in the `studylife` repository picks the best match of the system languages the
+web view reports (`navigator.languages`) among the 26 UI languages and falls back to English
+when none matches. A language chosen in the app's language picker always wins and is
+remembered. An existing install that has a server URL but never stored a choice keeps German,
+which it has always shown.
+
 ## Passkey login (how it works)
 
 WebAuthn doesn't exist in native WebViews (WKWebView/Android WebView). The app therefore
@@ -439,7 +446,8 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
 ## Architecture notes
 
 - `Components/AppRoot.razor` — root: first-launch dialog → boot sequence (session token,
-  default language "de") like in `StudyLife.Client/Program.cs` → renders
+  UI language via `UiLanguageStartup`, before the dialog texts load) like in
+  `StudyLife.Client/Program.cs` → renders
   `StudyLife.Client.App`. Also consumes quick-action routes (`DeepLinkService`).
 - `wwwroot/index.html` — 1:1 copy of the client `index.html` scripts + a native bridge
   block that redirects Wake Lock/Notifications/Badge/Vibration to
@@ -529,11 +537,14 @@ passed as the address instead - close enough to identify the function/file for t
 
 The Blazor UI (via the referenced Client project) is fully localized into 26 languages, same
 as the web app. Native-only surfaces added by this repo — home screen widgets, Live Activity,
-Siri Shortcuts, notification text, the Apple Watch companion app, and the iOS permission
+Siri Shortcuts, the Apple Watch companion app, and the iOS permission
 prompts/home-screen shortcuts — follow the OS's own system language, independently of the
 in-app language picker (which only affects the Blazor UI), using standard iOS/watchOS
 `.lproj`/`Localizable.strings` localization. Siri's spoken trigger phrases are the one
-exception, currently German/English only.
+exception, currently German/English only. The notifications the shell raises itself (stand-up
+nudge, streak milestone) use the `NativeNotificationText` table of the Client project and so
+follow the in-app language, which defaults to the device language. Still German-only native
+code: the Android home screen widget (`Platforms/Android/StudyTodayWidgetProvider.cs`).
 
 ## License
 
