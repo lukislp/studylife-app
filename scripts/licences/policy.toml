@@ -28,6 +28,15 @@ allowed = ["MIT", "BSD-2-Clause"]
 # cannot lift a denied id.
 denied = ["GPL-*", "AGPL-*", "LGPL-*"]
 
+# The copyright holder of each package is read from its nuspec (copyright, else authors, else owners)
+# with years, "(c)" and "All rights reserved" removed. A package that yields no holder fails the gate
+# unless it is named here with the holder and the reason it is certain:
+#
+# [[holder]]
+# package = "Some.Package"
+# holder = "Some Authors"
+# reason = "nuspec has no copyright/authors; holder taken from the repository's LICENSE file"
+
 [[exception]]
 package = "Toolbelt.Blazor.I18nText"
 license = "MPL-2.0"

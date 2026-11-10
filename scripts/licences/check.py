@@ -43,6 +43,11 @@ def load_policy(path: Path) -> dict:
             raise ValueError(f"policy: missing [{key}]")
     policy.setdefault("exception", [])
     policy.setdefault("component", [])
+    policy.setdefault("holder", [])
+    for h in policy["holder"]:
+        for key in ("package", "holder", "reason"):
+            if not h.get(key):
+                raise ValueError(f"policy: holder {h.get('package', '?')} needs '{key}'")
     for exc in policy["exception"]:
         for key in ("package", "license", "reason", "source"):
             if not exc.get(key):
@@ -193,9 +198,35 @@ def parse_nuspec(text: str) -> dict:
             if name == "license":
                 meta["license_type"] = el.get("type")
                 meta["license_value"] = (el.text or "").strip()
-            elif name in ("licenseUrl", "projectUrl", "copyright", "authors"):
+            elif name in ("licenseUrl", "projectUrl", "copyright", "authors", "owners"):
                 meta[name] = (el.text or "").strip()
     return meta
+
+
+_YEAR = r"(?:19|20)\d{2}"
+_YEARS = re.compile(rf"\b{_YEAR}(?:\s*[-\u2013,]\s*(?:{_YEAR}|\d{{2}}))*\b")
+
+
+def normalize_holder(text: str) -> str:
+    """Copyright holder without the parts that change per release: the word "Copyright", (c)/\u00a9
+    marks, years and year ranges, "All rights reserved" and a trailing ", <name> licence" clause."""
+    t = text or ""
+    t = re.sub(r"all\s+rights\s+reserved\.?", " ", t, flags=re.I)
+    t = re.sub(r"\bcopyright\b|\(c\)|\u00a9", " ", t, flags=re.I)
+    t = _YEARS.sub(" ", t)
+    parts = [part for part in re.split(r"\s*,\s*", t) if not re.search(r"licen[cs]e", part, re.I)]
+    t = ", ".join(parts)
+    t = re.sub(r"\s+", " ", t)
+    return t.lstrip(" \t,;:-").rstrip(" \t.,;:-")
+
+
+def copyright_holder(meta: dict) -> str:
+    """Normalised holder from <copyright>, else <authors>, else <owners>; "" when none gives one."""
+    for field in ("copyright", "authors", "owners"):
+        holder = normalize_holder(meta.get(field, ""))
+        if holder:
+            return holder
+    return ""
 
 
 def resolve_license(meta: dict, package_dir: Path) -> tuple[str, str | None, str | None]:
@@ -213,8 +244,11 @@ def resolve_license(meta: dict, package_dir: Path) -> tuple[str, str | None, str
     return UNKNOWN, "no licence information in the nuspec", None
 
 
-def build_inventory(assets: dict[str, Path]) -> list[dict]:
-    """assets: framework -> project.assets.json. One entry per (package id, licence).
+def build_inventory(assets: dict[str, Path], holders: dict[str, str] | None = None) -> list[dict]:
+    """assets: framework -> project.assets.json. One entry per (package id, licence, holder).
+
+    `holders` (lower-case package id -> holder) comes from the policy and only applies to a package
+    whose nuspec yields no holder.
 
     The version is deliberately not part of an entry's identity: the licence is read from the
     nuspec of the version resolved on this run, but a version bump with the same licence yields
@@ -230,7 +264,8 @@ def build_inventory(assets: dict[str, Path]) -> list[dict]:
                 raise FileNotFoundError(f"{pkg['id']} {pkg['version']}: no .nuspec in {pdir}")
             meta = parse_nuspec(nuspec.read_text(encoding="utf-8"))
             spdx, note, file_text = resolve_license(meta, pdir)
-            key = (pkg["id"].lower(), spdx)
+            holder = copyright_holder(meta) or (holders or {}).get(pkg["id"].lower(), "")
+            key = (pkg["id"].lower(), spdx, holder)
             if key in merged:
                 merged[key]["frameworks"].add(tfm)
                 continue
@@ -240,10 +275,11 @@ def build_inventory(assets: dict[str, Path]) -> list[dict]:
                 "license": spdx,
                 "license_note": note,
                 "license_file_text": file_text,
+                "holder": holder,
                 "project_url": meta.get("projectUrl", ""),
                 "frameworks": {tfm},
             }
-    return sorted(merged.values(), key=lambda p: (p["id"].lower(), p["license"]))
+    return sorted(merged.values(), key=lambda p: (p["id"].lower(), p["license"], p["holder"]))
 
 
 # --- checks ----------------------------------------------------------------------------------
@@ -266,6 +302,10 @@ def check_inventory(inventory: list[dict], policy: dict, texts_dir: Path) -> lis
                     texts_dir / f"{lid}.txt"
                 ).is_file():
                     problems.append(f"{label}: no licence text texts/{lid}.txt")
+    for pkg in inventory:
+        if not pkg.get("holder"):
+            problems.append(f"{pkg['id']} {pkg['version']}: no copyright holder in the nuspec "
+                            "(copyright, authors, owners); declare one with a reason in a policy [[holder]]")
     for comp in policy["component"]:
         if is_denied(comp["license"], policy["licenses"]["denied"]):
             problems.append(f"component {comp['name']}: denied licence family")
@@ -284,6 +324,18 @@ def check_asset_declared(csproj_text: str, logical_name: str) -> list[str]:
 # --- notices file ----------------------------------------------------------------------------
 
 
+def holder_lines(packages: list[dict]) -> list[str]:
+    """One "Copyright (c) <holder>" line per distinct holder, followed by the packages it covers."""
+    by_holder: dict[str, list[str]] = {}
+    for p in packages:
+        by_holder.setdefault(p["holder"], []).append(p["id"])
+    lines = []
+    for holder in sorted(by_holder, key=str.lower):
+        names = ", ".join(sorted(set(by_holder[holder]), key=str.lower))
+        lines += [f"Copyright (c) {holder}", f"  Packages: {names}", ""]
+    return lines[:-1]
+
+
 def render_notices(inventory: list[dict], policy: dict, texts_dir: Path) -> str:
     short = {"net10.0-ios": "iOS", "net10.0-maccatalyst": "Mac Catalyst"}
     frameworks = " and ".join(short.get(f, f) for f in policy["bundle"]["frameworks"])
@@ -298,9 +350,9 @@ def render_notices(inventory: list[dict], policy: dict, texts_dir: Path) -> str:
         "(github.com/lukislp/studylife), are copyright Lukas Koerber under AGPL-3.0 (see LICENSE).",
         "No third-party package in this list is under a GPL, AGPL or LGPL licence.",
         "",
-        "The list names packages and licences, not versions: it stays valid across version updates and",
-        "changes only when a package is added or removed or its licence or project URL changes.",
-        "Copyright in each package remains with its authors; the project link names them and the source.",
+        "The list names packages, licences and copyright holders, not versions: it stays valid across",
+        "version updates and changes only when a package is added or removed or its licence, copyright",
+        "holder (years are left out) or project URL changes.",
         "",
         "## NuGet packages",
         "",
@@ -320,9 +372,8 @@ def render_notices(inventory: list[dict], policy: dict, texts_dir: Path) -> str:
                 by_license.setdefault(lid, []).append(p)
 
     for lid in sorted(by_license):
-        out += ["", f"## {lid}", "", "Applies to:", ""]
-        for p in by_license[lid]:
-            out.append(f"- {p['id']}")
+        out += ["", f"## {lid}", ""]
+        out += holder_lines(by_license[lid])
         out += ["", "```text", (texts_dir / f"{lid}.txt").read_text(encoding="utf-8").strip(), "```"]
 
     for exc in policy["exception"]:
@@ -330,8 +381,7 @@ def render_notices(inventory: list[dict], policy: dict, texts_dir: Path) -> str:
         if not matches:
             continue
         out += ["", f"## {exc['license']}: {exc['package']}", ""]
-        for p in matches:
-            out.append(f"- {p['id']}")
+        out += holder_lines(matches)
         out += [
             "",
             exc["reason"],
@@ -384,7 +434,8 @@ def main(argv: list[str] | None = None) -> int:
             copy.write_bytes(path.read_bytes())
             assets[tfm] = copy
 
-    inventory = build_inventory(assets)
+    holders = {h["package"].lower(): h["holder"] for h in policy["holder"]}
+    inventory = build_inventory(assets, holders)
     problems = check_inventory(inventory, policy, texts_dir)
     problems += check_asset_declared(csproj.read_text(encoding="utf-8"), policy["bundle"]["asset_logical_name"])
     if problems:

@@ -8,9 +8,9 @@ The app's own code, and the StudyLife client and shared libraries compiled into 
 (github.com/lukislp/studylife), are copyright Lukas Koerber under AGPL-3.0 (see LICENSE).
 No third-party package in this list is under a GPL, AGPL or LGPL licence.
 
-The list names packages and licences, not versions: it stays valid across version updates and
-changes only when a package is added or removed or its licence or project URL changes.
-Copyright in each package remains with its authors; the project link names them and the source.
+The list names packages, licences and copyright holders, not versions: it stays valid across
+version updates and changes only when a package is added or removed or its licence, copyright
+holder (years are left out) or project URL changes.
 
 ## NuGet packages
 
@@ -65,9 +65,8 @@ Copyright in each package remains with its authors; the project link names them 
 
 ## BSD-2-Clause
 
-Applies to:
-
-- Markdig
+Copyright (c) Alexandre Mutel
+  Packages: Markdig
 
 ```text
 Redistribution and use in source and binary forms, with or without modification, are permitted
@@ -92,51 +91,8 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## MIT
 
-Applies to:
-
-- Microsoft.AspNetCore.Authorization
-- Microsoft.AspNetCore.Components
-- Microsoft.AspNetCore.Components.Analyzers
-- Microsoft.AspNetCore.Components.Forms
-- Microsoft.AspNetCore.Components.Web
-- Microsoft.AspNetCore.Components.WebAssembly
-- Microsoft.AspNetCore.Components.WebView
-- Microsoft.AspNetCore.Components.WebView.Maui
-- Microsoft.AspNetCore.Metadata
-- Microsoft.Extensions.Configuration
-- Microsoft.Extensions.Configuration.Abstractions
-- Microsoft.Extensions.Configuration.Binder
-- Microsoft.Extensions.Configuration.FileExtensions
-- Microsoft.Extensions.Configuration.Json
-- Microsoft.Extensions.DependencyInjection
-- Microsoft.Extensions.DependencyInjection.Abstractions
-- Microsoft.Extensions.Diagnostics
-- Microsoft.Extensions.Diagnostics.Abstractions
-- Microsoft.Extensions.FileProviders.Abstractions
-- Microsoft.Extensions.FileProviders.Composite
-- Microsoft.Extensions.FileProviders.Embedded
-- Microsoft.Extensions.FileProviders.Physical
-- Microsoft.Extensions.FileSystemGlobbing
-- Microsoft.Extensions.Hosting.Abstractions
-- Microsoft.Extensions.Http
-- Microsoft.Extensions.Logging
-- Microsoft.Extensions.Logging.Abstractions
-- Microsoft.Extensions.Logging.Debug
-- Microsoft.Extensions.Options
-- Microsoft.Extensions.Options.ConfigurationExtensions
-- Microsoft.Extensions.Primitives
-- Microsoft.Extensions.Validation
-- Microsoft.JSInterop
-- Microsoft.JSInterop.WebAssembly
-- Microsoft.Maui.Controls
-- Microsoft.Maui.Controls.Build.Tasks
-- Microsoft.Maui.Controls.Core
-- Microsoft.Maui.Controls.Xaml
-- Microsoft.Maui.Core
-- Microsoft.Maui.Essentials
-- Microsoft.Maui.Graphics
-- Microsoft.Maui.Resizetizer
-- Microsoft.NET.ILLink.Tasks
+Copyright (c) Microsoft Corporation
+  Packages: Microsoft.AspNetCore.Authorization, Microsoft.AspNetCore.Components, Microsoft.AspNetCore.Components.Analyzers, Microsoft.AspNetCore.Components.Forms, Microsoft.AspNetCore.Components.Web, Microsoft.AspNetCore.Components.WebAssembly, Microsoft.AspNetCore.Components.WebView, Microsoft.AspNetCore.Components.WebView.Maui, Microsoft.AspNetCore.Metadata, Microsoft.Extensions.Configuration, Microsoft.Extensions.Configuration.Abstractions, Microsoft.Extensions.Configuration.Binder, Microsoft.Extensions.Configuration.FileExtensions, Microsoft.Extensions.Configuration.Json, Microsoft.Extensions.DependencyInjection, Microsoft.Extensions.DependencyInjection.Abstractions, Microsoft.Extensions.Diagnostics, Microsoft.Extensions.Diagnostics.Abstractions, Microsoft.Extensions.FileProviders.Abstractions, Microsoft.Extensions.FileProviders.Composite, Microsoft.Extensions.FileProviders.Embedded, Microsoft.Extensions.FileProviders.Physical, Microsoft.Extensions.FileSystemGlobbing, Microsoft.Extensions.Hosting.Abstractions, Microsoft.Extensions.Http, Microsoft.Extensions.Logging, Microsoft.Extensions.Logging.Abstractions, Microsoft.Extensions.Logging.Debug, Microsoft.Extensions.Options, Microsoft.Extensions.Options.ConfigurationExtensions, Microsoft.Extensions.Primitives, Microsoft.Extensions.Validation, Microsoft.JSInterop, Microsoft.JSInterop.WebAssembly, Microsoft.Maui.Controls, Microsoft.Maui.Controls.Build.Tasks, Microsoft.Maui.Controls.Core, Microsoft.Maui.Controls.Xaml, Microsoft.Maui.Core, Microsoft.Maui.Essentials, Microsoft.Maui.Graphics, Microsoft.Maui.Resizetizer, Microsoft.NET.ILLink.Tasks
 
 ```text
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
@@ -157,7 +113,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 ## MPL-2.0: Toolbelt.Blazor.I18nText
 
-- Toolbelt.Blazor.I18nText
+Copyright (c) J.Sakamoto
+  Packages: Toolbelt.Blazor.I18nText
 
 MPL-2.0 is file-level copyleft: it only covers the package's own files (its assembly and the shipped helper.min.js / *.lib.module.js), not the app. Allowed unmodified; the notice and the source location below satisfy MPL-2.0 section 3.2 for the executable form.
 
@@ -166,7 +123,8 @@ Licence text: https://spdx.org/licenses/MPL-2.0.html
 
 ## MPL-2.0: Toolbelt.Blazor.I18nText.SourceGenerator
 
-- Toolbelt.Blazor.I18nText.SourceGenerator
+Copyright (c) J.Sakamoto
+  Packages: Toolbelt.Blazor.I18nText.SourceGenerator
 
 Same project and licence as Toolbelt.Blazor.I18nText. A compile-time analyzer, not part of the shipped bundle; listed for completeness. MPL-2.0 is file-level copyleft, allowed unmodified.
 

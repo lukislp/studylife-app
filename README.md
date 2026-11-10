@@ -561,8 +561,9 @@ Music in the demo video above: "Happy Beats & Business Moves Vol. 12" by Sascha 
   <https://github.com/jsakamoto/Toolbelt.Blazor.I18nText/>.
 
 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) lists every third-party package with its
-licence and project and carries the licence texts. It names no versions, so dependency updates
-do not touch it. It is generated and ships
+licence, copyright holder and project and carries the licence texts, with the copyright notices
+of the MIT/BSD packages printed above the licence text they belong to. It names no versions and no
+years, so dependency updates do not touch it. It is generated and ships
 inside the app as the raw asset `THIRD-PARTY-NOTICES.md`.
 
 ### Licence gate
@@ -574,8 +575,8 @@ licences are allowed, which families are denied (GPL, AGPL, LGPL) and which pack
 exceptions, each with a written reason. A licence that cannot be read counts as unknown and
 fails. The licence is read from the version actually resolved, so a licence change in an update
 is caught. The CI job `test-licences` fails on a violation and on a notices file that is out of
-date, which means a package was added or removed or a licence or project URL changed (never a
-plain version bump); then regenerate it with `python3 scripts/licences/check.py --update`. The
+date, which means a package was added or removed or its licence, copyright holder or project URL
+changed (never a plain version bump or a new copyright year); then regenerate it with `python3 scripts/licences/check.py --update`. The
 `dependency-review` check additionally refuses GPL/AGPL/LGPL dependencies on a pull request.
 
 ### App Store distribution

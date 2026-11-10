@@ -25,7 +25,7 @@ def make_policy(allowed=("MIT",), exceptions=()):
 
 def pkg(spdx, name="Pkg", **kw):
     return {"id": name, "version": "1.0.0", "license": spdx, "license_note": None,
-            "license_file_text": None, "project_url": "", "copyright": "", "frameworks": {"net10.0-ios"}, **kw}
+            "license_file_text": None, "project_url": "", "holder": "Acme", "frameworks": {"net10.0-ios"}, **kw}
 
 
 class Expressions(unittest.TestCase):
@@ -52,6 +52,25 @@ class Expressions(unittest.TestCase):
         for bad in ("MIT OR", "(MIT", "OR MIT", ""):
             with self.assertRaises(ValueError, msg=bad):
                 check.evaluate(bad, lambda i: True)
+
+
+class HolderNormalisation(unittest.TestCase):
+    CASES = {
+        "© Microsoft Corporation. All rights reserved.": "Microsoft Corporation",
+        "Copyright © 2019-2026 J.Sakamoto, Mozilla Public License 2.0": "J.Sakamoto",
+        "Copyright (c) 2007 James Newton-King": "James Newton-King",
+        "(C) 2014-16 Foo Bar Inc.": "Foo Bar Inc",
+        "Copyright 2020, 2021 The DM Mono Project Authors": "The DM Mono Project Authors",
+        "Copyright (c) .NET Foundation and Contributors": ".NET Foundation and Contributors",
+        "  Alexandre Mutel  ": "Alexandre Mutel",
+        "Copyright © Microsoft Corporation 2015-2026. ALL RIGHTS RESERVED.": "Microsoft Corporation",
+        "": "",
+        "Copyright (c) 2020": "",
+    }
+
+    def test_cases(self):
+        for raw, expected in self.CASES.items():
+            self.assertEqual(check.normalize_holder(raw), expected, raw)
 
 
 class Verdicts(unittest.TestCase):
@@ -145,14 +164,18 @@ class NuspecAndAssets(unittest.TestCase):
         self.assertEqual(inv[0]["frameworks"], {"net10.0-ios", "net10.0-maccatalyst"})
 
 
-def notices_for(root, packages, tag):
+def notices_for(root, packages, tag, holders=None):
     """Fake NuGet cache + assets file for {id: (version, licence expression or None)}; returns
     (inventory, problems, rendered notices) the way main() computes them."""
     libs = {}
-    for name, (version, expr) in packages.items():
+    for name, spec in packages.items():
+        version, expr = spec[0], spec[1]
+        cr = spec[2] if len(spec) > 2 else f"Copyright (c) 2020 {name} Authors"
         pdir = root / tag / "cache" / name.lower() / version
         pdir.mkdir(parents=True, exist_ok=True)
         lic = f'<license type="expression">{expr}</license>' if expr else ""
+        if cr:
+            lic += f"<copyright>{cr}</copyright>"
         (pdir / f"{name.lower()}.nuspec").write_text(
             f'<package {NuspecAndAssets.NS}><metadata><projectUrl>https://x/{name}</projectUrl>{lic}'
             "</metadata></package>")
@@ -164,16 +187,16 @@ def notices_for(root, packages, tag):
     for lid in ("MIT", "BSD-2-Clause"):
         (texts / f"{lid}.txt").write_text(f"{lid} text")
     policy = make_policy(allowed=("MIT", "BSD-2-Clause"))
-    inv = check.build_inventory({"net10.0-ios": assets})
+    inv = check.build_inventory({"net10.0-ios": assets}, holders)
     return inv, check.check_inventory(inv, policy, texts), check.render_notices(inv, policy, texts)
 
 
 class VersionIndependentNotices(unittest.TestCase):
     BASE = {"Markdig": ("1.6.0", "BSD-2-Clause"), "Microsoft.Foo": ("10.0.14", "MIT")}
 
-    def render(self, packages):
+    def render(self, packages, holders=None):
         with tempfile.TemporaryDirectory() as d:
-            return notices_for(Path(d), packages, "p")
+            return notices_for(Path(d), packages, "p", holders)
 
     def test_version_bump_with_same_licence_is_not_stale(self):
         _, problems, before = self.render(self.BASE)
@@ -203,6 +226,40 @@ class VersionIndependentNotices(unittest.TestCase):
             (texts / "MIT.txt").write_text("MIT text")
             self.assertNotEqual(check.render_notices(a, make_policy(), texts),
                                 check.render_notices(b, make_policy(), texts))
+
+    def test_copyright_year_change_is_not_stale(self):
+        a = {"Markdig": ("1.6.0", "MIT", "Copyright (c) 2019-2025 Alexandre Mutel. All rights reserved.")}
+        b = {"Markdig": ("1.7.0", "MIT", "(C) 2019-2026 Alexandre Mutel")}
+        self.assertEqual(self.render(a)[2], self.render(b)[2])
+        self.assertIn("Copyright (c) Alexandre Mutel", self.render(a)[2])
+
+    def test_holder_change_makes_the_notices_stale(self):
+        a = {"Markdig": ("1.6.0", "MIT", "Copyright (c) 2020 Alexandre Mutel")}
+        b = {"Markdig": ("1.7.0", "MIT", "Copyright (c) 2020 Someone Else")}
+        self.assertNotEqual(self.render(a)[2], self.render(b)[2])
+
+    def test_notice_lists_holder_with_its_packages_once_per_licence(self):
+        text = self.render({"A": ("1", "MIT", "(c) 2020 Acme"), "B": ("1", "MIT", "Copyright 2021 Acme"),
+                            "C": ("1", "MIT", "(c) 2020 Other Co")})[2]
+        self.assertEqual(text.count("Copyright (c) Acme\n  Packages: A, B"), 1)
+        self.assertIn("Copyright (c) Other Co\n  Packages: C", text)
+        self.assertEqual(text.count("MIT text"), 1)
+
+    def test_missing_holder_fails_unless_declared_in_policy(self):
+        pkgs = {"Anon": ("1.0.0", "MIT", "")}
+        inv, problems, _ = self.render(pkgs)
+        self.assertEqual(inv[0]["holder"], "")
+        self.assertEqual(len(problems), 1)
+        self.assertIn("copyright holder", problems[0])
+        inv, problems, text = self.render(pkgs, {"anon": "Anon Authors"})
+        self.assertEqual(problems, [])
+        self.assertIn("Copyright (c) Anon Authors", text)
+
+    def test_authors_are_the_fallback_for_a_missing_copyright(self):
+        self.assertEqual(check.copyright_holder({"authors": "J.Sakamoto"}), "J.Sakamoto")
+        self.assertEqual(check.copyright_holder({"owners": "Jane Doe"}), "Jane Doe")
+        self.assertEqual(check.copyright_holder({"copyright": "(c) 2020", "authors": "Jane"}), "Jane")
+        self.assertEqual(check.copyright_holder({}), "")
 
     def test_unreadable_licence_fails_even_when_only_the_version_changed(self):
         _, problems, _ = self.render({**self.BASE, "Markdig": ("1.7.0", None)})
