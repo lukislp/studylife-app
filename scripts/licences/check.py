@@ -17,6 +17,7 @@ does not ship the notices file, or a stale notices file. Tests: test_check.py.
 from __future__ import annotations
 
 import argparse
+import difflib
 import fnmatch
 import json
 import re
@@ -394,6 +395,9 @@ def main(argv: list[str] | None = None) -> int:
     current = notices_path.read_bytes().decode("utf-8").replace("\r\n", "\n") if notices_path.exists() else ""
     if current != notices:
         print(f"{notices_path.name} is stale. Run: python3 scripts/licences/check.py --update", file=sys.stderr)
+        diff = difflib.unified_diff(current.splitlines(), notices.splitlines(), "committed", "generated", lineterm="", n=0)
+        for line in list(diff)[:60]:
+            print(line, file=sys.stderr)
         return 1
     print(f"{len(inventory)} packages, policy satisfied, {notices_path.name} is current")
     return 0
