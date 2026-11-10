@@ -48,10 +48,37 @@ exact same `StudyLife.Client` UI shown here, project-referenced rather than copi
 
 ## First launch
 
-On first launch, the app asks for the **server URL** (e.g. `https://studylife.example.com`)
-and validates it via a `manifest.json` request. The URL is stored in the native app
-preferences. To change it: clear app data (iOS: reinstall the app, Android: "Clear
-storage") and restart.
+StudyLife is self-hosted, and the first screen says so: there is no central service, so the
+app needs the address of your own server or of the one your school, university or organisation
+runs (a link leads to the setup guide). The address (e.g. `https://studylife.example.com`, the
+`https://` may be left out) is checked in plain words: nothing typed, not an address, no
+answer from the server, or an answer that does not look like a StudyLife server (the app asks
+`GET api/instance`, which every current server answers with an installation id and a version).
+After a warning, a second tap on "Use anyway" saves the address regardless, for a server that
+is down for a moment or is older than that endpoint. The address is stored in the native app
+preferences. The rules live in `StudyLife.App.Core` (`ServerAddress`, `ServerChecker`,
+`ServerEntry`).
+
+### Changing the server
+
+**Setup, "Server"** shows the host the app is connected to with **Change server**; the
+sign-in screen shows the same switch while signed out, so a mistyped address is no dead end.
+After a confirmation, one hand-over runs (`ServerHandOver`), in this order: unregister this
+device's push token on the old server, sign out on the old server (both with a five second
+limit, skipped silently when the server is unreachable), drop the session and the offline
+caches, wipe the widget, Apple Watch and Spotlight copies (`NativeLocalCopies.WipeAsync`, the
+same function the account deletion uses), forget the address. A step that fails never stops
+the next one. The app then restarts at the first-start screen. The account and its data on
+the old server are untouched.
+
+### Apple Health
+
+The app never asks for Health access at start-up. Setup shows **Connect Apple Health**
+(on iOS, where HealthKit exists); only that tap shows the system prompt, once. The state
+comes from the system each time (`HealthAccessCoordinator`): connected (nothing to do, also for
+installs that allowed access before), or declined, where Setup explains where to turn it on
+in the Health app instead of asking again. Until access is granted, finished focus rounds are
+not written to Health and the readiness tiles stay hidden.
 
 The dialog and the rest of the app open in the **device language**: the shared rule
 `UiLanguage` in the `studylife` repository picks the best match of the system languages the
@@ -453,6 +480,11 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
 
 ## Architecture notes
 
+- `src/StudyLife.App.Core` — plain net10.0 library with the decisions that need no device
+  (server address rules, `GET api/instance` check, the hand-over order, when Health access is
+  asked for); unit-tested in `tests/StudyLife.App.Core.Tests` (CI job `test-unit`,
+  `dotnet test tests/StudyLife.App.Core.Tests`). The MAUI app implements its small interfaces
+  (`AppHandOverSteps`, `NativeHealthData`).
 - `Components/AppRoot.razor` — root: first-launch dialog → boot sequence (session token,
   UI language via `UiLanguageStartup`, before the dialog texts load) like in
   `StudyLife.Client/Program.cs` → renders
@@ -480,7 +512,8 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
 - `Services/HealthBridge.cs` — facade over the Swift Apple HealthKit bridge
   (`native/ios-liveactivity/HealthBridge.swift`); backs the studylife repo's
   `INativeHealthData` (HRV, sleep onset, step count, cardio fitness/VO2max) - read-only, one
-  combined authorization prompt at startup, data never leaves the device.
+  combined authorization prompt shown when the user taps "Connect Apple Health" in Setup (never
+  at startup), data never leaves the device.
 - `Services/NativeTelemetry.cs` + `Services/TelemetryBridge.cs` — back the studylife repo's
   `INativeTelemetry`/`IClientPlatform` (see "Telemetry (native)" below).
 

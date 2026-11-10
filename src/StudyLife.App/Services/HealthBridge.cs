@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using StudyLife.App.Core;
 
 namespace StudyLife.App.Services;
 
@@ -30,8 +31,31 @@ public static class HealthBridge
     private static TaskCompletionSource<bool>? _authCompletion;
 #endif
 
+    /// <summary>What the system says about write access to Mindful Sessions (HealthKit never reveals
+    /// whether READ access was refused, so this is the one observable sign of the user's answer to the
+    /// combined prompt). Never shows a prompt.</summary>
+    public static HealthPermission GetPermission()
+    {
+#if LIVE_ACTIVITY && IOS
+        try
+        {
+            return slla_health_write_status() switch
+            {
+                2 => HealthPermission.Authorized,
+                1 => HealthPermission.Denied,
+                _ => HealthPermission.NotDetermined,
+            };
+        }
+        catch { return HealthPermission.NotDetermined; }
+#else
+        return HealthPermission.NotDetermined;
+#endif
+    }
+
     /// <summary>Requests Mindful Session write + HRV/Sleep Analysis/Step Count/VO2max read
-    /// authorization together, once, at app startup. Denied/undetermined just means
+    /// authorization together. Shows the system prompt, so it is only ever called from
+    /// HealthAccessCoordinator, i.e. when the user taps "Connect Apple Health" - never at start-up.
+    /// Denied/undetermined just means
     /// LogMindfulSession/GetRecentHrvAsync/GetRecentSleepOnsetMinutesAsync/GetStepsSinceAsync/
     /// GetCardioFitnessHistoryAsync silently no-op afterward.</summary>
     public static Task<bool> RequestAuthorizationAsync()
@@ -242,6 +266,9 @@ public static class HealthBridge
 #if LIVE_ACTIVITY && IOS
     [DllImport("__Internal")]
     private static extern int slla_health_is_available();
+
+    [DllImport("__Internal")]
+    private static extern int slla_health_write_status();
 
     [DllImport("__Internal")]
     private static extern unsafe void slla_health_request_authorization(delegate* unmanaged<int, void> handler);

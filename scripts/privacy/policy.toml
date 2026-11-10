@@ -113,7 +113,7 @@ DiskSpace = "E174.1"
 name = "app"                       # iOS app and Mac Catalyst app: same .NET runtime, same manifest
 manifest = "src/StudyLife.App/Platforms/iOS/Resources/PrivacyInfo.xcprivacy"
 baseline = true
-sources = ["src/StudyLife.App/**/*.cs", "native/ios-liveactivity/*.swift"]
+sources = ["src/StudyLife.App/**/*.cs", "src/StudyLife.App.Core/**/*.cs", "native/ios-liveactivity/*.swift"]
 exclude = [
   "**/obj/**", "**/bin/**", "src/StudyLife.App/Platforms/Android/**", "src/StudyLife.App/Platforms/Windows/**",
 ]

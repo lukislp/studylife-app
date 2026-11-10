@@ -49,6 +49,26 @@ public sealed class NativePush : INativePush
         }
     }
 
+    /// <summary>Tells the server to stop sending pushes to this device (api/push/unsubscribe-apns), used when
+    /// the user leaves the server. Best effort: no token, no push entitlement or a failing request all
+    /// report false, and the caller carries on.</summary>
+    public async Task<bool> UnregisterAsync()
+    {
+        if (!IsAvailable) return false;
+        var token = await ApnsTokenStore.GetTokenAsync();
+        if (token == null) return false;
+        try
+        {
+            var response = await _http.PostAsJsonAsync("api/push/unsubscribe-apns",
+                new { Token = token, DeviceName = DeviceInfo.Current.Name });
+            return response.IsSuccessStatusCode;
+        }
+        catch (HttpRequestException)
+        {
+            return false;
+        }
+    }
+
     public async Task<string?> GetEndpointHashAsync()
     {
         var token = await ApnsTokenStore.GetTokenAsync();

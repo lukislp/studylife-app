@@ -1,3 +1,4 @@
+using StudyLife.App.Core;
 using StudyLife.Client.Services;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -29,16 +30,22 @@ public sealed class NativeAppAuth : INativeAppAuth
     public const string CallbackScheme = "studylife";
 
     private readonly ServerUrlStore _urls;
+    private readonly ServerSwitcher _switcher;
 #if WINDOWS
     private readonly IJSRuntime _js;
 
-    public NativeAppAuth(ServerUrlStore urls, IJSRuntime js)
+    public NativeAppAuth(ServerUrlStore urls, ServerSwitcher switcher, IJSRuntime js)
     {
         _urls = urls;
+        _switcher = switcher;
         _js = js;
     }
 #else
-    public NativeAppAuth(ServerUrlStore urls) => _urls = urls;
+    public NativeAppAuth(ServerUrlStore urls, ServerSwitcher switcher)
+    {
+        _urls = urls;
+        _switcher = switcher;
+    }
 #endif
 
     /// <summary>Deliberately hardcoded to false, even though AppleSigningInfo.HasAssociatedDomains
@@ -76,11 +83,13 @@ public sealed class NativeAppAuth : INativeAppAuth
     /// Spotlight index. The session token and the offline caches are already gone (the client clears
     /// them the way a logout does); the server URL preference stays, it belongs to the device, not
     /// the account. Logout deliberately does not wipe these.</summary>
-    public async Task AccountDeletedAsync()
-    {
-        await HomeWidgetSnapshot.ClearAsync();
-        await SpotlightIndexer.ClearAsync();
-    }
+    public Task AccountDeletedAsync() => NativeLocalCopies.WipeAsync();
+
+    /// <summary>Host of the connected server, shown in Setup and next to the sign-in screen.</summary>
+    public string? ServerHost => _urls.BaseUri is { } uri ? ServerAddress.DisplayHost(uri) : null;
+
+    /// <summary>The user confirmed leaving this server: one hand-over sequence (see ServerSwitcher).</summary>
+    public Task ChangeServerAsync() => _switcher.ChangeAsync();
 
     public bool IsAvailable => _urls.IsConfigured
         && (DeviceInfo.Platform == DevicePlatform.iOS

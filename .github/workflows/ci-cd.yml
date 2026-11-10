@@ -155,6 +155,34 @@ jobs:
             fi
           done
 
+  # Unit tests of the decisions that need no device (src/StudyLife.App.Core: server address rules,
+  # the hand-over order when the user changes server, when Health access is asked for). Plain
+  # net10.0 projects, so no MAUI workload and no studylife checkout.
+  test-unit:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            github.com:443
+            release-assets.githubusercontent.com:443
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet test tests/StudyLife.App.Core.Tests/StudyLife.App.Core.Tests.csproj -c Release
+
   # Privacy gate: the privacy manifests, the required reason APIs the code uses and the purpose
   # strings (scripts/privacy/policy.toml is the one place for the rules). Pure file checks with
   # the Python standard library, so no workload, no studylife checkout and no macOS runner.
@@ -464,12 +492,15 @@ jobs:
       - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-android</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-android
       - run: dotnet format src/StudyLife.App/StudyLife.App.csproj --verify-no-changes
+      # The plain libraries need no workload; the one cross-platform edit above does not touch them.
+      - run: dotnet format src/StudyLife.App.Core/StudyLife.App.Core.csproj --verify-no-changes
+      - run: dotnet format tests/StudyLife.App.Core.Tests/StudyLife.App.Core.Tests.csproj --verify-no-changes
 
   # ---------------------------------------------------------------------
   # Version / release — push to main only
   # ---------------------------------------------------------------------
   get-version:
-    needs: [test-android, test-ios, test-maccatalyst, test-windows, test-lint, test-native-parity, test-licences, test-privacy]
+    needs: [test-android, test-ios, test-maccatalyst, test-windows, test-lint, test-native-parity, test-licences, test-privacy, test-unit]
     if: github.event_name == 'push'
     # Dry run: works out the next version from the Conventional Commits (rules in
     # .github/lktec-bot.yml) and creates nothing. `release` below cuts the tag.

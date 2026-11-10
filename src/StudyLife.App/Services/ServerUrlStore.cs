@@ -1,3 +1,5 @@
+using StudyLife.App.Core;
+
 namespace StudyLife.App.Services;
 
 /// <summary>
@@ -24,13 +26,20 @@ public sealed class ServerUrlStore
 
     public bool IsConfigured => BaseUri != null;
 
+    /// <summary>Forgets the saved address (changing server): the next start shows the first-start screen.
+    /// The STUDYLIFE_SERVER_URL fallback is only read when the app process starts, so it cannot bring
+    /// the old address back within the session.</summary>
+    public void Clear()
+    {
+        Preferences.Default.Remove(PreferencesKey);
+        BaseUri = null;
+    }
+
     public void Save(Uri baseUri)
     {
         // Force a trailing slash, otherwise "api/..." resolves relative to the parent path
         // (https://host/app + api/x => https://host/api/x instead of https://host/app/api/x).
-        var normalized = baseUri.ToString();
-        if (!normalized.EndsWith('/'))
-            baseUri = new Uri(normalized + "/");
+        baseUri = ServerAddress.WithTrailingSlash(baseUri);
 
         Preferences.Default.Set(PreferencesKey, baseUri.ToString());
         BaseUri = baseUri;

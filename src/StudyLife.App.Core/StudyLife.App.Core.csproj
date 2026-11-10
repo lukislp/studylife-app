@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- The decisions of the native app that do not need a device: which server addresses are
+         acceptable, what counts as a StudyLife server, the order of the hand-over when the user
+         changes server, and when Health access is asked for. A plain library (no MAUI, no platform
+         code) so it is unit-tested on any machine (tests/StudyLife.App.Core.Tests). The MAUI app
+         implements the small interfaces defined here. -->
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>StudyLife.App.Core</RootNamespace>
+    </PropertyGroup>
+
+</Project>

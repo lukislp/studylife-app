@@ -6,13 +6,29 @@ import HealthKit
 // readiness tile, Sleep Analysis for the sleep-consistency tile, Step Count for the Focus
 // Timer's movement-break nudge, and VO2max (Cardio Fitness) for the Stats page trend chart
 // (all INativeHealthData/studylife repo consumers) - all requested together in one
-// authorization prompt at app startup, see slla_health_request_authorization below.
+// authorization prompt, shown only when the user taps "Connect Apple Health" in Setup (never at app
+// startup), see slla_health_request_authorization below.
 
 private let healthStore = HKHealthStore()
 
 @_cdecl("slla_health_is_available")
 public func slla_health_is_available() -> Int32 {
     HKHealthStore.isHealthDataAvailable() ? 1 : 0
+}
+
+/// Write status of the Mindful Session type: 0 = not asked yet, 1 = denied, 2 = allowed. HealthKit never
+/// says whether READ access was refused (by design), so this is the one observable sign of the user's
+/// answer to the combined prompt. Never shows a prompt; the app uses it to decide whether to offer
+/// "Connect Apple Health" (0), explain where to switch it on (1) or show "connected" (2).
+@_cdecl("slla_health_write_status")
+public func slla_health_write_status() -> Int32 {
+    guard HKHealthStore.isHealthDataAvailable(),
+          let mindfulType = HKObjectType.categoryType(forIdentifier: .mindfulSession) else { return 0 }
+    switch healthStore.authorizationStatus(for: mindfulType) {
+    case .sharingDenied: return 1
+    case .sharingAuthorized: return 2
+    default: return 0
+    }
 }
 
 @_cdecl("slla_health_request_authorization")
