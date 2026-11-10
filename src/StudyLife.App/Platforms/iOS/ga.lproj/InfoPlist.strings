@@ -1,6 +1,8 @@
 "NSHealthUpdateUsageDescription" = "Taifeadann StudyLife seisiúin fócais críochnaithe mar Nóiméid Aireachais in Health.";
 "NSHealthShareUsageDescription" = "Léann StudyLife athraitheacht ráta croí, codladh, líon coiscéimeanna agus aclaíocht chardach (VO2max) chun scór pearsanta ullmhachta staidéir agus comhsheasmhachta codlata a thaispeáint ar an Deais, chun sosanna gluaiseachta a mheabhrú duit le linn seisiúin fhada fócais, agus chun do dhul chun cinn aclaíochta a thaispeáint sna Staitisticí.";
 "NSMicrophoneUsageDescription" = "Taifeadann StudyLife do ghuth chun nótaí a dhearbhú trí chaint.";
+"NSSpeechRecognitionUsageDescription" = "Úsáideann StudyLife aitheantas cainte mar rogha chúltaca chun do dheachtú a thiontú ina théacs nóta.";
+"NSLocalNetworkUsageDescription" = "Ceanglaíonn StudyLife le do fhreastalaí StudyLife ar do líonra áitiúil.";
 "Fokus starten" = "Tosaigh Fócas";
 "Direkt in den Fokus-Timer springen" = "Léim díreach isteach san amadóir fócais";
 "Neue Notiz" = "Nóta Nua";

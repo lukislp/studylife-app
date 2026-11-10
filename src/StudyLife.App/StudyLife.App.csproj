@@ -42,6 +42,19 @@
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     </PropertyGroup>
 
+    <!-- Privacy manifest and localised purpose strings, iOS and Mac Catalyst (same .NET runtime,
+         same files). Stated explicitly - Remove first, so nothing is added twice if a default
+         glob already picks the file up - because App Store Connect rejects an upload without the
+         manifest (ITMS-91053) and a missing purpose string crashes the app when it touches the
+         protected API. scripts/privacy/check.py checks the contents (CI job test-privacy); the
+         iOS and Mac build scripts check that both reached the finished bundle. -->
+    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+        <BundleResource Remove="Platforms\iOS\Resources\PrivacyInfo.xcprivacy" />
+        <BundleResource Include="Platforms\iOS\Resources\PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
+        <BundleResource Remove="Platforms\iOS\**\InfoPlist.strings" />
+        <BundleResource Include="Platforms\iOS\**\InfoPlist.strings" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
     <ItemGroup>
         <!-- App icon and splash: same icon as the PWA (icon-512.png), background = app dark tone -->
         <!-- Mac Catalyst uses its own icon set (Platforms/MacCatalyst/Assets.xcassets, same art,

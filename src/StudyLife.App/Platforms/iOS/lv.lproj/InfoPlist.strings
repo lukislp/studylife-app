@@ -1,6 +1,8 @@
 "NSHealthUpdateUsageDescription" = "StudyLife reģistrē pabeigtās koncentrēšanās sesijas kā apzinātības minūtes lietotnē Veselība.";
 "NSHealthShareUsageDescription" = "StudyLife nolasa jūsu sirdsdarbības mainīgumu, miegu, soļu skaitu un kardio fizisko sagatavotību (VO2max), lai informācijas panelī parādītu personīgu mācību gatavības un miega konsekvences novērtējumu, atgādinātu par kustību pauzēm garu koncentrēšanās sesiju laikā un parādītu jūsu fiziskās sagatavotības progresu Statistikā.";
 "NSMicrophoneUsageDescription" = "StudyLife ieraksta jūsu balsi, lai diktētu piezīmes ar balsi.";
+"NSSpeechRecognitionUsageDescription" = "StudyLife izmanto runas atpazīšanu kā rezerves risinājumu, lai jūsu diktēto tekstu pārvērstu piezīmes tekstā.";
+"NSLocalNetworkUsageDescription" = "StudyLife savienojas ar jūsu StudyLife serveri jūsu lokālajā tīklā.";
 "Fokus starten" = "Sākt fokusu";
 "Direkt in den Fokus-Timer springen" = "Pāriet tieši uz fokusa taimeri";
 "Neue Notiz" = "Jauna piezīme";

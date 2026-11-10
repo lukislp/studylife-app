@@ -1,6 +1,8 @@
 "NSHealthUpdateUsageDescription" = "StudyLife zaznamenáva dokončené sústredené sedenia ako minúty všímavosti v aplikácii Zdravie.";
 "NSHealthShareUsageDescription" = "StudyLife číta variabilitu srdcovej frekvencie, spánok, počet krokov a kardio kondíciu (VO2max), aby na paneli zobrazila osobné hodnotenie pripravenosti na štúdium a konzistencie spánku, pripomenula pohybové prestávky počas dlhých sústredených sedení a zobrazila váš pokrok v kondícii v Štatistikách.";
 "NSMicrophoneUsageDescription" = "StudyLife nahráva váš hlas na diktovanie poznámok hlasom.";
+"NSSpeechRecognitionUsageDescription" = "StudyLife používa rozpoznávanie reči ako záložné riešenie na prevod vášho diktovania na text poznámky.";
+"NSLocalNetworkUsageDescription" = "StudyLife sa pripája k vášmu serveru StudyLife vo vašej lokálnej sieti.";
 "Fokus starten" = "Spustiť fokus";
 "Direkt in den Fokus-Timer springen" = "Prejsť priamo na časovač fokusu";
 "Neue Notiz" = "Nová poznámka";

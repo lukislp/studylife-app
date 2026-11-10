@@ -1,0 +1,166 @@
+# Privacy policy of the StudyLife app bundles - the single source of truth for
+# scripts/privacy/check.py. Three things live here and nowhere else:
+#   [categories.*]   Apple's required reason API categories, their approved reason codes and the
+#                    API names that put a source file into a category (the one table the script
+#                    scans with),
+#   [[bundle]]       every shipped bundle: which sources go into it and which privacy manifest it
+#                    carries (none = its code must not use a required reason API),
+#   [[purpose]]      the purpose strings an Info.plist must have and where they are localised.
+#
+# Sources of the category data (checked 2026-11-10):
+#   https://developer.apple.com/documentation/bundleresources/privacy-manifest-files
+#   https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api
+#   https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes
+#   Microsoft's baseline for .NET MAUI apps (runtime and BCL): https://learn.microsoft.com/dotnet/maui/ios/privacy-manifest
+
+# ---------------------------------------------------------------------------------------------
+# Required reason API categories. "reasons" are all approved codes of the category (a manifest
+# may only use these); "swift" / "csharp" are the API names a source file of that language must
+# not use unless the bundle's manifest declares the category. A name ending in "(" is matched
+# as a call, any other name as a whole word. Names are what Apple's documentation lists, plus
+# the .NET wrappers that reach the same system API.
+# ---------------------------------------------------------------------------------------------
+
+[categories.FileTimestamp]
+key = "NSPrivacyAccessedAPICategoryFileTimestamp"
+reasons = ["DDA9.1", "C617.1", "3B52.1", "0A2A.1"]
+swift = [
+  "creationDate", "modificationDate", "fileModificationDate", "fileCreationDate",
+  "contentModificationDateKey", "creationDateKey", "NSFileCreationDate", "NSFileModificationDate",
+  "getattrlist", "getattrlistbulk", "fgetattrlist", "getattrlistat",
+  "stat(", "fstat(", "fstatat(", "lstat(",
+]
+csharp = [
+  "GetLastWriteTime", "GetLastWriteTimeUtc", "GetCreationTime", "GetCreationTimeUtc",
+  "GetLastAccessTime", "GetLastAccessTimeUtc", "LastWriteTime", "LastWriteTimeUtc",
+  "CreationTime", "CreationTimeUtc", "LastAccessTime", "LastAccessTimeUtc",
+  "AttributesOfItem", "NSFileCreationDate", "NSFileModificationDate",
+  "ContentModificationDateKey", "CreationDateKey",
+]
+
+[categories.SystemBootTime]
+key = "NSPrivacyAccessedAPICategorySystemBootTime"
+reasons = ["35F9.1", "8FFB.1", "3D61.1"]
+swift = ["systemUptime", "mach_absolute_time"]
+csharp = ["SystemUptime", "mach_absolute_time"]
+
+[categories.DiskSpace]
+key = "NSPrivacyAccessedAPICategoryDiskSpace"
+reasons = ["85F4.1", "E174.1", "7D9E.1", "B728.1"]
+swift = [
+  "volumeAvailableCapacityKey", "volumeAvailableCapacityForImportantUsageKey",
+  "volumeAvailableCapacityForOpportunisticUsageKey", "volumeTotalCapacityKey",
+  "systemFreeSize", "systemSize", "NSFileSystemFreeSize", "NSFileSystemSize",
+  "statfs", "statvfs", "fstatfs", "fstatvfs",
+]
+csharp = [
+  "DriveInfo", "AvailableFreeSpace", "TotalFreeSpace", "VolumeAvailableCapacityKey",
+  "VolumeAvailableCapacityForImportantUsageKey", "VolumeAvailableCapacityForOpportunisticUsageKey",
+  "VolumeTotalCapacityKey", "SystemFreeSize", "SystemSize", "NSFileSystemFreeSize", "NSFileSystemSize",
+  "statfs", "statvfs",
+]
+
+[categories.ActiveKeyboards]
+key = "NSPrivacyAccessedAPICategoryActiveKeyboards"
+reasons = ["3EC4.1", "54BD.1"]
+swift = ["activeInputModes"]
+csharp = ["ActiveInputModes"]
+
+[categories.UserDefaults]
+key = "NSPrivacyAccessedAPICategoryUserDefaults"
+# CA92.1: information only the app itself reads and writes. 1C8F.1: information shared with the
+# apps and extensions of the same App Group. C56D.1 and AC6B.1 are for third-party SDKs and
+# managed app configuration.
+reasons = ["CA92.1", "1C8F.1", "C56D.1", "AC6B.1"]
+swift = ["UserDefaults", "NSUserDefaults"]
+csharp = [
+  "NSUserDefaults", "UserDefaults",
+  "Preferences.Default", "Preferences.Get", "Preferences.Set", "Preferences.Remove",
+  "Preferences.Clear", "Preferences.ContainsKey",
+]
+# A source that matches one of these regular expressions needs the reason as well. Reading or
+# writing the defaults of an App Group (suite name) is 1C8F.1, not CA92.1.
+[[categories.UserDefaults.hint]]
+pattern = '\bUserDefaults\s*\(\s*suiteName'
+reason = "1C8F.1"
+[[categories.UserDefaults.hint]]
+pattern = 'NSUserDefaults\s*\(\s*"'
+reason = "1C8F.1"
+[[categories.UserDefaults.hint]]
+pattern = '\bsharedName\s*:'
+reason = "1C8F.1"
+
+# ---------------------------------------------------------------------------------------------
+# Baseline of every .NET MAUI app bundle: the .NET runtime and the BCL use these APIs whatever
+# the linker removes (Microsoft's privacy-manifest guidance). A bundle with baseline = true must
+# declare all of them with at least the listed reason.
+# ---------------------------------------------------------------------------------------------
+
+[baseline]
+FileTimestamp = "C617.1"
+SystemBootTime = "35F9.1"
+DiskSpace = "E174.1"
+
+# ---------------------------------------------------------------------------------------------
+# Bundles. "sources" are globs from the repository root, "exclude" globs are dropped from them.
+# manifest = "" means: this bundle ships no privacy manifest, so none of its sources may use a
+# required reason API (Apple: each executable that uses one needs a manifest in its bundle;
+# system frameworks and the Swift runtime do not count - only code written here). Add a
+# manifest and wire it into the target before using such an API in one of them.
+# ---------------------------------------------------------------------------------------------
+
+[[bundle]]
+name = "app"                       # iOS app and Mac Catalyst app: same .NET runtime, same manifest
+manifest = "src/StudyLife.App/Platforms/iOS/Resources/PrivacyInfo.xcprivacy"
+baseline = true
+sources = ["src/StudyLife.App/**/*.cs", "native/ios-liveactivity/*.swift"]
+exclude = [
+  "**/obj/**", "**/bin/**", "src/StudyLife.App/Platforms/Android/**", "src/StudyLife.App/Platforms/Windows/**",
+]
+
+[[bundle]]
+name = "widgets"                   # home screen widgets and Live Activity UI (app extension)
+manifest = ""
+sources = [
+  "native/ios-liveactivity/Widget/*.swift", "native/ios-liveactivity/TimerActivityAttributes.swift",
+  "native/ios-liveactivity/TimerControlIntent.swift", "native/ios-liveactivity/UpcomingSessionActivity.swift",
+]
+
+[[bundle]]
+name = "share"                     # share extension
+manifest = ""
+sources = ["native/ios-share/*.swift"]
+
+[[bundle]]
+name = "watch"                     # Apple Watch app
+manifest = ""
+sources = ["native/watchos-app/*.swift"]
+
+[[bundle]]
+name = "watch-widgets"             # Apple Watch complications
+manifest = ""
+sources = ["native/watchos-app/Widgets/*.swift", "native/watchos-app/WatchSnapshot.swift"]
+
+# ---------------------------------------------------------------------------------------------
+# Purpose strings. Every key in "required" must be in the Info.plist; every *UsageDescription
+# key an Info.plist has must be translated in every InfoPlist.strings file under "lproj" (the
+# base value in the plist is German), and all those files must carry the same keys.
+# Mac Catalyst is localised from the same files: the csproj bundles them into both targets.
+# ---------------------------------------------------------------------------------------------
+
+[[purpose]]
+name = "ios"
+plist = "src/StudyLife.App/Platforms/iOS/Info.plist"
+lproj = "src/StudyLife.App/Platforms/iOS/*.lproj/InfoPlist.strings"
+required = [
+  "NSHealthShareUsageDescription", "NSHealthUpdateUsageDescription", "NSMicrophoneUsageDescription",
+  "NSSpeechRecognitionUsageDescription", "NSLocalNetworkUsageDescription",
+]
+
+[[purpose]]
+name = "maccatalyst"
+plist = "src/StudyLife.App/Platforms/MacCatalyst/Info.plist"
+lproj = "src/StudyLife.App/Platforms/iOS/*.lproj/InfoPlist.strings"
+required = [
+  "NSMicrophoneUsageDescription", "NSSpeechRecognitionUsageDescription", "NSLocalNetworkUsageDescription",
+]

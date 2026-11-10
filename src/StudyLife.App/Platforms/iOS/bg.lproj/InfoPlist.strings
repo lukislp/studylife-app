@@ -1,6 +1,8 @@
 "NSHealthUpdateUsageDescription" = "StudyLife записва завършените сесии на фокус като минути на осъзнатост в Health.";
 "NSHealthShareUsageDescription" = "StudyLife чете вашата вариабилност на сърдечния ритъм, съня, броя стъпки и кардио фитнес (VO2max), за да покаже персонална оценка на готовността за учене и постоянството на съня в таблото, да ви напомня за паузи за движение по време на дълги сесии на фокус и да покаже напредъка на фитнеса ви в статистиката.";
 "NSMicrophoneUsageDescription" = "StudyLife записва гласа ви, за да диктувате бележки чрез говор.";
+"NSSpeechRecognitionUsageDescription" = "StudyLife използва разпознаване на реч като резервен вариант, за да превръща вашата диктовка в текст на бележка.";
+"NSLocalNetworkUsageDescription" = "StudyLife се свързва с вашия сървър на StudyLife във вашата локална мрежа.";
 "Fokus starten" = "Стартирай фокус";
 "Direkt in den Fokus-Timer springen" = "Премини директно към таймера за фокус";
 "Neue Notiz" = "Нова бележка";

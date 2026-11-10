@@ -55,6 +55,12 @@ services and packaging.
   Catalyst workloads, which also works on Windows) and commit the regenerated
   `THIRD-PARTY-NOTICES.md`; a new licence needs an entry in the policy file and its text under
   `scripts/licences/texts/`.
+- **Privacy.** `test-privacy` (pure file checks, a few seconds) keeps the privacy manifests, the
+  required reason APIs the code uses and the purpose strings consistent, against
+  `scripts/privacy/policy.toml`. Using a new API from that table, adding a bundle, or adding a
+  permission means updating the manifest or the `Info.plist` and all 26 `InfoPlist.strings` in
+  the same pull request; the check names the file and line. `python3 scripts/privacy/check.py
+  --inventory` shows which bundle uses what.
 - **Formatting.** `test-lint` runs
   `dotnet format src/StudyLife.App/StudyLife.App.csproj --verify-no-changes` against the Android
   target framework, which stands in for all of them because `dotnet format` cannot be scoped to

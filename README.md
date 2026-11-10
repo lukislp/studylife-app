@@ -269,6 +269,14 @@ tagged commit (the sibling `lukislp/studylife` checkout is its current `main`, a
 release run) and use no caches. After Apple's processing (usually minutes, sometimes an hour)
 the builds show up in App Store Connect -> TestFlight.
 
+**What App Store Connect checks that this repository answers.** An upload is rejected
+(ITMS-91053) when a bundle uses a required reason API without declaring it in its privacy
+manifest; the manifest, the purpose strings and the reasoning are in
+[Privacy and permissions](#privacy-and-permissions), and `test-ios`/`test-maccatalyst` fail
+when the finished bundle lacks either. The App Privacy questionnaire is answered in App Store
+Connect by the owner; the expected answer and its two caveats are in the same section. Export
+compliance needs no answer (`ITSAppUsesNonExemptEncryption` is false in both Info.plists).
+
 The TestFlight jobs use the GitHub Environment **`release`** (required reviewer: the owner,
 deployment branches: `main` only). Its secrets never reach pull requests or other jobs, and
 nothing runs with them before the owner approves. A missing TestFlight secret fails that job;
@@ -550,6 +558,84 @@ atos -o artifacts/dsym/<sha>/StudyLife.App.app.dSYM/Contents/Resources/DWARF/Stu
 
 Without a known load address, `-l` can be omitted and the raw `offsetIntoBinaryTextSegment`
 passed as the address instead - close enough to identify the function/file for triage purposes.
+
+## Privacy and permissions
+
+### Permissions the app asks for
+
+Each prompt has a purpose string in `Platforms/iOS/Info.plist` (German base value) and in all 26
+`Platforms/iOS/<language>.lproj/InfoPlist.strings`; Mac Catalyst uses the same translation files
+(the csproj bundles them into both targets) and its own `Platforms/MacCatalyst/Info.plist`. A
+capability the app does not use has no string.
+
+| Prompt | Key | What uses it |
+| --- | --- | --- |
+| Microphone | `NSMicrophoneUsageDescription` | Notes dictation: `getUserMedia` + `MediaRecorder` in the web view. The recording goes to the user's own server for transcription. |
+| Speech recognition | `NSSpeechRecognitionUsageDescription` | Fallback of the same dictation: the web view's `webkitSpeechRecognition` (Apple's speech recognition), used when recording is not possible. Without the key the first use would crash the app. |
+| Local network | `NSLocalNetworkUsageDescription` | Connecting to a StudyLife server on the user's LAN (a NAS, a Raspberry Pi, a `.local` name). |
+| Health (iOS) | `NSHealthShareUsageDescription`, `NSHealthUpdateUsageDescription` | Readiness score, movement breaks, VO2max; Mindful Minutes. Read on the device only. |
+
+Notifications and push need no purpose string (runtime prompt). On Mac Catalyst the dictation
+needs the entitlement `com.apple.security.device.audio-input` as well, which is in
+`Platforms/MacCatalyst/Entitlements.plist` (App Sandbox, TestFlight/Mac App Store) and in
+`scripts/apple/entitlements/maccatalyst-developer-id.plist` (hardened runtime, notarized ZIP).
+Why Mac gets dictation instead of hiding it: the Notes page of the shared UI always shows the
+dictation button and has no switch for native capabilities (it lives in the studylife repository),
+so the app cannot take the feature away on one platform; it works through the same web view code
+as on iOS, so the Mac build gets the strings and the entitlement. Not yet exercised on a Mac - see
+the pull request that added this for what to try.
+
+### Privacy manifest
+
+`Platforms/iOS/Resources/PrivacyInfo.xcprivacy` is the manifest of the app, for iOS and (same
+file, the csproj includes it in both targets) Mac Catalyst: no tracking, no tracking domains, no
+collected data types, and the required reason APIs the bundle uses:
+
+| Category | Reason | Evidence |
+| --- | --- | --- |
+| File timestamp | `C617.1` | .NET runtime/BCL baseline ([Microsoft](https://learn.microsoft.com/dotnet/maui/ios/privacy-manifest)); the app's own `File.Exists`/`ReadAllText` in the app container and the App Group inbox |
+| System boot time | `35F9.1` | .NET runtime baseline; `Stopwatch` for the launch timing (elapsed time between two events in the app) |
+| Disk space | `E174.1` | .NET runtime baseline only; the app never reads free space |
+| User defaults | `CA92.1` | MAUI `Preferences` (`ServerUrlStore`, `StreakMilestones`) and `NSUserDefaults.StandardUserDefaults` (`AppDelegate`): values only the app reads and writes. The widgets and the Watch app share data through files in the App Group, not through `UserDefaults(suiteName:)`, so there is no `1C8F.1` |
+
+The widget, share and Watch extensions have no manifest: their Swift code uses no required reason
+API (Apple's documentation asks for a manifest in each bundle whose own code uses one; system
+frameworks and the Swift runtime do not count). The Swift bridge compiled into the app
+(`native/ios-liveactivity`) is part of the app bundle and covered by its manifest.
+Sources: Apple, [Privacy manifest files](https://developer.apple.com/documentation/bundleresources/privacy-manifest-files)
+and [Describing use of required reason API](https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api).
+
+### Privacy gate
+
+`scripts/privacy/check.py` (Python standard library, tests beside it) fails the CI job
+`test-privacy` when
+
+- a manifest is not a valid property list, declares tracking, tracking domains or collected data
+  types, or uses a category or reason Apple does not define,
+- the sources of a bundle use a required reason API its manifest does not declare (the app's
+  manifest also has to carry the .NET baseline above), or a bundle without manifest uses one at all,
+- a purpose string is missing from an `Info.plist` or from any `InfoPlist.strings`.
+
+[`scripts/privacy/policy.toml`](scripts/privacy/policy.toml) is the one place for the rules: the
+categories with their approved reason codes and the API names that put a file into a category,
+the bundles with their sources and manifests, and the purpose strings. When the gate reports an
+API, add the reason to the manifest (and an entry to the table above) - or, for an extension,
+add a `PrivacyInfo.xcprivacy` to its target in `native/ios-signing/project.yml` and set it in the
+policy. `python3 scripts/privacy/check.py --inventory` prints which bundle uses what. The Apple
+build scripts (`scripts/apple/release-ios.sh`, `release-maccatalyst.sh`, run by `test-ios` and
+`test-maccatalyst`) check the finished bundle for the manifest and the localised strings.
+
+### App Store Connect: App Privacy
+
+For the app as distributed from this repository the expected answer is **Data Not Collected**:
+the app talks to the server the user types in on first launch and to nothing the developer
+operates (no analytics SDK, no advertising identifier, no tracking; the telemetry events and the
+push token go to that server, and telemetry only after the user's consent). That is the
+reading of Apple's definition ("collect" means data leaves the device to the developer or third
+parties), which is the developer's to confirm in App Store Connect. Two caveats the code makes
+visible: a demo or review instance operated by the developer is a server that does collect (account,
+notes, ...) and would change the answer, and the Marketplace browser calls the public GitHub API
+(`api.github.com`) from the device, which exposes the device's IP address to GitHub.
 
 ## Language
 
