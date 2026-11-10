@@ -8,62 +8,66 @@ The app's own code, and the StudyLife client and shared libraries compiled into 
 (github.com/lukislp/studylife), are copyright Lukas Koerber under AGPL-3.0 (see LICENSE).
 No third-party package in this list is under a GPL, AGPL or LGPL licence.
 
+The list names packages and licences, not versions: it stays valid across version updates and
+changes only when a package is added or removed or its licence or project URL changes.
+Copyright in each package remains with its authors; the project link names them and the source.
+
 ## NuGet packages
 
-| Package | Version | Licence | Project | Used in |
-| --- | --- | --- | --- | --- |
-| Markdig | 1.6.0 | BSD-2-Clause | https://xoofx.github.io/markdig | Mac Catalyst, iOS |
-| Microsoft.AspNetCore.Authorization | 10.0.14 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.AspNetCore.Components | 10.0.14 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.AspNetCore.Components.Analyzers | 10.0.14 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.AspNetCore.Components.Forms | 10.0.14 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.AspNetCore.Components.Web | 10.0.14 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.AspNetCore.Components.WebAssembly | 10.0.14 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.AspNetCore.Components.WebView | 10.0.0 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.AspNetCore.Components.WebView.Maui | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
-| Microsoft.AspNetCore.Metadata | 10.0.14 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Configuration | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Configuration.Abstractions | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Configuration.Binder | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Configuration.FileExtensions | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Configuration.Json | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.DependencyInjection | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Diagnostics | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Diagnostics.Abstractions | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.FileProviders.Abstractions | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.FileProviders.Composite | 10.0.0 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.FileProviders.Embedded | 10.0.0 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.FileProviders.Physical | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.FileSystemGlobbing | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Hosting.Abstractions | 10.0.0 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Http | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Logging | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Logging.Abstractions | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Logging.Debug | 10.0.0 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Options | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Options.ConfigurationExtensions | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Primitives | 10.0.14 | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Microsoft.Extensions.Validation | 10.0.14 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.JSInterop | 10.0.14 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.JSInterop.WebAssembly | 10.0.14 | MIT | https://asp.net/ | Mac Catalyst, iOS |
-| Microsoft.Maui.Controls | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
-| Microsoft.Maui.Controls.Build.Tasks | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
-| Microsoft.Maui.Controls.Core | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
-| Microsoft.Maui.Controls.Xaml | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
-| Microsoft.Maui.Core | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
-| Microsoft.Maui.Essentials | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
-| Microsoft.Maui.Graphics | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
-| Microsoft.Maui.Resizetizer | 10.0.20 | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
-| Microsoft.NET.ILLink.Tasks | (SDK) | MIT | https://dot.net/ | Mac Catalyst, iOS |
-| Toolbelt.Blazor.I18nText | 14.1.1 | MPL-2.0 | https://github.com/jsakamoto/Toolbelt.Blazor.I18nText/ | Mac Catalyst, iOS |
-| Toolbelt.Blazor.I18nText.SourceGenerator | 14.1.1 | MPL-2.0 | https://github.com/jsakamoto/Toolbelt.Blazor.I18nText/ | Mac Catalyst, iOS |
+| Package | Licence | Project | Used in |
+| --- | --- | --- | --- |
+| Markdig | BSD-2-Clause | https://xoofx.github.io/markdig | Mac Catalyst, iOS |
+| Microsoft.AspNetCore.Authorization | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.AspNetCore.Components | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.AspNetCore.Components.Analyzers | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.AspNetCore.Components.Forms | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.AspNetCore.Components.Web | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.AspNetCore.Components.WebAssembly | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.AspNetCore.Components.WebView | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.AspNetCore.Components.WebView.Maui | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
+| Microsoft.AspNetCore.Metadata | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Configuration | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Configuration.Abstractions | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Configuration.Binder | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Configuration.FileExtensions | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Configuration.Json | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.DependencyInjection | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.DependencyInjection.Abstractions | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Diagnostics | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Diagnostics.Abstractions | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.FileProviders.Abstractions | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.FileProviders.Composite | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.FileProviders.Embedded | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.FileProviders.Physical | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.FileSystemGlobbing | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Hosting.Abstractions | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Http | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Logging | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Logging.Abstractions | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Logging.Debug | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Options | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Options.ConfigurationExtensions | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Primitives | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Microsoft.Extensions.Validation | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.JSInterop | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.JSInterop.WebAssembly | MIT | https://asp.net/ | Mac Catalyst, iOS |
+| Microsoft.Maui.Controls | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
+| Microsoft.Maui.Controls.Build.Tasks | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
+| Microsoft.Maui.Controls.Core | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
+| Microsoft.Maui.Controls.Xaml | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
+| Microsoft.Maui.Core | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
+| Microsoft.Maui.Essentials | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
+| Microsoft.Maui.Graphics | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
+| Microsoft.Maui.Resizetizer | MIT | https://github.com/dotnet/maui | Mac Catalyst, iOS |
+| Microsoft.NET.ILLink.Tasks | MIT | https://dot.net/ | Mac Catalyst, iOS |
+| Toolbelt.Blazor.I18nText | MPL-2.0 | https://github.com/jsakamoto/Toolbelt.Blazor.I18nText/ | Mac Catalyst, iOS |
+| Toolbelt.Blazor.I18nText.SourceGenerator | MPL-2.0 | https://github.com/jsakamoto/Toolbelt.Blazor.I18nText/ | Mac Catalyst, iOS |
 
 ## BSD-2-Clause
 
 Applies to:
 
-- Markdig 1.6.0 - Alexandre Mutel
+- Markdig
 
 ```text
 Redistribution and use in source and binary forms, with or without modification, are permitted
@@ -90,49 +94,49 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Applies to:
 
-- Microsoft.AspNetCore.Authorization 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.AspNetCore.Components 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.AspNetCore.Components.Analyzers 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.AspNetCore.Components.Forms 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.AspNetCore.Components.Web 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.AspNetCore.Components.WebAssembly 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.AspNetCore.Components.WebView 10.0.0 - © Microsoft Corporation. All rights reserved.
-- Microsoft.AspNetCore.Components.WebView.Maui 10.0.20 - © Microsoft Corporation. All rights reserved.
-- Microsoft.AspNetCore.Metadata 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Configuration 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Configuration.Abstractions 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Configuration.Binder 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Configuration.FileExtensions 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Configuration.Json 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.DependencyInjection 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.DependencyInjection.Abstractions 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Diagnostics 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Diagnostics.Abstractions 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.FileProviders.Abstractions 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.FileProviders.Composite 10.0.0 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.FileProviders.Embedded 10.0.0 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.FileProviders.Physical 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.FileSystemGlobbing 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Hosting.Abstractions 10.0.0 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Http 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Logging 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Logging.Abstractions 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Logging.Debug 10.0.0 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Options 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Options.ConfigurationExtensions 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Primitives 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Extensions.Validation 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.JSInterop 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.JSInterop.WebAssembly 10.0.14 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Maui.Controls 10.0.20 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Maui.Controls.Build.Tasks 10.0.20 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Maui.Controls.Core 10.0.20 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Maui.Controls.Xaml 10.0.20 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Maui.Core 10.0.20 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Maui.Essentials 10.0.20 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Maui.Graphics 10.0.20 - © Microsoft Corporation. All rights reserved.
-- Microsoft.Maui.Resizetizer 10.0.20 - © Microsoft Corporation. All rights reserved.
-- Microsoft.NET.ILLink.Tasks (SDK) - © Microsoft Corporation. All rights reserved.
+- Microsoft.AspNetCore.Authorization
+- Microsoft.AspNetCore.Components
+- Microsoft.AspNetCore.Components.Analyzers
+- Microsoft.AspNetCore.Components.Forms
+- Microsoft.AspNetCore.Components.Web
+- Microsoft.AspNetCore.Components.WebAssembly
+- Microsoft.AspNetCore.Components.WebView
+- Microsoft.AspNetCore.Components.WebView.Maui
+- Microsoft.AspNetCore.Metadata
+- Microsoft.Extensions.Configuration
+- Microsoft.Extensions.Configuration.Abstractions
+- Microsoft.Extensions.Configuration.Binder
+- Microsoft.Extensions.Configuration.FileExtensions
+- Microsoft.Extensions.Configuration.Json
+- Microsoft.Extensions.DependencyInjection
+- Microsoft.Extensions.DependencyInjection.Abstractions
+- Microsoft.Extensions.Diagnostics
+- Microsoft.Extensions.Diagnostics.Abstractions
+- Microsoft.Extensions.FileProviders.Abstractions
+- Microsoft.Extensions.FileProviders.Composite
+- Microsoft.Extensions.FileProviders.Embedded
+- Microsoft.Extensions.FileProviders.Physical
+- Microsoft.Extensions.FileSystemGlobbing
+- Microsoft.Extensions.Hosting.Abstractions
+- Microsoft.Extensions.Http
+- Microsoft.Extensions.Logging
+- Microsoft.Extensions.Logging.Abstractions
+- Microsoft.Extensions.Logging.Debug
+- Microsoft.Extensions.Options
+- Microsoft.Extensions.Options.ConfigurationExtensions
+- Microsoft.Extensions.Primitives
+- Microsoft.Extensions.Validation
+- Microsoft.JSInterop
+- Microsoft.JSInterop.WebAssembly
+- Microsoft.Maui.Controls
+- Microsoft.Maui.Controls.Build.Tasks
+- Microsoft.Maui.Controls.Core
+- Microsoft.Maui.Controls.Xaml
+- Microsoft.Maui.Core
+- Microsoft.Maui.Essentials
+- Microsoft.Maui.Graphics
+- Microsoft.Maui.Resizetizer
+- Microsoft.NET.ILLink.Tasks
 
 ```text
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
@@ -153,7 +157,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 ## MPL-2.0: Toolbelt.Blazor.I18nText
 
-- Toolbelt.Blazor.I18nText 14.1.1 - Copyright © 2019-2026 J.Sakamoto, Mozilla Public License 2.0
+- Toolbelt.Blazor.I18nText
 
 MPL-2.0 is file-level copyleft: it only covers the package's own files (its assembly and the shipped helper.min.js / *.lib.module.js), not the app. Allowed unmodified; the notice and the source location below satisfy MPL-2.0 section 3.2 for the executable form.
 
@@ -162,7 +166,7 @@ Licence text: https://spdx.org/licenses/MPL-2.0.html
 
 ## MPL-2.0: Toolbelt.Blazor.I18nText.SourceGenerator
 
-- Toolbelt.Blazor.I18nText.SourceGenerator 14.1.1 - Copyright © 2019-2026 J.Sakamoto, Mozilla Public License 2.0
+- Toolbelt.Blazor.I18nText.SourceGenerator
 
 Same project and licence as Toolbelt.Blazor.I18nText. A compile-time analyzer, not part of the shipped bundle; listed for completeness. MPL-2.0 is file-level copyleft, allowed unmodified.
 

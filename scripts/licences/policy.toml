@@ -2,10 +2,13 @@
 # The script reads the resolved NuGet graph from the build system (dotnet restore ->
 # obj/project.assets.json) and each package's licence from its .nuspec; nothing about individual
 # packages is hard-coded in the script. THIRD-PARTY-NOTICES.md is generated from this file plus
-# that data, and CI fails when it is stale or a rule below is violated.
+# that data, and CI fails when it is stale or a rule below is violated. The notices name packages
+# and licences only, never versions, so a dependency version bump does not make them stale; the
+# licence is still read from the version actually resolved, so a licence change in a new version
+# is caught.
 #
 # A licence that cannot be read from the package ("UNKNOWN": no SPDX expression, only a licenseUrl
-# or nothing at all) always fails, unless a [[exception]] below names that package and the exact
+# or nothing at all) always fails, unless an [[exception]] below names that package and the exact
 # licence that was verified by hand.
 
 [bundle]
@@ -24,13 +27,6 @@ allowed = ["MIT", "BSD-2-Clause"]
 # FSF position). Matched case-insensitively against every id in a licence expression. Exceptions
 # cannot lift a denied id.
 denied = ["GPL-*", "AGPL-*", "LGPL-*"]
-
-# Implicit package references whose version follows the installed .NET SDK, not this repository:
-# they are listed without a version so the notices file is the same on every machine. The licence
-# is still read and checked on each run.
-[[sdk_package]]
-package = "Microsoft.NET.ILLink.Tasks"
-reason = "Added implicitly by the SDK (10.0.12 on one machine, 10.0.15 on the CI runner). Build-time linker task, not part of the bundle."
 
 [[exception]]
 package = "Toolbelt.Blazor.I18nText"

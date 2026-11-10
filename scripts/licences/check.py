@@ -43,10 +43,6 @@ def load_policy(path: Path) -> dict:
             raise ValueError(f"policy: missing [{key}]")
     policy.setdefault("exception", [])
     policy.setdefault("component", [])
-    policy.setdefault("sdk_package", [])
-    for sdk in policy["sdk_package"]:
-        if not sdk.get("package") or not sdk.get("reason"):
-            raise ValueError("policy: every sdk_package needs 'package' and 'reason'")
     for exc in policy["exception"]:
         for key in ("package", "license", "reason", "source"):
             if not exc.get(key):
@@ -217,42 +213,37 @@ def resolve_license(meta: dict, package_dir: Path) -> tuple[str, str | None, str
     return UNKNOWN, "no licence information in the nuspec", None
 
 
-SDK_VERSION = "(SDK)"
+def build_inventory(assets: dict[str, Path]) -> list[dict]:
+    """assets: framework -> project.assets.json. One entry per (package id, licence).
 
-
-def build_inventory(assets: dict[str, Path], sdk_packages: frozenset[str] = frozenset()) -> list[dict]:
-    """assets: framework -> project.assets.json. One entry per (id, version).
-
-    Packages named in `sdk_packages` (lower case) are implicit references whose version follows
-    the installed .NET SDK; they are recorded as "(SDK)" so the notices file does not depend on
-    the SDK patch level of the machine that generates it. Their licence is still read and checked.
+    The version is deliberately not part of an entry's identity: the licence is read from the
+    nuspec of the version resolved on this run, but a version bump with the same licence yields
+    the same entry (and so the same notices file). `version` only serves error messages.
     """
     merged: dict[tuple[str, str], dict] = {}
     for tfm, path in assets.items():
         packages, folders = read_assets(path)
         for pkg in packages:
-            shown = SDK_VERSION if pkg["id"].lower() in sdk_packages else pkg["version"]
-            key = (pkg["id"].lower(), shown)
-            if key in merged:
-                merged[key]["frameworks"].add(tfm)
-                continue
             pdir = find_package_dir(pkg, folders)
             nuspec = next(pdir.glob("*.nuspec"), None)
             if nuspec is None:
                 raise FileNotFoundError(f"{pkg['id']} {pkg['version']}: no .nuspec in {pdir}")
             meta = parse_nuspec(nuspec.read_text(encoding="utf-8"))
             spdx, note, file_text = resolve_license(meta, pdir)
+            key = (pkg["id"].lower(), spdx)
+            if key in merged:
+                merged[key]["frameworks"].add(tfm)
+                continue
             merged[key] = {
                 "id": pkg["id"],
-                "version": shown,
+                "version": pkg["version"],
                 "license": spdx,
                 "license_note": note,
                 "license_file_text": file_text,
                 "project_url": meta.get("projectUrl", ""),
-                "copyright": meta.get("copyright", ""),
                 "frameworks": {tfm},
             }
-    return sorted(merged.values(), key=lambda p: (p["id"].lower(), p["version"]))
+    return sorted(merged.values(), key=lambda p: (p["id"].lower(), p["license"]))
 
 
 # --- checks ----------------------------------------------------------------------------------
@@ -307,15 +298,19 @@ def render_notices(inventory: list[dict], policy: dict, texts_dir: Path) -> str:
         "(github.com/lukislp/studylife), are copyright Lukas Koerber under AGPL-3.0 (see LICENSE).",
         "No third-party package in this list is under a GPL, AGPL or LGPL licence.",
         "",
+        "The list names packages and licences, not versions: it stays valid across version updates and",
+        "changes only when a package is added or removed or its licence or project URL changes.",
+        "Copyright in each package remains with its authors; the project link names them and the source.",
+        "",
         "## NuGet packages",
         "",
-        "| Package | Version | Licence | Project | Used in |",
-        "| --- | --- | --- | --- | --- |",
+        "| Package | Licence | Project | Used in |",
+        "| --- | --- | --- | --- |",
     ]
     for p in inventory:
         used = ", ".join(sorted(short.get(f, f) for f in p["frameworks"]))
         url = p["project_url"] or "-"
-        out.append(f"| {p['id']} | {p['version']} | {p['license']} | {url} | {used} |")
+        out.append(f"| {p['id']} | {p['license']} | {url} | {used} |")
 
     by_license: dict[str, list[dict]] = {}
     for p in inventory:
@@ -327,8 +322,7 @@ def render_notices(inventory: list[dict], policy: dict, texts_dir: Path) -> str:
     for lid in sorted(by_license):
         out += ["", f"## {lid}", "", "Applies to:", ""]
         for p in by_license[lid]:
-            cr = f" - {p['copyright']}" if p["copyright"] else ""
-            out.append(f"- {p['id']} {p['version']}{cr}")
+            out.append(f"- {p['id']}")
         out += ["", "```text", (texts_dir / f"{lid}.txt").read_text(encoding="utf-8").strip(), "```"]
 
     for exc in policy["exception"]:
@@ -337,8 +331,7 @@ def render_notices(inventory: list[dict], policy: dict, texts_dir: Path) -> str:
             continue
         out += ["", f"## {exc['license']}: {exc['package']}", ""]
         for p in matches:
-            cr = f" - {p['copyright']}" if p["copyright"] else ""
-            out.append(f"- {p['id']} {p['version']}{cr}")
+            out.append(f"- {p['id']}")
         out += [
             "",
             exc["reason"],
@@ -349,7 +342,7 @@ def render_notices(inventory: list[dict], policy: dict, texts_dir: Path) -> str:
 
     for p in inventory:
         if p["license_file_text"]:
-            out += ["", f"## Licence file shipped with {p['id']} {p['version']}", "", "```text",
+            out += ["", f"## Licence file shipped with {p['id']}", "", "```text",
                     p["license_file_text"], "```"]
 
     out += ["", "## Other components", ""]
@@ -391,8 +384,7 @@ def main(argv: list[str] | None = None) -> int:
             copy.write_bytes(path.read_bytes())
             assets[tfm] = copy
 
-    sdk_packages = frozenset(e["package"].lower() for e in policy["sdk_package"])
-    inventory = build_inventory(assets, sdk_packages)
+    inventory = build_inventory(assets)
     problems = check_inventory(inventory, policy, texts_dir)
     problems += check_asset_declared(csproj.read_text(encoding="utf-8"), policy["bundle"]["asset_logical_name"])
     if problems:

@@ -145,24 +145,73 @@ class NuspecAndAssets(unittest.TestCase):
         self.assertEqual(inv[0]["frameworks"], {"net10.0-ios", "net10.0-maccatalyst"})
 
 
-class SdkPackages(unittest.TestCase):
-    def test_version_follows_the_sdk_and_is_not_recorded(self):
+def notices_for(root, packages, tag):
+    """Fake NuGet cache + assets file for {id: (version, licence expression or None)}; returns
+    (inventory, problems, rendered notices) the way main() computes them."""
+    libs = {}
+    for name, (version, expr) in packages.items():
+        pdir = root / tag / "cache" / name.lower() / version
+        pdir.mkdir(parents=True, exist_ok=True)
+        lic = f'<license type="expression">{expr}</license>' if expr else ""
+        (pdir / f"{name.lower()}.nuspec").write_text(
+            f'<package {NuspecAndAssets.NS}><metadata><projectUrl>https://x/{name}</projectUrl>{lic}'
+            "</metadata></package>")
+        libs[f"{name}/{version}"] = {"type": "package", "path": f"{name.lower()}/{version}"}
+    assets = root / tag / "a.json"
+    assets.write_text(json.dumps({"packageFolders": {str(root / tag / "cache"): {}}, "libraries": libs}))
+    texts = root / "texts"
+    texts.mkdir(exist_ok=True)
+    for lid in ("MIT", "BSD-2-Clause"):
+        (texts / f"{lid}.txt").write_text(f"{lid} text")
+    policy = make_policy(allowed=("MIT", "BSD-2-Clause"))
+    inv = check.build_inventory({"net10.0-ios": assets})
+    return inv, check.check_inventory(inv, policy, texts), check.render_notices(inv, policy, texts)
+
+
+class VersionIndependentNotices(unittest.TestCase):
+    BASE = {"Markdig": ("1.6.0", "BSD-2-Clause"), "Microsoft.Foo": ("10.0.14", "MIT")}
+
+    def render(self, packages):
         with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            files = []
-            for version in ("10.0.12", "10.0.15"):
-                pdir = root / "cache" / "tool" / version
-                pdir.mkdir(parents=True)
-                (pdir / "tool.nuspec").write_text(
-                    f'<package {NuspecAndAssets.NS}><metadata><license type="expression">MIT</license>'
-                    "</metadata></package>")
-                assets = root / f"{version}.json"
-                assets.write_text(json.dumps({
-                    "packageFolders": {str(root / "cache"): {}},
-                    "libraries": {f"Tool/{version}": {"type": "package", "path": f"tool/{version}"}}}))
-                files.append(assets)
-            inv = check.build_inventory({"a": files[0], "b": files[1]}, frozenset({"tool"}))
-        self.assertEqual([(p["id"], p["version"]) for p in inv], [("Tool", check.SDK_VERSION)])
+            return notices_for(Path(d), packages, "p")
+
+    def test_version_bump_with_same_licence_is_not_stale(self):
+        _, problems, before = self.render(self.BASE)
+        bumped = {**self.BASE, "Markdig": ("1.7.2", "BSD-2-Clause"), "Microsoft.Foo": ("10.0.20", "MIT")}
+        _, problems_after, after = self.render(bumped)
+        self.assertEqual((problems, problems_after), ([], []))
+        self.assertEqual(before, after)
+        self.assertNotIn("1.6.0", before)
+
+    def test_licence_change_makes_the_notices_stale(self):
+        _, _, before = self.render(self.BASE)
+        _, _, after = self.render({**self.BASE, "Markdig": ("1.7.0", "MIT")})
+        self.assertNotEqual(before, after)
+
+    def test_added_and_removed_package_make_the_notices_stale(self):
+        _, _, before = self.render(self.BASE)
+        _, _, added = self.render({**self.BASE, "New.Pkg": ("1.0.0", "MIT")})
+        _, _, removed = self.render({"Markdig": self.BASE["Markdig"]})
+        self.assertNotEqual(before, added)
+        self.assertNotEqual(before, removed)
+
+    def test_project_url_change_makes_the_notices_stale(self):
+        a = [dict(pkg("MIT", "A"), project_url="https://one")]
+        b = [dict(pkg("MIT", "A"), project_url="https://two")]
+        with tempfile.TemporaryDirectory() as d:
+            texts = Path(d)
+            (texts / "MIT.txt").write_text("MIT text")
+            self.assertNotEqual(check.render_notices(a, make_policy(), texts),
+                                check.render_notices(b, make_policy(), texts))
+
+    def test_unreadable_licence_fails_even_when_only_the_version_changed(self):
+        _, problems, _ = self.render({**self.BASE, "Markdig": ("1.7.0", None)})
+        self.assertEqual(len(problems), 1)
+        self.assertIn("could not be verified", problems[0])
+
+    def test_denied_licence_in_a_new_version_fails(self):
+        _, problems, _ = self.render({**self.BASE, "Markdig": ("2.0.0", "GPL-3.0-only")})
+        self.assertTrue(any("denied" in p for p in problems))
 
 
 class Rendering(unittest.TestCase):
@@ -175,9 +224,8 @@ class Rendering(unittest.TestCase):
             inv = [pkg("MPL-2.0", "Tool"), pkg("MIT", "A", copyright="(c) A")]
             out = check.render_notices(inv, policy, texts)
             self.assertEqual(out, check.render_notices(inv, policy, texts))
-        self.assertIn("| A | 1.0.0 | MIT |", out)
+        self.assertIn("| A | MIT |", out)
         self.assertIn("MIT TEXT", out)
-        self.assertIn("(c) A", out)
         self.assertIn("Source code of this component: https://src", out)
 
     def test_asset_declared(self):
