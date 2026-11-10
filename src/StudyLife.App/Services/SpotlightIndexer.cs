@@ -18,6 +18,26 @@ public static class SpotlightIndexer
     public const string NotePrefix = "note-";
     public const string CoursePrefix = "course-";
 
+    /// <summary>Removes every note and course from the system search index after the account was
+    /// deleted (INativeAppAuth.AccountDeletedAsync) - the index otherwise keeps titles and note
+    /// excerpts until the next reindex, which never comes for a deleted account. No-op elsewhere.</summary>
+    public static async Task ClearAsync()
+    {
+#if IOS
+        try
+        {
+            var index = CSSearchableIndex.DefaultSearchableIndex;
+            if (index == null) return;
+            var done = new TaskCompletionSource();
+            index.DeleteWithDomain(new[] { "studylife.notes", "studylife.courses" }, _ => done.TrySetResult());
+            await Task.WhenAny(done.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+        }
+        catch { /* best effort - the index simply keeps its last state */ }
+#else
+        await Task.CompletedTask;
+#endif
+    }
+
     public static async Task ReindexAsync(HttpClient http)
     {
 #if IOS
