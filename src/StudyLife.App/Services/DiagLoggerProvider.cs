@@ -30,10 +30,9 @@ internal sealed class DiagLoggerProvider : ILoggerProvider
         {
             if (!IsEnabled(logLevel))
                 return;
-            Console.WriteLine($"[Diag:{category}] {logLevel}: {formatter(state, exception)}");
+            DeveloperDiagnostics.Log(category, $"{logLevel}: {formatter(state, exception)}");
             if (exception != null)
-                Console.WriteLine(exception.ToString());
-            Console.Out.Flush();
+                DeveloperDiagnostics.Log(category, exception.ToString());
         }
     }
 }
