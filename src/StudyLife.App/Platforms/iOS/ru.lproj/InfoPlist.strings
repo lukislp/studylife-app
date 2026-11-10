@@ -1,6 +1,8 @@
 "NSHealthUpdateUsageDescription" = "StudyLife записывает завершённые сессии концентрации как минуты осознанности в Health.";
 "NSHealthShareUsageDescription" = "StudyLife считывает вариабельность сердечного ритма, сон, количество шагов и кардиофитнес (VO2max), чтобы показать персональную оценку готовности к учёбе и постоянства сна на панели, напоминать о перерывах на движение во время длительных сессий концентрации и отображать прогресс вашей физической формы в статистике.";
 "NSMicrophoneUsageDescription" = "StudyLife записывает ваш голос для надиктовки заметок.";
+"NSSpeechRecognitionUsageDescription" = "StudyLife использует распознавание речи как резервный вариант, чтобы преобразовывать вашу надиктовку в текст заметки.";
+"NSLocalNetworkUsageDescription" = "StudyLife подключается к вашему серверу StudyLife в вашей локальной сети.";
 "Fokus starten" = "Начать фокус";
 "Direkt in den Fokus-Timer springen" = "Перейти прямо к таймеру фокуса";
 "Neue Notiz" = "Новая заметка";

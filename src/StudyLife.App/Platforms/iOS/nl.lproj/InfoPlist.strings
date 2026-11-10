@@ -1,6 +1,8 @@
 "NSHealthUpdateUsageDescription" = "StudyLife registreert voltooide focussessies als Mindfulness-minuten in Gezondheid.";
 "NSHealthShareUsageDescription" = "StudyLife leest je hartslagvariabiliteit, slaap, aantal stappen en conditie (VO2max) om een persoonlijke leergereedheids- en slaapconsistentiescore op het Dashboard te tonen, je te herinneren aan bewegingspauzes tijdens lange focussessies en je conditievooruitgang in Statistieken weer te geven.";
 "NSMicrophoneUsageDescription" = "StudyLife neemt je stem op om notities via spraak te dicteren.";
+"NSSpeechRecognitionUsageDescription" = "StudyLife gebruikt spraakherkenning als terugvaloptie om je dictaat om te zetten in notitietekst.";
+"NSLocalNetworkUsageDescription" = "StudyLife maakt verbinding met je StudyLife-server op je lokale netwerk.";
 "Fokus starten" = "Focus starten";
 "Direkt in den Fokus-Timer springen" = "Direct naar de focustimer springen";
 "Neue Notiz" = "Nieuwe notitie";

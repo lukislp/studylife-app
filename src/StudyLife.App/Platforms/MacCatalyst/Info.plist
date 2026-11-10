@@ -32,6 +32,17 @@
     </array>
     <key>XSAppIconAssets</key>
     <string>Assets.xcassets/appicon.appiconset</string>
+    <!-- Notes dictation (getUserMedia in the web view). Needs the entitlement
+         com.apple.security.device.audio-input, in Entitlements.plist (App Sandbox) and in
+         scripts/apple/entitlements/maccatalyst-developer-id.plist (hardened runtime). The base
+         language is German like the iOS Info.plist; the translations are the same
+         InfoPlist.strings files (Platforms/iOS/*.lproj), bundled into this target by the csproj. -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>StudyLife nimmt deine Stimme auf, um Notizen per Spracheingabe zu diktieren.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>StudyLife nutzt als Ersatzlösung die Spracherkennung, um deine Spracheingabe in Notiztext umzuwandeln.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>StudyLife verbindet sich mit deinem StudyLife-Server in deinem lokalen Netzwerk.</string>
     <!-- Return channel of the passkey login (see iOS/Info.plist) -->
     <key>CFBundleURLTypes</key>
     <array>
