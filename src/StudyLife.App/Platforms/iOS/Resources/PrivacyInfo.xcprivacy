@@ -1,17 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-This is the minimum required version of the Apple Privacy Manifest for .NET MAUI apps.
-The contents below are needed because of APIs that are used in the .NET framework and .NET MAUI SDK.
+Privacy manifest of the StudyLife app (iOS, and the same file for Mac Catalyst - same .NET runtime).
+scripts/privacy/check.py (CI job test-privacy) keeps it consistent with the sources; the rules and
+the evidence for every entry are in scripts/privacy/policy.toml and the README ("Privacy").
 
-You are responsible for adding extra entries as needed for your application.
-
-More information: https://aka.ms/maui-privacy-manifest
+Sources: https://developer.apple.com/documentation/bundleresources/privacy-manifest-files
+         https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api
+         https://learn.microsoft.com/dotnet/maui/ios/privacy-manifest
 -->
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- The developer collects nothing and tracks nothing: the app only talks to the server the
+         user enters (and, for the Marketplace browser, to the public GitHub API). -->
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
     <key>NSPrivacyAccessedAPITypes</key>
     <array>
+        <!-- .NET runtime/BCL baseline (Microsoft's MAUI guidance). C617.1 also covers the app's
+             own files: File.Exists/ReadAllText in the app container and the App Group inbox of
+             the share extension (SharedNoteIntake, NativeTelemetry, HomeWidgetSnapshot). -->
         <dict>
             <key>NSPrivacyAccessedAPIType</key>
             <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
@@ -20,6 +32,8 @@ More information: https://aka.ms/maui-privacy-manifest
                 <string>C617.1</string>
             </array>
         </dict>
+        <!-- .NET runtime baseline; also Stopwatch (mach_absolute_time) for the launch timing,
+             which is elapsed time between two events inside the app. -->
         <dict>
             <key>NSPrivacyAccessedAPIType</key>
             <string>NSPrivacyAccessedAPICategorySystemBootTime</string>
@@ -28,6 +42,7 @@ More information: https://aka.ms/maui-privacy-manifest
                 <string>35F9.1</string>
             </array>
         </dict>
+        <!-- .NET runtime baseline (the app itself never reads free disk space). -->
         <dict>
             <key>NSPrivacyAccessedAPIType</key>
             <string>NSPrivacyAccessedAPICategoryDiskSpace</string>
@@ -36,8 +51,9 @@ More information: https://aka.ms/maui-privacy-manifest
                 <string>E174.1</string>
             </array>
         </dict>
-        <!--
-            The entry below is only needed when you're using the Preferences API in your app.
+        <!-- MAUI Preferences (ServerUrlStore, StreakMilestones) and NSUserDefaults.StandardUserDefaults
+             (AppDelegate epoch marker): values only the app itself reads and writes. The App Group
+             is shared through files, not through UserDefaults(suiteName:), so no 1C8F.1. -->
         <dict>
             <key>NSPrivacyAccessedAPIType</key>
             <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
@@ -45,7 +61,7 @@ More information: https://aka.ms/maui-privacy-manifest
             <array>
                 <string>CA92.1</string>
             </array>
-        </dict> -->
+        </dict>
     </array>
 </dict>
 </plist>

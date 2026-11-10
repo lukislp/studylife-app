@@ -1,6 +1,8 @@
 "NSHealthUpdateUsageDescription" = "StudyLife bilježi dovršene sesije fokusa kao minute svjesnosti u aplikaciji Zdravlje.";
 "NSHealthShareUsageDescription" = "StudyLife čita varijabilnost srčanog ritma, san, broj koraka i kardio kondiciju (VO2max) kako bi prikazao osobnu ocjenu spremnosti za učenje i dosljednosti sna na nadzornoj ploči, podsjetio te na pauze za pokret tijekom dugih sesija fokusa i prikazao tvoj napredak u kondiciji u Statistici.";
 "NSMicrophoneUsageDescription" = "StudyLife snima tvoj glas za diktiranje bilježaka govorom.";
+"NSSpeechRecognitionUsageDescription" = "StudyLife koristi prepoznavanje govora kao zamjensko rješenje za pretvaranje tvojeg diktiranja u tekst bilješke.";
+"NSLocalNetworkUsageDescription" = "StudyLife se povezuje s tvojim StudyLife poslužiteljem na tvojoj lokalnoj mreži.";
 "Fokus starten" = "Pokreni fokus";
 "Direkt in den Fokus-Timer springen" = "Skoči izravno na tajmer fokusa";
 "Neue Notiz" = "Nova bilješka";

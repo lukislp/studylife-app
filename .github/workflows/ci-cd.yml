@@ -155,6 +155,32 @@ jobs:
             fi
           done
 
+  # Privacy gate: the privacy manifests, the required reason APIs the code uses and the purpose
+  # strings (scripts/privacy/policy.toml is the one place for the rules). Pure file checks with
+  # the Python standard library, so no workload, no studylife checkout and no macOS runner.
+  # The finished bundles are checked again by scripts/apple/release-ios.sh and
+  # release-maccatalyst.sh (test-ios / test-maccatalyst).
+  test-privacy:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            github.com:443
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Unit tests of the privacy script
+        run: |
+          python3 --version
+          python3 -m unittest discover -s scripts/privacy -v
+      - name: Check manifests, required reason APIs and purpose strings
+        run: python3 scripts/privacy/check.py --inventory
+
   # Licence gate for the bundle: resolves the NuGet graph of the iOS and Mac Catalyst targets
   # (dotnet restore, no build), reads every package's licence from its nuspec and fails on a
   # GPL/AGPL/LGPL family, an unreadable licence, or a THIRD-PARTY-NOTICES.md that no longer
@@ -443,7 +469,7 @@ jobs:
   # Version / release — push to main only
   # ---------------------------------------------------------------------
   get-version:
-    needs: [test-android, test-ios, test-maccatalyst, test-windows, test-lint, test-native-parity, test-licences]
+    needs: [test-android, test-ios, test-maccatalyst, test-windows, test-lint, test-native-parity, test-licences, test-privacy]
     if: github.event_name == 'push'
     # Dry run: works out the next version from the Conventional Commits (rules in
     # .github/lktec-bot.yml) and creates nothing. `release` below cuts the tag.
