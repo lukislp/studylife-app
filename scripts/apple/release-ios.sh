@@ -111,6 +111,13 @@ rm -rf "$APP/PlugIns" "$APP/Watch"
 cp -R "$SHELL_APP/PlugIns" "$APP/PlugIns"
 cp -R "$SHELL_APP/Watch" "$APP/Watch"
 
+# The privacy manifest and the localised purpose strings must have reached the app bundle
+# (App Store Connect ITMS-91053, crash on a protected API without a purpose string). The sources
+# are checked by scripts/privacy/check.py in CI; this checks the finished bundle. The extensions
+# ship no manifest because their code uses no required reason API (scripts/privacy/policy.toml).
+python3 "$ROOT/scripts/privacy/check.py" --bundle ios "$APP/Info.plist" "$APP" \
+  || fail "the privacy manifest or the purpose strings are missing from the app bundle"
+
 # --- 3. One version everywhere: App Store Connect rejects embedded bundles whose
 # CFBundleVersion/CFBundleShortVersionString differ from the app's. ---
 set_versions() {

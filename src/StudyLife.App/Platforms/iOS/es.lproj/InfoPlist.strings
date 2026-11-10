@@ -1,6 +1,8 @@
 "NSHealthUpdateUsageDescription" = "StudyLife registra las sesiones de concentración completadas como minutos de atención plena en Salud.";
 "NSHealthShareUsageDescription" = "StudyLife lee tu variabilidad de la frecuencia cardíaca, el sueño, el número de pasos y tu forma física cardiovascular (VO2max) para mostrar una puntuación personal de preparación para estudiar y consistencia del sueño en el Panel, recordarte pausas de movimiento durante sesiones de concentración largas y mostrar tu progreso físico en Estadísticas.";
 "NSMicrophoneUsageDescription" = "StudyLife graba tu voz para dictar notas por voz.";
+"NSSpeechRecognitionUsageDescription" = "StudyLife usa el reconocimiento de voz como alternativa para convertir tu dictado en texto de nota.";
+"NSLocalNetworkUsageDescription" = "StudyLife se conecta a tu servidor de StudyLife en tu red local.";
 "Fokus starten" = "Iniciar enfoque";
 "Direkt in den Fokus-Timer springen" = "Ir directamente al temporizador de enfoque";
 "Neue Notiz" = "Nueva nota";

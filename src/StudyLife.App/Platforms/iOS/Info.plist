@@ -47,6 +47,15 @@
     <!-- Notes voice dictation (getUserMedia in the WKWebView, granted via MicPermissionUIDelegate) -->
     <key>NSMicrophoneUsageDescription</key>
     <string>StudyLife nimmt deine Stimme auf, um Notizen per Spracheingabe zu diktieren.</string>
+    <!-- Fallback of the Notes dictation: the web view's webkitSpeechRecognition (Apple's speech
+         recognition) when recording with MediaRecorder is not possible. Without this key the
+         first use of it crashes the app. -->
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>StudyLife nutzt als Ersatzlösung die Spracherkennung, um deine Spracheingabe in Notiztext umzuwandeln.</string>
+    <!-- The server is often on the user's LAN (a NAS, a Raspberry Pi, a .local name): iOS asks for
+         local network access on the first connection to such an address. -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>StudyLife verbindet sich mit deinem StudyLife-Server in deinem lokalen Netzwerk.</string>
     <!-- Background refresh (BackgroundRefresh.cs): occasionally warm up data caches -->
     <key>UIBackgroundModes</key>
     <array>

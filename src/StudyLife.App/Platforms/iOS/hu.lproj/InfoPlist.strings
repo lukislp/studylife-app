@@ -1,6 +1,8 @@
 "NSHealthUpdateUsageDescription" = "A StudyLife a befejezett fókuszidőszakokat mindfulness percekként rögzíti az Egészség alkalmazásban.";
 "NSHealthShareUsageDescription" = "A StudyLife beolvassa a szívritmus-variabilitást, az alvást, a lépésszámot és a kardió erőnlétet (VO2max), hogy személyes tanulási készenléti és alvási állandósági pontszámot jelenítsen meg az irányítópulton, mozgásszüneteket javasoljon hosszú fókuszidőszakok alatt, és megjelenítse az erőnléti fejlődésedet a Statisztikában.";
 "NSMicrophoneUsageDescription" = "A StudyLife rögzíti a hangodat, hogy hanggal diktálhass jegyzeteket.";
+"NSSpeechRecognitionUsageDescription" = "A StudyLife tartalékmegoldásként beszédfelismerést használ, hogy a diktálásodat jegyzetszöveggé alakítsa.";
+"NSLocalNetworkUsageDescription" = "A StudyLife csatlakozik a helyi hálózatodon lévő StudyLife-kiszolgálódhoz.";
 "Fokus starten" = "Fókusz indítása";
 "Direkt in den Fokus-Timer springen" = "Ugrás egyenesen a fókuszidőzítőhöz";
 "Neue Notiz" = "Új jegyzet";

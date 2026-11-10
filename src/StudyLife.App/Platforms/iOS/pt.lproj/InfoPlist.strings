@@ -1,6 +1,8 @@
 "NSHealthUpdateUsageDescription" = "O StudyLife regista as sessões de concentração concluídas como minutos de atenção plena na aplicação Saúde.";
 "NSHealthShareUsageDescription" = "O StudyLife lê a tua variabilidade da frequência cardíaca, sono, número de passos e aptidão cardio (VO2max) para mostrar uma pontuação pessoal de prontidão para estudar e consistência do sono no Painel, lembrar-te de fazer pausas de movimento durante sessões de concentração longas e mostrar o teu progresso de aptidão física nas Estatísticas.";
 "NSMicrophoneUsageDescription" = "O StudyLife grava a tua voz para ditar notas por voz.";
+"NSSpeechRecognitionUsageDescription" = "O StudyLife usa o reconhecimento de voz como alternativa para converter o teu ditado em texto de nota.";
+"NSLocalNetworkUsageDescription" = "O StudyLife liga-se ao teu servidor StudyLife na tua rede local.";
 "Fokus starten" = "Iniciar foco";
 "Direkt in den Fokus-Timer springen" = "Ir diretamente para o temporizador de foco";
 "Neue Notiz" = "Nova nota";

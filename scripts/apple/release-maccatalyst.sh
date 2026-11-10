@@ -107,6 +107,10 @@ print("icns files:", found or "none")
 # ic10 = 1024x1024 (512x512@2x)
 sys.exit(0 if any("ic10" in t for t in found.values()) else 1)
 PY
+  # The privacy manifest and the localised purpose strings must have reached the bundle
+  # (App Store Connect ITMS-91053; the sources are checked by scripts/privacy/check.py in CI).
+  python3 "$ROOT/scripts/privacy/check.py" --bundle maccatalyst "$app/Contents/Info.plist" "$app/Contents/Resources" \
+    || fail "the privacy manifest or the purpose strings are missing from $app"
 }
 check_mac_bundle "$BUILT_APP"
 

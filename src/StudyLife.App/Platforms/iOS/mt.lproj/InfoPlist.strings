@@ -1,6 +1,8 @@
 "NSHealthUpdateUsageDescription" = "StudyLife jirreġistra sessjonijiet ta' konċentrazzjoni mitmuma bħala Minuti ta' Konsapevolezza fi Health.";
 "NSHealthShareUsageDescription" = "StudyLife jaqra l-varjabbiltà tar-rata tal-qalb, l-irqad, l-għadd ta' passi u l-idoneità kardjo (VO2max) tiegħek biex juri punteġġ personali ta' lestezza għall-istudju u konsistenza tal-irqad fid-Dashboard, ifakkrek tieħu pawżi ta' moviment matul sessjonijiet twal ta' konċentrazzjoni, u juri l-progress tal-idoneità fiżika tiegħek fl-Istatistika.";
 "NSMicrophoneUsageDescription" = "StudyLife jirreġistra leħnek biex tiddetta noti bil-vuċi.";
+"NSSpeechRecognitionUsageDescription" = "StudyLife juża r-rikonoxximent tal-vuċi bħala soluzzjoni ta’ riżerva biex jittrasforma d-dettatura tiegħek f’test ta’ nota.";
+"NSLocalNetworkUsageDescription" = "StudyLife jaqbad mas-server StudyLife tiegħek fin-netwerk lokali tiegħek.";
 "Fokus starten" = "Ibda l-Fokus";
 "Direkt in den Fokus-Timer springen" = "Aqbeż direttament għat-timer tal-fokus";
 "Neue Notiz" = "Nota Ġdida";
