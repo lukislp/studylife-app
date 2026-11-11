@@ -94,6 +94,9 @@
              calls. -->
         <ProjectReference Include="..\..\studylife\src\StudyLife.Client\StudyLife.Client.csproj"
                           UndefineProperties="RuntimeIdentifier;RuntimeIdentifiers;SelfContained;AppendRuntimeIdentifierToOutputPath" />
+        <!-- The device-independent decisions (server address rules, hand-over order, when Health
+             access is asked for): a plain net10.0 library with its own unit tests. -->
+        <ProjectReference Include="..\StudyLife.App.Core\StudyLife.App.Core.csproj" />
     </ItemGroup>
 
     <!-- The client's index.html collides with the app's own (same target path "/") -

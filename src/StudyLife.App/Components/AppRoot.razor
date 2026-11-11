@@ -1,9 +1,12 @@
 @implements IDisposable
 @using System.Net.Http.Json
+@using StudyLife.App.Core
+@using StudyLife.App.Services
 @using StudyLife.Shared
 @using StudyLife.Client.I18nText
 @using StudyLife.Client.Services
 @inject ServerUrlStore ServerUrls
+@inject ServerEntry Entry
 @inject SessionTokenStore TokenStore
 @inject IJSRuntime JS
 @inject NavigationManager Nav
@@ -23,24 +26,38 @@
 @if (_ready)
 {
     <StudyLife.Client.App />
+    @* Signed out (sign-in screen, or a server that never worked): the way out of a wrong server. Signed in,
+       the same switch lives in Setup. *@
+    @if (TokenStore.Token is null)
+    {
+        <div style="position:fixed; left:0; right:0; bottom:max(0.5rem, env(safe-area-inset-bottom)); display:flex; justify-content:center; pointer-events:none; z-index:50;">
+            <div style="pointer-events:auto; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:0.4rem 0.75rem;">
+                <NativeServerSwitch Compact="true" />
+            </div>
+        </div>
+    }
 }
 else if (_needsServerUrl)
 {
     <div class="progress-share-page">
         <div class="progress-share-card">
             <h1>StudyLife</h1>
-            <p class="ss-desc">@T.Description</p>
-            @if (_urlError != null)
-            {
-                <p class="ss-desc" style="color:var(--danger, #e74c3c)">@_urlError</p>
-            }
+            <p class="ss-desc">@T.Intro</p>
+            <p class="ss-desc"><a href="@ProjectLinks.SelfHostingGuide" target="_blank" rel="noopener noreferrer">@T.SetupGuideLink</a></p>
             <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1.25rem;">
-                <label class="ss-label" for="server-url">@T.ServerUrlLabel</label>
+                <label class="ss-label" for="server-url">@T.Description</label>
                 <input id="server-url" class="input" type="url" inputmode="url" autocapitalize="off"
                        spellcheck="false" placeholder="https://studylife.example.com"
-                       @bind="_urlInput" @bind:event="oninput" @onkeyup="@(e => { if (e.Key == "Enter") _ = SaveServerUrlAsync(); })" />
+                       aria-label="@T.ServerUrlLabel" aria-invalid="@(_urlError != null ? "true" : null)"
+                       aria-describedby="@(_urlError != null ? "server-url-error" : null)"
+                       value="@_urlInput" @oninput="OnUrlInput"
+                       @onkeyup="@(e => { if (e.Key == "Enter") _ = SaveServerUrlAsync(); })" />
+                @if (_urlError != null)
+                {
+                    <p id="server-url-error" class="ss-desc" role="alert" style="color:var(--danger, #e74c3c); margin-bottom:0">@_urlError</p>
+                }
                 <button type="button" class="btn-primary" @onclick="SaveServerUrlAsync" disabled="@_checking">
-                    @(_checking ? T.CheckingConnection : _unreachableWarning ? T.UseAnyway : T.Connect)
+                    @(_checking ? T.CheckingConnection : _canUseAnyway ? T.UseAnyway : T.Connect)
                 </button>
             </div>
         </div>
@@ -51,7 +68,7 @@ else if (_needsServerUrl)
     private bool _ready;
     private bool _needsServerUrl;
     private bool _checking;
-    private bool _unreachableWarning;
+    private bool _canUseAnyway;
     private string _urlInput = "";
     private string? _urlError;
     private AppFirstRunText T = new();
@@ -97,6 +114,8 @@ else if (_needsServerUrl)
         // .NET/MAUI host startup.
         TelemetryBridge.Start();
         DeepLinks.OnNavigate += HandleDeepLink;
+        TokenStore.OnTokenAvailable += HandleSessionChanged;
+        TokenStore.OnSessionInvalidated += HandleSessionChanged;
         // Focus timer -> lock screen Live Activity (iOS; a no-op everywhere else).
         // Developer diagnostics (DEBUG / DEVELOPER_DIAGNOSTICS builds only): DOM banner
         // (window.alert would be a silent no-op in the WKWebView). Release builds never wire it.
@@ -113,9 +132,8 @@ else if (_needsServerUrl)
         // stop taps from the Watch into TimerService (same button semantics as the focus page).
         WatchBridge.Activate();
         _watchTimer = new WatchTimerCoordinator(Timer, State, Http);
-        // Mindful Minutes: best-effort, one-time authorization prompt (Settings toggle if
-        // denied) - HealthBridge silently no-ops afterward either way.
-        _ = HealthBridge.RequestAuthorizationAsync();
+        // Health access is deliberately NOT requested here: Setup offers "Connect Apple Health" and only that
+        // tap shows the system prompt (HealthAccessCoordinator). Until then LogMindfulSession silently no-ops.
         // Share menu: shared text becomes a note (Android: ACTION_SEND intent,
         // iOS: share extension inbox, drained on foreground transition/boot).
         SharedNoteIntake.PendingChanged += HandleSharedNotesChanged;
@@ -137,6 +155,8 @@ else if (_needsServerUrl)
     }
 
     private void HandleOpenFocusRequested() => DeepLinks.Dispatch("/focus");
+
+    private void HandleSessionChanged() => _ = InvokeAsync(StateHasChanged);
 
     private void HandleSharedNotesChanged() => _ = InvokeAsync(ConsumeSharedNotesAsync);
 
@@ -165,6 +185,8 @@ else if (_needsServerUrl)
     public void Dispose()
     {
         DeepLinks.OnNavigate -= HandleDeepLink;
+        TokenStore.OnTokenAvailable -= HandleSessionChanged;
+        TokenStore.OnSessionInvalidated -= HandleSessionChanged;
         TimerLiveActivity.OpenFocusRequested -= HandleOpenFocusRequested;
         SharedNoteIntake.PendingChanged -= HandleSharedNotesChanged;
         Timer.OnSessionComplete -= HandleSessionCompleteForWidget;
@@ -278,54 +300,47 @@ else if (_needsServerUrl)
         await HomeWidgetSnapshot.UpdateAsync(State, Timer);
     }
 
+    private void OnUrlInput(ChangeEventArgs e)
+    {
+        _urlInput = e.Value?.ToString() ?? "";
+        // A new address starts fresh: the earlier warning (and its "use anyway") belonged to the old text.
+        _urlError = null;
+        _canUseAnyway = false;
+    }
+
+    /// <summary>Hands the typed address to ServerEntry (parse, then ask the server whether it is a StudyLife
+    /// server) and shows its verdict in plain words. The second tap on "Use anyway" skips the server check.</summary>
     private async Task SaveServerUrlAsync()
     {
-        var input = _urlInput.Trim();
-        if (input.Length == 0) return;
-        if (!input.Contains("://")) input = "https://" + input;
-
-        if (!Uri.TryCreate(input, UriKind.Absolute, out var uri)
-            || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+        _checking = true;
+        _urlError = null;
+        StateHasChanged();
+        ServerEntryResult result;
+        try
         {
-            _urlError = T.InvalidUrl;
+            result = await Entry.SubmitAsync(_urlInput, useAnyway: _canUseAnyway);
+        }
+        finally
+        {
+            _checking = false;
+        }
+
+        if (!result.IsAccepted)
+        {
+            _urlError = result.Outcome switch
+            {
+                ServerEntryOutcome.Empty => T.EmptyUrl,
+                ServerEntryOutcome.NotAUrl => T.InvalidUrl,
+                ServerEntryOutcome.NotStudyLife => T.NotStudyLifeServer,
+                _ => T.ServerUnreachable,
+            };
+            _canUseAnyway = result.CanUseAnyway;
             return;
         }
 
-        // Best-effort reachability check via manifest.json (served statically by the server,
-        // no auth needed). On the first failure only warn - a second click ("Use anyway")
-        // saves the URL regardless, e.g. if the server is currently offline.
-        if (!_unreachableWarning)
-        {
-            _checking = true;
-            _urlError = null;
-            StateHasChanged();
-            try
-            {
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(6) };
-                var normalizedBase = uri.ToString().EndsWith('/') ? uri : new Uri(uri + "/");
-                var response = await http.GetAsync(new Uri(normalizedBase, "manifest.json"));
-                if (!response.IsSuccessStatusCode)
-                {
-                    _urlError = string.Format(T.UnexpectedResponse ?? "", (int)response.StatusCode);
-                    _unreachableWarning = true;
-                    return;
-                }
-            }
-            catch (Exception)
-            {
-                _urlError = T.ServerUnreachable;
-                _unreachableWarning = true;
-                return;
-            }
-            finally
-            {
-                _checking = false;
-            }
-        }
-
-        ServerUrls.Save(uri);
+        ServerUrls.Save(result.Uri!);
         _needsServerUrl = false;
-        _urlError = null;
+        _canUseAnyway = false;
         StateHasChanged();
         await BootAsync();
         StateHasChanged();

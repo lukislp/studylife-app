@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
+using StudyLife.App.Core;
 using StudyLife.App.Services;
 using StudyLife.Client.Services;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
@@ -77,9 +78,14 @@ public static class MauiProgram
         builder.Services.AddI18nText(options => options.PersistenceLevel = PersistanceLevel.SessionAndLocal);
 
         builder.Services.AddSingleton<ServerUrlStore>();
+        builder.Services.AddSingleton<IServerChecker>(_ => new ServerChecker());
+        builder.Services.AddSingleton<ServerEntry>();
         builder.Services.AddSingleton<DeepLinkService>();
         builder.Services.AddScoped<INativeAppAuth, NativeAppAuth>();
-        builder.Services.AddScoped<INativePush, NativePush>();
+        builder.Services.AddScoped<NativePush>();
+        builder.Services.AddScoped<INativePush>(sp => sp.GetRequiredService<NativePush>());
+        builder.Services.AddScoped<AppHandOverSteps>();
+        builder.Services.AddScoped<ServerSwitcher>();
         builder.Services.AddScoped<INativeIcsIntake, NativeIcsIntake>();
         builder.Services.AddScoped<INativeFileExport, NativeFileExport>();
         builder.Services.AddScoped<INativeHealthData, NativeHealthData>();

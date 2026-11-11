@@ -1,6 +1,10 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/StudyLife.App/StudyLife.App.csproj" />
+    <Project Path="src/StudyLife.App.Core/StudyLife.App.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/StudyLife.App.Core.Tests/StudyLife.App.Core.Tests.csproj" />
   </Folder>
   <Project Path="../studylife/src/StudyLife.Client/StudyLife.Client.csproj" />
   <Project Path="../studylife/src/StudyLife.Shared/StudyLife.Shared.csproj" />

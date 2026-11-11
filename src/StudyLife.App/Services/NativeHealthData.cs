@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using StudyLife.App.Core;
 using StudyLife.Client.Services;
 using StudyLife.Shared;
 
@@ -25,7 +26,29 @@ public sealed class NativeHealthData : INativeHealthData
     // thing this class needs, not a dependency on the page itself.
     private const int HrvAndSleepMinimumEntries = 14;
 
+    private readonly HealthAccessCoordinator _access = new(new BridgeHealthPlatform());
+
     public bool IsAvailable => HealthBridge.IsAvailable;
+
+    public async Task<NativeHealthAccess> GetAccessAsync() => ToClient(await _access.GetAccessAsync());
+
+    public async Task<NativeHealthAccess> RequestAccessAsync() => ToClient(await _access.RequestAccessAsync());
+
+    private static NativeHealthAccess ToClient(HealthAccess access) => access switch
+    {
+        HealthAccess.NotAsked => NativeHealthAccess.NotAsked,
+        HealthAccess.Granted => NativeHealthAccess.Granted,
+        HealthAccess.Declined => NativeHealthAccess.Declined,
+        _ => NativeHealthAccess.Unavailable,
+    };
+
+    /// <summary>The Swift HealthKit bridge as the platform behind HealthAccessCoordinator.</summary>
+    private sealed class BridgeHealthPlatform : IHealthPlatform
+    {
+        public bool IsAvailable => HealthBridge.IsAvailable;
+        public Task<HealthPermission> GetPermissionAsync() => Task.FromResult(HealthBridge.GetPermission());
+        public Task ShowPromptAsync() => HealthBridge.RequestAuthorizationAsync();
+    }
 
     public async Task<IReadOnlyList<double>?> GetRecentHrvAsync(int days)
     {

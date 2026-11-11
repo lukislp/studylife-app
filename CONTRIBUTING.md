@@ -41,8 +41,12 @@ services and packaging.
 - **Green required checks.** `test-android`, `test-maccatalyst`, `test-windows`, `test-lint` and
   `review / dependency-review` are required; a red one blocks the merge. Note what these are:
   each one restricts the project to a single target framework, installs that platform's MAUI
-  workload and runs a Release **publish**. They are build gates, not a unit-test suite - this
-  repository has no test project.
+  workload and runs a Release **publish**. They are build gates, not a unit-test suite.
+  The decisions that need no device (server address rules, the hand-over when the user changes
+  server, when Health access is asked for) live in the plain library `src/StudyLife.App.Core`
+  and have unit tests in `tests/StudyLife.App.Core.Tests`, run by the `test-unit` job
+  (`dotnet test tests/StudyLife.App.Core.Tests`, no workload needed). New rules of that kind
+  go there with a test, not into Razor markup or platform code.
 - **Every platform still has to build.** A change that compiles for Android but breaks Mac
   Catalyst or Windows is caught by the matching job. iOS is built from the Mac by hand
   (`scripts/build-ios-ipa.sh`), not in CI, so iOS-specific code needs a device build before the
