@@ -666,6 +666,18 @@ policy. `python3 scripts/privacy/check.py --inventory` prints which bundle uses 
 build scripts (`scripts/apple/release-ios.sh`, `release-maccatalyst.sh`, run by `test-ios` and
 `test-maccatalyst`) check the finished bundle for the manifest and the localised strings.
 
+### Privacy policy
+
+The app publisher's privacy policy is published on `legal.lktec.org`:
+[German](https://legal.lktec.org/studylife/) and [English](https://legal.lktec.org/en/studylife/).
+It says that the operator of a StudyLife server is responsible for that server.
+
+- **App Store Connect "Privacy Policy URL"** (guideline 5.1.1(i)): `https://legal.lktec.org/en/studylife/`
+  (`https://legal.lktec.org/studylife/` for a German-language listing).
+- **In the app** the link belongs in the About section of Setup, which is part of the shared UI in the
+  `studylife` repository (`SetupAboutCard`), not in this repository; German UI links the German page,
+  every other language the English one.
+
 ### App Store Connect: App Privacy
 
 For the app as distributed from this repository the expected answer is **Data Not Collected**:
