@@ -55,14 +55,27 @@ runs (a link leads to the setup guide). The address (e.g. `https://studylife.exa
 answer from the server, or an answer that does not look like a StudyLife server (the app asks
 `GET api/instance`, which every current server answers with an installation id and a version).
 After a warning, a second tap on "Use anyway" saves the address regardless, for a server that
-is down for a moment or is older than that endpoint. The address is stored in the native app
-preferences. The rules live in `StudyLife.App.Core` (`ServerAddress`, `ServerChecker`,
-`ServerEntry`).
+is down for a moment or is older than that endpoint. A server whose TLS certificate this device
+does not trust (a private certificate authority, a self-signed certificate, a name that is not
+on the certificate) gets its own message: install the certificate authority's profile on the
+device or use the server's public address. There is no "use anyway" for it and the app never
+relaxes certificate validation; every request would fail the same way. The address is stored in
+the native app preferences. The rules live in `StudyLife.App.Core` (`ServerAddress`,
+`ServerChecker`, `ConnectionFailure`, `ServerEntry`).
 
 ### Changing the server
 
 **Setup, "Server"** shows the host the app is connected to with **Change server**; the
 sign-in screen shows the same switch while signed out, so a mistyped address is no dead end.
+That bar is rendered by the app shell itself (`AppRoot`), not by the shared sign-in page, because
+it has to work without a working server; `SignInServerStatus` decides it in one place: signed out
+with a saved address it is always there. The shell asks the saved server once (`api/instance`)
+and names a problem next to the button: not reachable, certificate not trusted, not a StudyLife
+server. When the server pinned its passkey domain (`Fido2:ServerDomain`, reported by
+`api/instance`) and the saved address lies outside it (an internal name such as
+`studylife.home.lan` for a server whose passkeys belong to its public domain), the bar says that
+passkeys only work under that domain and offers **Use this address**, which runs the same
+hand-over and switches to the public address.
 After a confirmation, one hand-over runs (`ServerHandOver`), in this order: unregister this
 device's push token on the old server, sign out on the old server (both with a five second
 limit, skipped silently when the server is unreachable), drop the session and the offline
@@ -80,12 +93,8 @@ installs that allowed access before), or declined, where Setup explains where to
 in the Health app instead of asking again. Until access is granted, finished focus rounds are
 not written to Health and the readiness tiles stay hidden.
 
-The dialog and the rest of the app open in the **device language**: the shared rule
-`UiLanguage` in the `studylife` repository picks the best match of the system languages the
-web view reports (`navigator.languages`) among the 26 UI languages and falls back to English
-when none matches. A language chosen in the app's language picker always wins and is
-remembered. An existing install that has a server URL but never stored a choice keeps German,
-which it has always shown.
+The dialog and the rest of the app use the **language the system sets for the app** (see
+"Language" below).
 
 ## Passkey login (how it works)
 
@@ -481,12 +490,12 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
 ## Architecture notes
 
 - `src/StudyLife.App.Core` — plain net10.0 library with the decisions that need no device
-  (server address rules, `GET api/instance` check, the hand-over order, when Health access is
-  asked for); unit-tested in `tests/StudyLife.App.Core.Tests` (CI job `test-unit`,
+  (server address rules, `GET api/instance` check, TLS trust failures, the sign-in bar, the
+  hand-over order, when Health access is asked for); unit-tested in `tests/StudyLife.App.Core.Tests` (CI job `test-unit`,
   `dotnet test tests/StudyLife.App.Core.Tests`). The MAUI app implements its small interfaces
   (`AppHandOverSteps`, `NativeHealthData`).
 - `Components/AppRoot.razor` — root: first-launch dialog → boot sequence (session token,
-  UI language via `UiLanguageStartup`, before the dialog texts load) like in
+  UI language from the system setting for the app via `UiLanguageStartup`, before the dialog texts load) like in
   `StudyLife.Client/Program.cs` → renders
   `StudyLife.Client.App`. Also consumes quick-action routes (`DeepLinkService`).
 - `wwwroot/index.html` — 1:1 copy of the client `index.html` scripts + a native bridge
@@ -570,8 +579,8 @@ Live Activity self-check (`TimerLiveActivity`) and unexpected JavaScript errors 
 | Release / store / CI | yes | yes (sent only after consent, to your own server) | never | the normal Blazor error bar ("An unhandled error has occurred." + Reload), no stack |
 | `Debug`, or `-p:DeveloperDiagnostics=true` | yes | yes | yes | developer banner with message and stack instead of the error bar |
 
-"Not supported here" is not a diagnostic: Live Activities are unavailable on Mac Catalyst, on
-iPad, below iOS 16.1 and when the user switched them off, and in all of these the timer just
+"Not supported here" is not a diagnostic: Live Activities are unavailable on Mac Catalyst,
+below iOS 16.1 (iPadOS 17 on iPad) and when the user switched them off, and in all of these the timer just
 runs without a lock screen card, silently.
 
 To chase a problem on your own phone with a release-configuration build, add
@@ -707,15 +716,34 @@ dropped.
 ## Language
 
 The Blazor UI (via the referenced Client project) is fully localized into 26 languages, same
-as the web app. Native-only surfaces added by this repo — home screen widgets, Live Activity,
-Siri Shortcuts, the Apple Watch companion app, and the iOS permission
-prompts/home-screen shortcuts — follow the OS's own system language, independently of the
-in-app language picker (which only affects the Blazor UI), using standard iOS/watchOS
-`.lproj`/`Localizable.strings` localization. Siri's spoken trigger phrases are the one
-exception, currently German/English only. The notifications the shell raises itself (stand-up
-nudge, streak milestone) use the `NativeNotificationText` table of the Client project and so
-follow the in-app language, which defaults to the device language. Still German-only native
-code: the Android home screen widget (`Platforms/Android/StudyTodayWidgetProvider.cs`).
+as the web app. **The app has no language picker: its language is the operating system's
+language setting for the app.**
+
+- **iPhone, iPad, Mac:** Settings, StudyLife, Language (the list comes from
+  `CFBundleLocalizations` in `Platforms/iOS/Info.plist` and `Platforms/MacCatalyst/Info.plist`).
+  Without a choice there, the app follows the device language.
+- **Android 13 and later:** Settings, Apps, StudyLife, Language (declared in
+  `Platforms/Android/Resources/xml/locales_config.xml`); older Android versions follow the system
+  language.
+- **Windows:** the Windows display language.
+
+Where the web app shows its language picker, the app shows a short hint with a button that
+opens that setting (`IClientPlatform.LanguageFromSystem`, the one switch for it, implemented in
+`AppClientPlatform`). `SystemAppLanguage` reads the setting; the shared rule `UiLanguage.FromSystem`
+in the `studylife` repository maps it to one of the 26 languages (English when none matches). On
+every start, and when the app returns to the foreground after the setting changed, the app applies
+it and, signed in, reports it to the server (the same `ReportLanguageAsync` the web picker uses),
+so the server's own texts (push notifications, reports, reminders) follow it. The sign-in, sign-up
+and device-link pages the app opens in the system browser get the app's language as `applang`, so
+they do not fall back to whatever that browser stored.
+
+Native-only surfaces added by this repo (home screen widgets, Live Activity, Siri Shortcuts, the
+Apple Watch companion app, the iOS permission prompts and home-screen shortcuts) use standard
+iOS/watchOS `.lproj`/`Localizable.strings` localization and so follow the same setting. Siri's
+spoken trigger phrases are the one exception, currently German/English only. The notifications
+the shell raises itself (stand-up nudge, streak milestone) use the `NativeNotificationText` table
+of the Client project. Still German-only native code: the Android home screen widget
+(`Platforms/Android/StudyTodayWidgetProvider.cs`).
 
 ## License
 

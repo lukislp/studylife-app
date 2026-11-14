@@ -36,6 +36,12 @@ public sealed class AppClientPlatform : IClientPlatform
     /// the server publishes. No new interop and no new DI registration: the client reads this
     /// through IClientPlatform, which MauiProgram already registers.
     /// </summary>
+    /// <summary>The app's language is the system's language setting for the app (SystemAppLanguage): the
+    /// shared UI shows a hint that leads there instead of its language picker.</summary>
+    public bool LanguageFromSystem => true;
+
+    public Task OpenLanguageSettingsAsync() => SystemAppLanguage.OpenSettingsAsync();
+
     public async Task<string?> ReadBundledNoticesAsync()
     {
         try

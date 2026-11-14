@@ -11,11 +11,20 @@ public enum ServerCheckResult
     NotStudyLife,
     /// <summary>No usable answer: no connection, timeout, or a gateway error.</summary>
     Unreachable,
+    /// <summary>The device does not trust the server's TLS certificate (see <see cref="ConnectionFailure"/>).</summary>
+    UntrustedCertificate,
+}
+
+/// <summary>The answer of <see cref="IServerChecker"/>: the verdict and, from a StudyLife server that pinned
+/// its passkey domain, that domain and its public origin (api/instance, null otherwise).</summary>
+public sealed record ServerCheck(ServerCheckResult Result, string? PasskeyRpId = null, Uri? PasskeyOrigin = null)
+{
+    public static ServerCheck Of(ServerCheckResult result) => new(result);
 }
 
 public interface IServerChecker
 {
-    Task<ServerCheckResult> CheckAsync(Uri baseUri, CancellationToken cancellationToken = default);
+    Task<ServerCheck> CheckAsync(Uri baseUri, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -24,7 +33,8 @@ public interface IServerChecker
 /// installation id Home Assistant discovery uses). A random id plus a version string is a cheap and
 /// specific signal: a login page or a router's admin page does not produce it. Servers older than that
 /// endpoint answer 404 and are reported as <see cref="ServerCheckResult.NotStudyLife"/>; the first-start
-/// screen lets the user continue anyway.
+/// screen lets the user continue anyway. A certificate the device does not trust is reported as such
+/// (<see cref="ServerCheckResult.UntrustedCertificate"/>), never accepted.
 /// </summary>
 public sealed class ServerChecker : IServerChecker
 {
@@ -32,14 +42,16 @@ public sealed class ServerChecker : IServerChecker
 
     private readonly HttpMessageHandler? _handler;
     private readonly TimeSpan _timeout;
+    private readonly ConnectionFailure _failures;
 
-    public ServerChecker(HttpMessageHandler? handler = null, TimeSpan? timeout = null)
+    public ServerChecker(HttpMessageHandler? handler = null, TimeSpan? timeout = null, ConnectionFailure? failures = null)
     {
         _handler = handler;
         _timeout = timeout ?? DefaultTimeout;
+        _failures = failures ?? new ConnectionFailure();
     }
 
-    public async Task<ServerCheckResult> CheckAsync(Uri baseUri, CancellationToken cancellationToken = default)
+    public async Task<ServerCheck> CheckAsync(Uri baseUri, CancellationToken cancellationToken = default)
     {
         using var http = _handler is null
             ? new HttpClient()
@@ -52,41 +64,49 @@ public sealed class ServerChecker : IServerChecker
             // WaitAsync enforces the limit even if a handler ignores its cancellation token.
             return await AskAsync(http, baseUri, timeout.Token).WaitAsync(_timeout, cancellationToken);
         }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception failure) when (!cancellationToken.IsCancellationRequested)
         {
-            return ServerCheckResult.Unreachable;
+            return ServerCheck.Of(_failures.IsUntrustedCertificate(failure)
+                ? ServerCheckResult.UntrustedCertificate
+                : ServerCheckResult.Unreachable);
         }
     }
 
-    private static async Task<ServerCheckResult> AskAsync(HttpClient http, Uri baseUri, CancellationToken cancellationToken)
+    private static async Task<ServerCheck> AskAsync(HttpClient http, Uri baseUri, CancellationToken cancellationToken)
     {
         using var response = await http.GetAsync(new Uri(ServerAddress.WithTrailingSlash(baseUri), "api/instance"), cancellationToken);
         if (response.StatusCode is HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout)
-            return ServerCheckResult.Unreachable;
+            return ServerCheck.Of(ServerCheckResult.Unreachable);
         if (!response.IsSuccessStatusCode)
-            return ServerCheckResult.NotStudyLife;
+            return ServerCheck.Of(ServerCheckResult.NotStudyLife);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        return LooksLikeInstanceInfo(body) ? ServerCheckResult.StudyLife : ServerCheckResult.NotStudyLife;
+        return ReadInstanceInfo(body);
     }
 
-    private static bool LooksLikeInstanceInfo(string body)
+    private static ServerCheck ReadInstanceInfo(string body)
     {
         try
         {
             using var document = JsonDocument.Parse(body);
             var root = document.RootElement;
-            return root.ValueKind == JsonValueKind.Object
-                && HasText(root, "id")
-                && HasText(root, "version");
+            if (root.ValueKind != JsonValueKind.Object || Text(root, "id") is null || Text(root, "version") is null)
+                return ServerCheck.Of(ServerCheckResult.NotStudyLife);
+            var origin = Uri.TryCreate(Text(root, "passkeyOrigin"), UriKind.Absolute, out var parsed)
+                && parsed.Scheme == Uri.UriSchemeHttps
+                ? parsed
+                : null;
+            return new ServerCheck(ServerCheckResult.StudyLife, Text(root, "passkeyRpId"), origin);
         }
         catch (JsonException)
         {
-            return false;
+            return ServerCheck.Of(ServerCheckResult.NotStudyLife);
         }
     }
 
-    private static bool HasText(JsonElement element, string name) =>
+    private static string? Text(JsonElement element, string name) =>
         element.TryGetProperty(name, out var value)
         && value.ValueKind == JsonValueKind.String
-        && !string.IsNullOrWhiteSpace(value.GetString());
+        && !string.IsNullOrWhiteSpace(value.GetString())
+            ? value.GetString()!.Trim()
+            : null;
 }

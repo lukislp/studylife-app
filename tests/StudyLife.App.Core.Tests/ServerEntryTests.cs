@@ -48,10 +48,10 @@ public class ServerEntryTests
     {
         public int Calls { get; private set; }
 
-        public Task<ServerCheckResult> CheckAsync(Uri baseUri, CancellationToken cancellationToken = default)
+        public Task<ServerCheck> CheckAsync(Uri baseUri, CancellationToken cancellationToken = default)
         {
             Calls++;
-            return Task.FromResult(result);
+            return Task.FromResult(ServerCheck.Of(result));
         }
     }
 
@@ -100,6 +100,16 @@ public class ServerEntryTests
     }
 
     [Fact]
+    public async Task AnUntrustedCertificate_IsReportedAndCannotBeUsedAnyway()
+    {
+        var result = await new ServerEntry(new FakeChecker(ServerCheckResult.UntrustedCertificate)).SubmitAsync("studylife.heim.lan", false);
+
+        Assert.Equal(ServerEntryOutcome.UntrustedCertificate, result.Outcome);
+        Assert.False(result.IsAccepted);
+        Assert.False(result.CanUseAnyway);
+    }
+
+    [Fact]
     public async Task UseAnyway_SkipsTheCheck()
     {
         var checker = new FakeChecker(ServerCheckResult.Unreachable);
@@ -127,8 +137,8 @@ public class ServerCheckerTests
     private static HttpResponseMessage Json(string body, HttpStatusCode status = HttpStatusCode.OK) =>
         new(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
-    private static Task<ServerCheckResult> CheckAsync(StubHandler handler, TimeSpan? timeout = null) =>
-        new ServerChecker(handler, timeout).CheckAsync(new Uri("https://studylife.example.com/app/"));
+    private static async Task<ServerCheckResult> CheckAsync(StubHandler handler, TimeSpan? timeout = null, ConnectionFailure? failures = null) =>
+        (await new ServerChecker(handler, timeout, failures).CheckAsync(new Uri("https://studylife.example.com/app/"))).Result;
 
     [Fact]
     public async Task InstanceInfo_IsAStudyLifeServer()
@@ -194,4 +204,48 @@ public class ServerCheckerTests
 
         Assert.Equal(ServerCheckResult.Unreachable, result);
     }
+
+    [Fact]
+    public async Task APinnedPasskeyDomain_IsReadFromInstanceInfo()
+    {
+        var handler = new StubHandler(_ => Task.FromResult(Json(
+            """{"id":"3f2c","version":"3.33.0","passkeyRpId":"studylife.example.org","passkeyOrigin":"https://studylife.example.org"}""")));
+
+        var check = await new ServerChecker(handler).CheckAsync(new Uri("https://studylife.heim.lan/"));
+
+        Assert.Equal(ServerCheckResult.StudyLife, check.Result);
+        Assert.Equal("studylife.example.org", check.PasskeyRpId);
+        Assert.Equal(new Uri("https://studylife.example.org"), check.PasskeyOrigin);
+    }
+
+    [Fact]
+    public async Task AnOlderServer_HasNoPasskeyDomain()
+    {
+        var handler = new StubHandler(_ => Task.FromResult(Json("""{"id":"3f2c","version":"3.29.1"}""")));
+
+        var check = await new ServerChecker(handler).CheckAsync(new Uri("https://studylife.example.com/"));
+
+        Assert.Null(check.PasskeyRpId);
+        Assert.Null(check.PasskeyOrigin);
+    }
+
+    [Fact]
+    public async Task ATlsFailure_IsAnUntrustedCertificate()
+    {
+        var handler = new StubHandler(_ => throw new HttpRequestException(HttpRequestError.SecureConnectionError, "The SSL connection could not be established"));
+
+        Assert.Equal(ServerCheckResult.UntrustedCertificate, await CheckAsync(handler));
+    }
+
+    [Fact]
+    public async Task APlatformTlsFailure_IsAnUntrustedCertificate()
+    {
+        var handler = new StubHandler(_ => throw new HttpRequestException("failed", new PlatformTlsError()));
+
+        var result = await CheckAsync(handler, failures: new ConnectionFailure(e => e is PlatformTlsError));
+
+        Assert.Equal(ServerCheckResult.UntrustedCertificate, result);
+    }
+
+    private sealed class PlatformTlsError : Exception;
 }
