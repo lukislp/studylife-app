@@ -81,6 +81,12 @@ else if (_needsServerUrl)
         // rest of the app was forced to German). Same rule as the browser client (UiLanguage).
         await ApplyLanguageAsync();
 
+        // Every sign-out (manual, session declared invalid by the server, the one an account deletion or a
+        // server switch ends in) also removes the device copies: widget, Watch, Spotlight, Live Activity.
+        // AppStateService (injected above, so already constructed) owns the hook with its cache purge;
+        // the wipe is composed behind it.
+        TokenStore.OnLoggedOutAsync = SignOutLocalCopies.Compose(TokenStore.OnLoggedOutAsync, NativeLocalCopies.WipeAsync);
+
         // Fetch EARLY, before the boot branch - the dialog can already appear on the first
         // render (with empty T defaults), but gets populated correctly on the second render
         // (after this await). Purely client-side lookup (localStorage + bundled JSON), needs

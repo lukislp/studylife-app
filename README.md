@@ -678,6 +678,20 @@ visible: a demo or review instance operated by the developer is a server that do
 notes, ...) and would change the answer, and the Marketplace browser calls the public GitHub API
 (`api.github.com`) from the device, which exposes the device's IP address to GitHub.
 
+### What stays on the device after sign-out
+
+Nothing of the account's content. Every sign-out removes the copies the app keeps outside the web
+view (`NativeLocalCopies.WipeAsync`, the one function account deletion and the server switch use
+as well): the home screen widget snapshot (iOS App Group container, Android app data) and a
+widget refresh, the copy on a paired Apple Watch (replaced by an empty snapshot), the "next
+session starts soon" Live Activity, and the Spotlight index entries (notes and courses). This
+holds for a manual sign-out, for a session the server declared invalid (expired or revoked), and
+for the sign-out that account deletion and the server switch end in: the shared client has a single
+"logged out" hook for all of them and `AppRoot` composes the wipe behind it (`SignOutLocalCopies`).
+Only the saved server address stays (it belongs to the device, see "Changing the server"), and a
+note shared into the app that has not been sent yet waits for the next sign-in instead of being
+dropped.
+
 ## Language
 
 The Blazor UI (via the referenced Client project) is fully localized into 26 languages, same
