@@ -81,8 +81,9 @@ public sealed class NativeAppAuth : INativeAppAuth
     /// <summary>The account was deleted on the server (Setup, "Delete account"): wipe the copies this
     /// app keeps outside the web view - widget snapshot (and its Watch/Live Activity relatives) and the
     /// Spotlight index. The session token and the offline caches are already gone (the client clears
-    /// them the way a logout does); the server URL preference stays, it belongs to the device, not
-    /// the account. Logout deliberately does not wipe these.</summary>
+    /// them the way a logout does, which also wipes these copies now); the server URL preference stays, it
+    /// belongs to the device, not the account. Kept as an explicit call so a deletion wipes even if the
+    /// logout hook is not wired.</summary>
     public Task AccountDeletedAsync() => NativeLocalCopies.WipeAsync();
 
     /// <summary>Host of the connected server, shown in Setup and next to the sign-in screen.</summary>

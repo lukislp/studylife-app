@@ -28,12 +28,11 @@ public static class HomeWidgetSnapshot
 #endif
 
     /// <summary>
-    /// Wipes what the app keeps about the user outside the web view's own storage after their
-    /// account was deleted (INativeAppAuth.AccountDeletedAsync): the snapshot behind the home
+    /// Wipes what the app keeps about the user outside the web view's own storage when they sign
+    /// out (any sign-out, see SignOutLocalCopies) or delete their account: the snapshot behind the home
     /// screen widget (iOS App Group container / Android app data), the copy relayed to a paired
-    /// Apple Watch, and the "next session starts soon" Live Activity. Signing out does not call
-    /// this - those copies belong to the device - but a deleted account must not keep showing its
-    /// courses and sessions on the lock screen. Best effort like <see cref="UpdateAsync"/>.
+    /// Apple Watch, and the "next session starts soon" Live Activity. A signed-out or deleted
+    /// account must not keep showing its courses and sessions on the lock screen. Best effort like <see cref="UpdateAsync"/>.
     /// </summary>
     public static async Task ClearAsync()
     {
