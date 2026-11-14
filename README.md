@@ -38,6 +38,7 @@ exact same `StudyLife.Client` UI shown here, project-referenced rather than copi
 | App icon badge | limited | ✓ (iOS/Mac) |
 | Screen stays on during focus timer (wake lock) | ✗ in WKWebView | ✓ native (`KeepScreenOn`) |
 | Passkey login | ✓ (Safari) | ✓ via system browser sheet (see below) |
+| Username + password sign-in (when the server allows it) | ✓ | ✓ directly in the app, no browser sheet (see below) |
 | Lock screen / Dynamic Island focus timer (Live Activity) | ✗ | ✓ (iOS; local updates on any tier, remote push updates while the app is fully closed need paid signing - see below) |
 | Siri/Shortcuts "Open Focus" | ✗ | ✓ (iOS, navigates straight to the focus page) |
 | Home screen widget (today's study time, streak) | ✗ | ✓ (iOS/Android) |
@@ -112,6 +113,27 @@ Known limitation: "Add an additional passkey on THIS device" from Settings
 (register/begin-additional) needs WebAuthn in the WebView and doesn't work in the app —
 use the device-link flow (`/link`) instead, which works fully. Releasing/managing
 passkeys in Settings works normally (plain HTTP).
+
+## Username and password (how it works)
+
+Servers from the password sign-in release on offer a username and password next to passkeys
+(operator switch `PasswordSignIn__Enabled`, on by default; passkeys stay the recommended way).
+The sign-in, registration and Settings screens are the shared `StudyLife.Client` pages, so the
+app gets them without any code of its own:
+
+- Password sign-in and registration run **inside the app's web view** - no WebAuthn is
+  involved, so no system browser sheet opens. The server answers with the same session token a
+  passkey sign-in returns, and the app keeps only that token (`SessionTokenStore`), exactly as
+  after a passkey sign-in. The app never stores the password itself.
+- The fields carry `autocomplete="username"` / `"current-password"` / `"new-password"`, so the
+  system password managers can fill them: on iOS the Passwords key in the QuickType bar fills
+  from iCloud Keychain, on Android the Autofill service (e.g. Google Password Manager) works in
+  the web view. Offering to **save** a new password into iCloud Keychain from inside the app
+  needs the associated-domains entitlement (`webcredentials:`) with an AASA file Apple's CDN can
+  read - the same reason the in-app passkey dialog is off (see "Native in-app passkey dialog" under "iOS — the production path"), so on a
+  self-hosted, internal-only server iOS fills existing entries but does not offer to save.
+- On a server with password sign-in switched off the app shows the passkey screens exactly as
+  before.
 
 ## Installing on Android
 
@@ -698,6 +720,16 @@ parties), which is the developer's to confirm in App Store Connect. Two caveats 
 visible: a demo or review instance operated by the developer is a server that does collect (account,
 notes, ...) and would change the answer, and the Marketplace browser calls the public GitHub API
 (`api.github.com`) from the device, which exposes the device's IP address to GitHub.
+
+### App Review sign-in
+
+App Review signs in with a username and password ("Sign-in required" in App Review Information),
+which needs a server from the password sign-in release with `PasswordSignIn__Enabled` left on
+(the default). Create a dedicated review account on the server the reviewers are pointed to:
+Register → "Username and password" (or, as the owner, Setup → Password → "Reset a password" for an
+existing test account, then sign in and choose the final password). Enter the server address,
+username and password in App Store Connect. The caveat above applies: a review server operated by
+the developer is a server that collects data.
 
 ### What stays on the device after sign-out
 
