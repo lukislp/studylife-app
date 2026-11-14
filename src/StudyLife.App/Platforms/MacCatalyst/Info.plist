@@ -4,6 +4,40 @@
 <dict>
     <!-- Only standard HTTPS (system TLS) and hashing, no own cryptography: exempt from export
          compliance, so TestFlight builds need no manual answer. -->
+    <!-- The languages of the app's UI (the 26 of StudyLife.Client/i18ntext). Declaring them makes the
+         system offer Settings, StudyLife, Language; the app takes its language from there and has no
+         picker of its own (Services/SystemAppLanguage.cs). Keep in step with UiLanguage.All. -->
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>de</string>
+        <string>fr</string>
+        <string>es</string>
+        <string>it</string>
+        <string>pt</string>
+        <string>nl</string>
+        <string>da</string>
+        <string>sv</string>
+        <string>fi</string>
+        <string>el</string>
+        <string>pl</string>
+        <string>cs</string>
+        <string>sk</string>
+        <string>hu</string>
+        <string>ro</string>
+        <string>bg</string>
+        <string>hr</string>
+        <string>sl</string>
+        <string>et</string>
+        <string>lv</string>
+        <string>lt</string>
+        <string>mt</string>
+        <string>ga</string>
+        <string>uk</string>
+        <string>ru</string>
+    </array>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <!-- Required for Mac App Store / TestFlight uploads. -->

@@ -8,6 +8,9 @@ public enum ServerEntryOutcome
     NotAUrl,
     Unreachable,
     NotStudyLife,
+    /// <summary>The device does not trust the server's certificate. Never "use anyway": every request of the
+    /// app would fail the same way, so saving it would only lead to a sign-in screen that cannot work.</summary>
+    UntrustedCertificate,
 }
 
 public readonly record struct ServerEntryResult(ServerEntryOutcome Outcome, Uri? Uri)
@@ -39,8 +42,9 @@ public sealed class ServerEntry(IServerChecker checker)
         if (useAnyway)
             return new(ServerEntryOutcome.Accepted, uri);
 
-        return await checker.CheckAsync(uri, cancellationToken) switch
+        return (await checker.CheckAsync(uri, cancellationToken)).Result switch
         {
+            ServerCheckResult.UntrustedCertificate => new(ServerEntryOutcome.UntrustedCertificate, uri),
             ServerCheckResult.StudyLife => new(ServerEntryOutcome.Accepted, uri),
             ServerCheckResult.NotStudyLife => new(ServerEntryOutcome.NotStudyLife, uri),
             _ => new(ServerEntryOutcome.Unreachable, uri),

@@ -7,6 +7,8 @@
 @using StudyLife.Client.Services
 @inject ServerUrlStore ServerUrls
 @inject ServerEntry Entry
+@inject IServerChecker Checker
+@inject ServerSwitcher Switcher
 @inject SessionTokenStore TokenStore
 @inject IJSRuntime JS
 @inject NavigationManager Nav
@@ -26,12 +28,23 @@
 @if (_ready)
 {
     <StudyLife.Client.App />
-    @* Signed out (sign-in screen, or a server that never worked): the way out of a wrong server. Signed in,
-       the same switch lives in Setup. *@
-    @if (TokenStore.Token is null)
+    @* Signed out (sign-in screen, or a server that never worked): the way out of a wrong server, rendered by
+       the shell itself because the shared sign-in page needs a working server. SignInServerStatus decides
+       whether it shows and what it says; signed in, the same switch lives in Setup. *@
+    var signIn = SignInStatus;
+    @if (signIn.ShowChangeServer)
     {
-        <div style="position:fixed; left:0; right:0; bottom:max(0.5rem, env(safe-area-inset-bottom)); display:flex; justify-content:center; pointer-events:none; z-index:50;">
-            <div style="pointer-events:auto; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:0.4rem 0.75rem;">
+        <div style="position:fixed; left:0; right:0; bottom:max(0.5rem, env(safe-area-inset-bottom)); display:flex; justify-content:center; pointer-events:none; z-index:50; padding:0 1rem;">
+            <div style="pointer-events:auto; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:0.4rem 0.75rem; max-width:36rem; display:flex; flex-direction:column; gap:0.4rem;">
+                @if (NoticeText(signIn) is { } notice)
+                {
+                    <p class="ss-desc" role="status" style="margin:0; font-size:0.85rem;">@notice</p>
+                }
+                @if (signIn.SuggestedAddress is { } suggested)
+                {
+                    <button type="button" class="btn-secondary" style="padding:0.25rem 0.6rem; font-size:0.85rem;"
+                            disabled="@_switching" @onclick="() => UseAddressAsync(suggested)">@T.UsePasskeyAddress</button>
+                }
                 <NativeServerSwitch Compact="true" />
             </div>
         </div>
@@ -73,6 +86,43 @@ else if (_needsServerUrl)
     private string? _urlError;
     private AppFirstRunText T = new();
     private NativeNotificationText N = new();
+    private ServerCheck? _serverCheck;
+    private bool _switching;
+    private string? _language;
+
+    private SignInServerStatus SignInStatus =>
+        SignInServerStatus.Decide(TokenStore.Token is not null, ServerUrls.BaseUri, _serverCheck);
+
+    /// <summary>The bar's text for a decided notice (the texts live in AppFirstRunText, like the first start's).</summary>
+    private string? NoticeText(SignInServerStatus status)
+    {
+        var host = ServerUrls.BaseUri is { } uri ? ServerAddress.DisplayHost(uri) : "";
+        return status.Notice switch
+        {
+            SignInServerNotice.Unreachable => string.Format(T.SignedOutUnreachable ?? "", host),
+            SignInServerNotice.UntrustedCertificate => T.UntrustedCertificate,
+            SignInServerNotice.NotStudyLife => string.Format(T.SignedOutNotStudyLife ?? "", host),
+            SignInServerNotice.PasskeysElsewhere => string.Format(T.PasskeyDomainHint ?? "", status.PasskeyDomain),
+            _ => null,
+        };
+    }
+
+    /// <summary>"Use this address": the same hand-over as Change server, then straight to the public address.</summary>
+    private async Task UseAddressAsync(Uri address)
+    {
+        _switching = true;
+        try { await Switcher.ChangeAsync(address); }
+        finally { _switching = false; }
+    }
+
+    /// <summary>Signed out: ask the configured server once, so the bar can say why sign-in may not work.</summary>
+    private async Task CheckServerForSignInAsync()
+    {
+        if (TokenStore.Token is not null || ServerUrls.BaseUri is not { } server) return;
+        try { _serverCheck = await Checker.CheckAsync(server); }
+        catch { return; /* the bar keeps its action without a notice */ }
+        await InvokeAsync(StateHasChanged);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -120,6 +170,7 @@ else if (_needsServerUrl)
         // .NET/MAUI host startup.
         TelemetryBridge.Start();
         DeepLinks.OnNavigate += HandleDeepLink;
+        global::StudyLife.App.App.Resumed += HandleResumed;
         TokenStore.OnTokenAvailable += HandleSessionChanged;
         TokenStore.OnSessionInvalidated += HandleSessionChanged;
         // Focus timer -> lock screen Live Activity (iOS; a no-op everywhere else).
@@ -191,6 +242,7 @@ else if (_needsServerUrl)
     public void Dispose()
     {
         DeepLinks.OnNavigate -= HandleDeepLink;
+        global::StudyLife.App.App.Resumed -= HandleResumed;
         TokenStore.OnTokenAvailable -= HandleSessionChanged;
         TokenStore.OnSessionInvalidated -= HandleSessionChanged;
         TimerLiveActivity.OpenFocusRequested -= HandleOpenFocusRequested;
@@ -260,19 +312,28 @@ else if (_needsServerUrl)
 
     private void HandleDeepLink(string route) => _ = InvokeAsync(() => Nav.NavigateTo(route));
 
-    /// <summary>Decides the UI language of this start with the shared rule (stored choice, else the
-    /// system languages the web view reports, else English) and stores it like a manual choice,
-    /// then syncs html-lang. An install that already has a server URL but no stored language
-    /// predates this rule and has only ever been shown German, so it keeps it (the browser client
-    /// uses its session token for the same purpose).</summary>
+    /// <summary>The UI language of this start is the system's language setting for the app (no picker in the
+    /// app, see SystemAppLanguage and UiLanguage.FromSystem), passed to the shared start-up rule as the
+    /// prescribed language; then html-lang is synced. Signed in, MainLayout reports it to the server on every
+    /// start, so the server's own texts (push, reports, reminders) follow the same language.</summary>
     private async Task ApplyLanguageAsync()
     {
         try
         {
-            var language = await UiLanguageStartup.ApplyAsync(JS, I18nText.SetCurrentLanguageAsync, ServerUrls.IsConfigured);
-            await JS.InvokeVoidAsync("setDocumentLanguage", language);
+            var system = UiLanguage.FromSystem(SystemAppLanguage.Get());
+            _language = await UiLanguageStartup.ApplyAsync(JS, I18nText.SetCurrentLanguageAsync, hasPriorUse: false, prescribed: system);
+            await JS.InvokeVoidAsync("setDocumentLanguage", _language);
         }
         catch { /* localStorage not available - app continues with the library's auto-detection */ }
+    }
+
+    /// <summary>Back in the foreground: when the system language for the app changed meanwhile (Android keeps
+    /// the process; iOS usually restarts the app anyway), reload the web view - the start-up applies the new
+    /// language and MainLayout reports it to the server, the one path for both.</summary>
+    private void HandleResumed()
+    {
+        if (UiLanguage.SystemLanguageChange(_language, SystemAppLanguage.Get()) is null) return;
+        _ = InvokeAsync(() => Nav.NavigateTo(Nav.Uri, forceLoad: true));
     }
 
     /// <summary>Boot sequence as in StudyLife.Client/Program.cs: load the token before the
@@ -282,6 +343,7 @@ else if (_needsServerUrl)
         await TokenStore.InitializeAsync();
 
         _ready = true;
+        _ = CheckServerForSignInAsync();
 
         // iOS integrations after boot: background refresh gets its work order
         // (warm caches + keep Spotlight current) and the search index gets its initial fill.
@@ -338,6 +400,7 @@ else if (_needsServerUrl)
                 ServerEntryOutcome.Empty => T.EmptyUrl,
                 ServerEntryOutcome.NotAUrl => T.InvalidUrl,
                 ServerEntryOutcome.NotStudyLife => T.NotStudyLifeServer,
+                ServerEntryOutcome.UntrustedCertificate => T.UntrustedCertificate,
                 _ => T.ServerUnreachable,
             };
             _canUseAnyway = result.CanUseAnyway;

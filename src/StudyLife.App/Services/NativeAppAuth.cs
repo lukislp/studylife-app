@@ -31,22 +31,30 @@ public sealed class NativeAppAuth : INativeAppAuth
 
     private readonly ServerUrlStore _urls;
     private readonly ServerSwitcher _switcher;
+    private readonly Toolbelt.Blazor.I18nText.I18nText _i18n;
 #if WINDOWS
     private readonly IJSRuntime _js;
 
-    public NativeAppAuth(ServerUrlStore urls, ServerSwitcher switcher, IJSRuntime js)
+    public NativeAppAuth(ServerUrlStore urls, ServerSwitcher switcher, Toolbelt.Blazor.I18nText.I18nText i18n, IJSRuntime js)
     {
         _urls = urls;
         _switcher = switcher;
+        _i18n = i18n;
         _js = js;
     }
 #else
-    public NativeAppAuth(ServerUrlStore urls, ServerSwitcher switcher)
+    public NativeAppAuth(ServerUrlStore urls, ServerSwitcher switcher, Toolbelt.Blazor.I18nText.I18nText i18n)
     {
         _urls = urls;
         _switcher = switcher;
+        _i18n = i18n;
     }
 #endif
+
+    /// <summary>"&amp;applang=xx": the auth page in the system browser speaks the language the app shows
+    /// (AppReturnContext.Language in the client) instead of whatever that browser stored last.</summary>
+    private async Task<string> LanguageQueryAsync() =>
+        "&applang=" + Uri.EscapeDataString(await _i18n.GetCurrentLanguageAsync());
 
     /// <summary>Deliberately hardcoded to false, even though AppleSigningInfo.HasAssociatedDomains
     /// returns true with paid signing: the entitlement alone isn't enough to make the native
@@ -111,13 +119,14 @@ public sealed class NativeAppAuth : INativeAppAuth
             fragment = startPage[hashIndex..];
         }
 
+        var language = await LanguageQueryAsync();
 #if WINDOWS
-        return await AuthenticateViaLoopbackAsync(path, fragment);
+        return await AuthenticateViaLoopbackAsync(path, language, fragment);
 #else
         var codeVerifier = GenerateCodeVerifier();
         var codeChallenge = ComputeCodeChallenge(codeVerifier);
         var startUrl = new Uri(_urls.BaseUri!,
-            $"{path}?app=1&appchallenge={Uri.EscapeDataString(codeChallenge)}{fragment}");
+            $"{path}?app=1&appchallenge={Uri.EscapeDataString(codeChallenge)}{language}{fragment}");
         try
         {
             var result = await WebAuthenticator.Default.AuthenticateAsync(
@@ -182,7 +191,7 @@ public sealed class NativeAppAuth : INativeAppAuth
     }
 
 #if WINDOWS
-    private async Task<string?> AuthenticateViaLoopbackAsync(string path, string fragment)
+    private async Task<string?> AuthenticateViaLoopbackAsync(string path, string language, string fragment)
     {
         // Loopback listener on a free port; the auth page redirects to
         // http://127.0.0.1:{port}/?token=... once done. Loopback prefixes need no
@@ -197,7 +206,7 @@ public sealed class NativeAppAuth : INativeAppAuth
         var returnUrl = $"http://127.0.0.1:{port}/";
         var startUrl = new Uri(_urls.BaseUri!,
             $"{path}?app=1&appret={Uri.EscapeDataString(returnUrl)}" +
-            $"&appchallenge={Uri.EscapeDataString(codeChallenge)}{fragment}");
+            $"&appchallenge={Uri.EscapeDataString(codeChallenge)}{language}{fragment}");
         await Launcher.Default.OpenAsync(startUrl);
 
         // 5 minutes is generous for the passkey dialog + a possible cross-device QR scan.
