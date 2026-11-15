@@ -86,7 +86,7 @@ jobs:
       # with a throwaway key generated here, because release-android only runs after a merge.
       # The resulting APK is a test build: its key exists for this run only, so it can never
       # update an installed release. It stays downloadable for trying out a pull request,
-      # under an artifact name the release job's "StudyLife-*" download pattern does not match.
+      # under an artifact name the release job's "StudyAtrium-*" download pattern does not match.
       - name: Generate a throwaway signing key
         run: |
           keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/throwaway.keystore" \
@@ -100,13 +100,13 @@ jobs:
           ANDROID_KEYSTORE: ${{ runner.temp }}/throwaway.keystore
           ANDROID_KEYSTORE_PASSWORD: throwaway-ci-only
           ANDROID_KEY_ALIAS: throwaway
-          APK_OUTPUT: StudyLife-android-test.apk
+          APK_OUTPUT: StudyAtrium-android-test.apk
           APK_SUMMARY_TITLE: test build, throwaway key
         run: bash scripts/build-android-apk.sh build
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: android-test-apk
-          path: StudyLife-android-test.apk
+          path: StudyAtrium-android-test.apk
           if-no-files-found: error
           retention-days: 5
 
@@ -322,11 +322,11 @@ jobs:
           SIGN_MODE: adhoc
           APP_VERSION: 9.87.65
         run: bash scripts/apple/release-maccatalyst.sh
-      # Not "StudyLife-*": the release asset comes from release-macos, never from this job.
+      # Not "StudyAtrium-*": the release asset comes from release-macos, never from this job.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: macos-test-app
-          path: StudyLife-macos.zip
+          path: StudyAtrium-macos.zip
           if-no-files-found: error
           retention-days: 5
 
@@ -439,11 +439,11 @@ jobs:
         shell: pwsh
         run: |
           $publishDir = Get-ChildItem -Path "src/StudyLife.App/bin/Release/net10.0-windows10.0.19041.0" -Recurse -Directory -Filter "publish" | Select-Object -First 1
-          Compress-Archive -Path "$($publishDir.FullName)/*" -DestinationPath StudyLife-windows.zip
+          Compress-Archive -Path "$($publishDir.FullName)/*" -DestinationPath StudyAtrium-windows.zip
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: StudyLife-windows
-          path: StudyLife-windows.zip
+          name: StudyAtrium-windows
+          path: StudyAtrium-windows.zip
           retention-days: 5
 
   test-lint:
@@ -576,17 +576,17 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          APK_OUTPUT: StudyLife-android.apk
+          APK_OUTPUT: StudyAtrium-android.apk
           APK_SUMMARY_TITLE: release
         run: bash scripts/build-android-apk.sh build
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: StudyLife-android
-          path: StudyLife-android.apk
+          name: StudyAtrium-android
+          path: StudyAtrium-android.apk
           if-no-files-found: error
           retention-days: 5
 
-  # The StudyLife-macos.zip release asset: the same build and inside-out signing as
+  # The StudyAtrium-macos.zip release asset: the same build and inside-out signing as
   # test-maccatalyst, ad hoc with the hardened runtime and the release version - no Apple
   # secret, no environment, no approval, so a release never waits for the owner (Gatekeeper
   # treats the app as unsigned, as before TestFlight existed). TestFlight builds and the
@@ -633,8 +633,8 @@ jobs:
         run: bash scripts/apple/release-maccatalyst.sh
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: StudyLife-macos
-          path: StudyLife-macos.zip
+          name: StudyAtrium-macos
+          path: StudyAtrium-macos.zip
           if-no-files-found: error
           retention-days: 5
 
@@ -691,7 +691,7 @@ jobs:
             uploads.github.com:443
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          pattern: StudyLife-*
+          pattern: StudyAtrium-*
           path: release-assets
           merge-multiple: true
       - name: Attach the release assets
@@ -701,9 +701,9 @@ jobs:
           TAG: ${{ needs.release.outputs.tag }}
         run: |
           gh release upload "$TAG" --clobber \
-            "release-assets/StudyLife-android.apk#Android (.apk, release-signed, sideload - updates install over the previous release)" \
-            "release-assets/StudyLife-macos.zip#macOS (Mac Catalyst, unsigned for Gatekeeper - right-click \"Open\" once, or xattr -cr)" \
-            "release-assets/StudyLife-windows.zip#Windows (unsigned - SmartScreen warning expected, click \"More info\" -> \"Run anyway\")"
+            "release-assets/StudyAtrium-android.apk#Android (.apk, release-signed, sideload - updates install over the previous release)" \
+            "release-assets/StudyAtrium-macos.zip#macOS (Mac Catalyst, unsigned for Gatekeeper - right-click \"Open\" once, or xattr -cr)" \
+            "release-assets/StudyAtrium-windows.zip#Windows (unsigned - SmartScreen warning expected, click \"More info\" -> \"Run anyway\")"
       # The APK was built with the version get-version predicted. Only an out-of-band push that
       # changes the bump level between the two jobs can make them differ.
       - name: Check the released version against the APK's
@@ -727,7 +727,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.release.outputs.tag }}
         run: |
-          for f in release-assets/StudyLife-*; do
+          for f in release-assets/StudyAtrium-*; do
             cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"
             cosign verify-blob --bundle "$f.sigstore.json" \
               --certificate-identity-regexp '^https://github.com/lukislp/studylife-app/\.github/workflows/ci-cd\.yml@refs/heads/main$' \
@@ -738,7 +738,7 @@ jobs:
         id: provenance
         with:
           subject-path: |
-            release-assets/StudyLife-*
+            release-assets/StudyAtrium-*
       - name: Attach the build provenance to the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -12,7 +12,7 @@
 #   SIGN_MODE        app-store (TestFlight) or adhoc (pull requests, nothing secret needed)
 #   APP_VERSION      x.y.z -> CFBundleShortVersionString
 #   BUILD_NUMBER     CFBundleVersion, optional: major*10000+minor*100+patch, like Android
-#   IPA_OUTPUT       output path (default StudyLife-ios.ipa)
+#   IPA_OUTPUT       output path (default StudyAtrium-ios.ipa)
 #   XCODEGEN         xcodegen binary (default ~/tools/xcodegen/bin/xcodegen)
 #   app-store only, from scripts/apple/keychain.sh setup:
 #   APPLE_TEAM_ID, SIGNING_KEYCHAIN, DISTRIBUTION_IDENTITY, PROFILE_DIR
@@ -25,7 +25,7 @@ fail() { echo "::error::$*" >&2; exit 1; }
 SIGN_MODE="${SIGN_MODE:?SIGN_MODE is app-store or adhoc}"
 APP_VERSION="${APP_VERSION:?APP_VERSION is not set}"
 BUILD_NUMBER="${BUILD_NUMBER:-$(bash scripts/build-android-apk.sh version-code "$APP_VERSION")}"
-IPA_OUTPUT="${IPA_OUTPUT:-StudyLife-ios.ipa}"
+IPA_OUTPUT="${IPA_OUTPUT:-StudyAtrium-ios.ipa}"
 XCODEGEN="${XCODEGEN:-$HOME/tools/xcodegen/bin/xcodegen}"
 SIGNING="python3 $ROOT/scripts/apple/signing.py"
 APP_ID="app.studylife.mobile"
