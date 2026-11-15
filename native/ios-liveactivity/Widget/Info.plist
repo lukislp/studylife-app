@@ -5,7 +5,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>de</string>
     <key>CFBundleDisplayName</key>
-    <string>StudyLife</string>
+    <string>StudyAtrium</string>
     <key>CFBundleExecutable</key>
     <string>StudyLifeWidgets</string>
     <!-- Must be prefixed with the main app's bundle ID; Sideloadly adjusts both together

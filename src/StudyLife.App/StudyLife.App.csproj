@@ -19,7 +19,7 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
         <!-- Display name -->
-        <ApplicationTitle>StudyLife</ApplicationTitle>
+        <ApplicationTitle>StudyAtrium</ApplicationTitle>
         <!-- A component tag the compiler does not know (a missing @using) renders as an inert HTML element
              without any error: that is how the sign-in screen's "Change server" bar shipped empty
              (NativeServerSwitch, 2026-11-14). Fail the build instead. -->

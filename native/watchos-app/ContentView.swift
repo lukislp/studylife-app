@@ -26,7 +26,7 @@ struct ContentView: View {
                     } else {
                         VStack(spacing: 4) {
                             Text("✦").font(.title2).foregroundStyle(wAccent)
-                            Text("Öffne StudyLife\nauf dem iPhone")
+                            Text("Öffne StudyAtrium\nauf dem iPhone")
                                 .font(.caption2)
                                 .multilineTextAlignment(.center)
                         }

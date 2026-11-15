@@ -167,7 +167,7 @@ private final class UpcomingSessionActivityController {
 @_cdecl("slla_upcoming_start")
 public func slla_upcoming_start(_ title: UnsafePointer<CChar>?, _ startsAtEpoch: Double) {
     guard #available(iOS 16.2, *) else { return }
-    let titleString = title.map { String(cString: $0) } ?? "StudyLife"
+    let titleString = title.map { String(cString: $0) } ?? "StudyAtrium"
     UpcomingSessionActivityController.shared.start(
         title: titleString, startsAt: Date(timeIntervalSince1970: startsAtEpoch))
 }
@@ -204,7 +204,7 @@ public func slla_update(
         phaseTotalSeconds: Int(phaseTotalSeconds),
         round: Int(round),
         totalRounds: Int(totalRounds))
-    let titleString = title.map { String(cString: $0) } ?? "StudyLife"
+    let titleString = title.map { String(cString: $0) } ?? "StudyAtrium"
     LiveActivityController.shared.update(title: titleString, state: state)
 }
 

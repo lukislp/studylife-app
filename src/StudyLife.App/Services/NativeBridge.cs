@@ -54,7 +54,7 @@ public static class NativeBridge
                 }
                 var printInfo = UIKit.UIPrintInfo.PrintInfo;
                 printInfo.OutputType = UIKit.UIPrintInfoOutputType.General;
-                printInfo.JobName = "StudyLife";
+                printInfo.JobName = "StudyAtrium";
                 var controller = UIKit.UIPrintInteractionController.SharedPrintController;
                 controller.PrintInfo = printInfo;
                 controller.PrintFormatter = webView.ViewPrintFormatter;
@@ -98,13 +98,13 @@ public static class NativeBridge
                     return;
                 }
                 var printManager = (global::Android.Print.PrintManager?)activity.GetSystemService(Context.PrintService);
-                var adapter = webView.CreatePrintDocumentAdapter("StudyLife");
+                var adapter = webView.CreatePrintDocumentAdapter("StudyAtrium");
                 if (printManager == null || adapter == null)
                 {
                     completion.TrySetResult(false);
                     return;
                 }
-                printManager.Print("StudyLife", adapter, new global::Android.Print.PrintAttributes.Builder().Build());
+                printManager.Print("StudyAtrium", adapter, new global::Android.Print.PrintAttributes.Builder().Build());
                 completion.TrySetResult(true);
             }
             catch
@@ -282,7 +282,7 @@ public static class NativeBridge
         var manager = (NotificationManager?)context.GetSystemService(Context.NotificationService);
         if (manager?.GetNotificationChannel(ChannelId) != null) return;
         manager?.CreateNotificationChannel(
-            new NotificationChannel(ChannelId, "StudyLife", NotificationImportance.High)
+            new NotificationChannel(ChannelId, "StudyAtrium", NotificationImportance.High)
             {
                 Description = "Timer- und Session-Benachrichtigungen",
             });

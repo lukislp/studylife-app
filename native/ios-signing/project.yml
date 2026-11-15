@@ -71,7 +71,7 @@ targets:
     info:
       path: WidgetShell/Info.plist
       properties:
-        CFBundleDisplayName: StudyLife
+        CFBundleDisplayName: StudyAtrium
         # XcodeGen writes CFBundleVersion "1" otherwise; the bundles must carry the parent app's
         # build number (xcodebuild warns, App Store Connect rejects a mismatch).
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -96,14 +96,14 @@ targets:
     type: app-extension
     platform: iOS
     deploymentTarget: "16.2"
-    # Share sheet entry "StudyLife": puts shared text/URLs into the App Group inbox
+    # Share sheet entry "StudyAtrium": puts shared text/URLs into the App Group inbox
     # (native/ios-share/ShareViewController.swift), the app turns them into notes.
     sources:
       - path: ../ios-share/ShareViewController.swift
     info:
       path: ShareShell/Info.plist
       properties:
-        CFBundleDisplayName: StudyLife
+        CFBundleDisplayName: StudyAtrium
         # XcodeGen writes CFBundleVersion "1" otherwise; the bundles must carry the parent app's
         # build number (xcodebuild warns, App Store Connect rejects a mismatch).
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -151,7 +151,7 @@ targets:
     info:
       path: WatchShell/Info.plist
       properties:
-        CFBundleDisplayName: StudyLife
+        CFBundleDisplayName: StudyAtrium
         # XcodeGen writes CFBundleVersion "1" otherwise; the bundles must carry the parent app's
         # build number (xcodebuild warns, App Store Connect rejects a mismatch).
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -191,7 +191,7 @@ targets:
     info:
       path: WatchWidgetsShell/Info.plist
       properties:
-        CFBundleDisplayName: StudyLife
+        CFBundleDisplayName: StudyAtrium
         # XcodeGen writes CFBundleVersion "1" otherwise; the bundles must carry the parent app's
         # build number (xcodebuild warns, App Store Connect rejects a mismatch).
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)

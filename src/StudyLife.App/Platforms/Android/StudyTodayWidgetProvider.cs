@@ -68,7 +68,7 @@ public class StudyTodayWidgetProvider : AppWidgetProvider
         {
             views.SetViewVisibility(Resource.Id.widget_chrono, global::Android.Views.ViewStates.Gone);
             views.SetViewVisibility(Resource.Id.widget_value, global::Android.Views.ViewStates.Gone);
-            views.SetTextViewText(Resource.Id.widget_header, "✦ StudyLife");
+            views.SetTextViewText(Resource.Id.widget_header, "✦ StudyAtrium");
             views.SetTextViewText(Resource.Id.widget_subtitle, "App öffnen, um Daten zu laden");
             views.SetTextViewText(Resource.Id.widget_footer, "");
             return views;

@@ -61,7 +61,7 @@ public static class SpotlightIndexer
                 var attributes = new CSSearchableItemAttributeSet(UniformTypeIdentifiers.UTTypes.Item)
                 {
                     Title = course.Name,
-                    ContentDescription = "StudyLife-Kurs",
+                    ContentDescription = "StudyAtrium-Kurs",
                 };
                 items.Add(new CSSearchableItem($"{CoursePrefix}{course.Id}", "studylife.courses", attributes));
             }

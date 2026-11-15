@@ -1,11 +1,13 @@
-# StudyLife App (iOS / Android / Mac / Windows)
+# StudyAtrium App (iOS / Android / Mac / Windows)
+
+> Formerly StudyLife. The product is now called StudyAtrium; repository, bundle identifiers and file names keep the old name for compatibility.
 
 [![CI/CD](https://github.com/lukislp/studylife-app/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/lukislp/studylife-app/actions/workflows/ci-cd.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/lukislp/studylife-app/badge)](https://scorecard.dev/viewer/?uri=github.com/lukislp/studylife-app) [![CodeQL](https://github.com/lukislp/studylife-app/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/lukislp/studylife-app/security/code-scanning)
 [![Release](https://img.shields.io/github/v/release/lukislp/studylife-app)](https://github.com/lukislp/studylife-app/releases)
 [![License: AGPL-3.0](https://img.shields.io/github/license/lukislp/studylife-app)](LICENSE)
 [![.NET MAUI](https://img.shields.io/badge/.NET_MAUI-10.0-512BD4)](https://dotnet.microsoft.com/apps/maui)
 
-Native app shell for [StudyLife](https://github.com/lukislp/studylife) built on **.NET MAUI Blazor Hybrid**.
+Native app shell for [StudyAtrium](https://github.com/lukislp/studylife) built on **.NET MAUI Blazor Hybrid**.
 The entire frontend (Razor components, CSS, JS interop, all 26 languages) comes **directly
 from the studylife repo via a project reference** — no copy, so the app UI is always
 automatically identical to the web/PWA UI. The app talks to the same REST API as the
@@ -24,19 +26,19 @@ repos/
 each under its own repo name (`studylife` and `studylife-app`) — the project reference is
 relative.
 
-![StudyLife mobile dashboard, showing the same shared UI this app's Blazor Hybrid shell renders natively](docs/screenshot.png)
+![StudyAtrium mobile dashboard, showing the same shared UI this app's Blazor Hybrid shell renders natively](docs/screenshot.png)
 
 *Captured from the live demo in a phone-sized viewport — this app's native shell renders the
 exact same `StudyLife.Client` UI shown here, project-referenced rather than copied (see above).*
 
-## Which StudyLife the app bundles (the pin)
+## Which StudyAtrium the app bundles (the pin)
 
 The app bundles the shared client of `lukislp/studylife` at build time, so a released app version
 must always contain the same client. [`studylife.version`](studylife.version) names the
 `lukislp/studylife` release (a tag such as `v3.33.2`) that every CI job, every release build and
 the Apple TestFlight workflow check out into `./studylife`, through the local action
 [`.github/actions/checkout-studylife`](.github/actions/checkout-studylife/action.yml). Rebuilding
-an old app tag therefore reproduces its client, and a new StudyLife release only reaches the app
+an old app tag therefore reproduces its client, and a new StudyAtrium release only reaches the app
 through a pull request that raises the pin.
 
 That pull request is opened by Renovate ([`renovate.json`](renovate.json): a regex manager on
@@ -47,7 +49,7 @@ change the tag in `studylife.version` and use the same commit type.
 
 The cross-repo test is deliberately the other way round: a pull request in `lukislp/studylife`
 builds its own tree and does not depend on this repository. To build the app against a local
-StudyLife checkout (for example one with unreleased changes), keep both repositories side by
+StudyAtrium checkout (for example one with unreleased changes), keep both repositories side by
 side as described above and check out whatever you need in `../studylife`; the pin only governs
 CI and releases, never a local build.
 
@@ -64,18 +66,18 @@ CI and releases, never a local build.
 | Lock screen / Dynamic Island focus timer (Live Activity) | ✗ | ✓ (iOS; local updates on any tier, remote push updates while the app is fully closed need paid signing - see below) |
 | Siri/Shortcuts "Open Focus" | ✗ | ✓ (iOS, navigates straight to the focus page) |
 | Home screen widget (today's study time, streak) | ✗ | ✓ (iOS/Android) |
-| Share sheet → new note | ✗ | ✓ (share any text from another app directly into a StudyLife note) |
+| Share sheet → new note | ✗ | ✓ (share any text from another app directly into a StudyAtrium note) |
 | Study readiness score + sleep consistency (Dashboard) | ✗ | ✓ (iOS, via Apple HealthKit - Heart Rate Variability + Sleep Analysis, read-only, on-device only) |
 | Movement-break reminder (Focus Timer) | ✗ | ✓ (iOS, via Apple HealthKit step count, read-only) |
 | Cardio fitness (VO2max) trend (Evaluation) | ✗ | ✓ (iOS, via Apple HealthKit, read-only - populated from Apple Watch outdoor walk/run workouts) |
 
 ## First launch
 
-StudyLife is self-hosted, and the first screen says so: there is no central service, so the
+StudyAtrium is self-hosted, and the first screen says so: there is no central service, so the
 app needs the address of your own server or of the one your school, university or organisation
 runs (a link leads to the setup guide). The address (e.g. `https://studylife.example.com`, the
 `https://` may be left out) is checked in plain words: nothing typed, not an address, no
-answer from the server, or an answer that does not look like a StudyLife server (the app asks
+answer from the server, or an answer that does not look like a StudyAtrium server (the app asks
 `GET api/instance`, which every current server answers with an installation id and a version).
 After a warning, a second tap on "Use anyway" saves the address regardless, for a server that
 is down for a moment or is older than that endpoint. A server whose TLS certificate this device
@@ -93,7 +95,7 @@ sign-in screen shows the same switch while signed out, so a mistyped address is 
 That bar is rendered by the app shell itself (`AppRoot`), not by the shared sign-in page, because
 it has to work without a working server; `SignInServerStatus` decides it in one place: signed out
 with a saved address it is always there. The shell asks the saved server once (`api/instance`)
-and names a problem next to the button: not reachable, certificate not trusted, not a StudyLife
+and names a problem next to the button: not reachable, certificate not trusted, not a StudyAtrium
 server. When the server pinned its passkey domain (`Fido2:ServerDomain`, reported by
 `api/instance`) and the saved address lies outside it (an internal name such as
 `studylife.home.lan` for a server whose passkeys belong to its public domain), the bar says that
@@ -175,7 +177,7 @@ To update, install the APK of a newer release the same way.
 > that changed on every build and all had versionCode 1, so Android refuses to update them
 > ("App not installed"). Uninstall that build once, then install the current release.
 > Uninstalling deletes the app's local data on the phone (server address, sign-in, local
-> settings); everything stored on your StudyLife server stays. From then on every update
+> settings); everything stored on your StudyAtrium server stays. From then on every update
 > installs in place.
 
 ### Verifying the download
@@ -538,7 +540,7 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
   hand-over order, when Health access is asked for); unit-tested in `tests/StudyLife.App.Core.Tests` (CI job `test-unit`,
   `dotnet test tests/StudyLife.App.Core.Tests`). The MAUI app implements its small interfaces
   (`AppHandOverSteps`, `NativeHealthData`).
-- Signed-out server check (`AppRoot`, `Services/AppConnectivitySignal.cs`, `SignInServerProbe`, `SignInServerStatus` and `ServerRecheckPolicy` in `StudyLife.App.Core`): the device's own reachability comes first. When MAUI reports `NetworkAccess.None` (Wi-Fi, LAN and mobile data all off), the bar says so at once and the server is not asked (the question cannot succeed); retries pause until the network returns, then the check runs at once. With any network (also `ConstrainedInternet`: a captive portal, a LAN that may not reach the server) the server check is the source of truth. The bar keeps re-checking an unreachable server (backoff 2 s, 5 s, 10 s, 30 s, then every 60 s, via the shared `Reasker`) and checks again at once when MAUI reports a connectivity change (`Connectivity.ConnectivityChanged`; `ConnectivityWatch` maps it and drops repeated reports of the same state) or the app resumes. The check never takes its answer from a cache: `api/instance` is sent with `Cache-Control: private, max-age=60`, and on Apple platforms NSUrlSession's shared URL cache used to answer it with Wi-Fi off (so the bar never said "cannot be reached"); the request now says `no-cache, no-store` and the Apple handler runs with `DisableCaching` (`Services/ServerCheckHandler.cs`). A check that fails unexpectedly counts as unreachable, so the bar never stays silently without a notice. A wrong certificate or a server that is not StudyLife is not polled, only re-checked on those events. One check at a time, stops once signed in and on dispose, paused while the app is in the background (`IConnectivitySignal.CanAsk` from `App.InForeground`, for the bar and the shared form alike), continuing on resume. When the server turns reachable the shell raises the same `IConnectivitySignal`, so the shared sign-in page (password form) re-asks too. Needs the StudyLife release that introduced `IConnectivitySignal` and `Reasker` in `studylife.version`.
+- Signed-out server check (`AppRoot`, `Services/AppConnectivitySignal.cs`, `SignInServerProbe`, `SignInServerStatus` and `ServerRecheckPolicy` in `StudyLife.App.Core`): the device's own reachability comes first. When MAUI reports `NetworkAccess.None` (Wi-Fi, LAN and mobile data all off), the bar says so at once and the server is not asked (the question cannot succeed); retries pause until the network returns, then the check runs at once. With any network (also `ConstrainedInternet`: a captive portal, a LAN that may not reach the server) the server check is the source of truth. The bar keeps re-checking an unreachable server (backoff 2 s, 5 s, 10 s, 30 s, then every 60 s, via the shared `Reasker`) and checks again at once when MAUI reports a connectivity change (`Connectivity.ConnectivityChanged`; `ConnectivityWatch` maps it and drops repeated reports of the same state) or the app resumes. The check never takes its answer from a cache: `api/instance` is sent with `Cache-Control: private, max-age=60`, and on Apple platforms NSUrlSession's shared URL cache used to answer it with Wi-Fi off (so the bar never said "cannot be reached"); the request now says `no-cache, no-store` and the Apple handler runs with `DisableCaching` (`Services/ServerCheckHandler.cs`). A check that fails unexpectedly counts as unreachable, so the bar never stays silently without a notice. A wrong certificate or a server that is not StudyAtrium is not polled, only re-checked on those events. One check at a time, stops once signed in and on dispose, paused while the app is in the background (`IConnectivitySignal.CanAsk` from `App.InForeground`, for the bar and the shared form alike), continuing on resume. When the server turns reachable the shell raises the same `IConnectivitySignal`, so the shared sign-in page (password form) re-asks too. Needs the StudyAtrium release that introduced `IConnectivitySignal` and `Reasker` in `studylife.version`.
 - `Components/AppRoot.razor` — root: first-launch dialog → boot sequence (session token,
   UI language from the system setting for the app via `UiLanguageStartup`, before the dialog texts load) like in
   `StudyLife.Client/Program.cs` → renders
@@ -667,7 +669,7 @@ capability the app does not use has no string.
 | --- | --- | --- |
 | Microphone | `NSMicrophoneUsageDescription` | Notes dictation: `getUserMedia` + `MediaRecorder` in the web view. The recording goes to the user's own server for transcription. |
 | Speech recognition | `NSSpeechRecognitionUsageDescription` | Fallback of the same dictation: the web view's `webkitSpeechRecognition` (Apple's speech recognition), used when recording is not possible. Without the key the first use would crash the app. |
-| Local network | `NSLocalNetworkUsageDescription` | Connecting to a StudyLife server on the user's LAN (a NAS, a Raspberry Pi, a `.local` name). |
+| Local network | `NSLocalNetworkUsageDescription` | Connecting to a StudyAtrium server on the user's LAN (a NAS, a Raspberry Pi, a `.local` name). |
 | Health (iOS) | `NSHealthShareUsageDescription`, `NSHealthUpdateUsageDescription` | Readiness score, movement breaks, VO2max; Mindful Minutes. Read on the device only. |
 
 Notifications and push need no purpose string (runtime prompt). On Mac Catalyst the dictation
@@ -724,7 +726,7 @@ build scripts (`scripts/apple/release-ios.sh`, `release-maccatalyst.sh`, run by 
 
 The app publisher's privacy policy is published on `legal.lktec.org`:
 [German](https://legal.lktec.org/studylife/) and [English](https://legal.lktec.org/en/studylife/).
-It says that the operator of a StudyLife server is responsible for that server.
+It says that the operator of a StudyAtrium server is responsible for that server.
 
 - **App Store Connect "Privacy Policy URL"** (guideline 5.1.1(i)): `https://legal.lktec.org/en/studylife/`
   (`https://legal.lktec.org/studylife/` for a German-language listing).
@@ -774,10 +776,10 @@ The Blazor UI (via the referenced Client project) is fully localized into 26 lan
 as the web app. **The app has no language picker: its language is the operating system's
 language setting for the app.**
 
-- **iPhone, iPad, Mac:** Settings, StudyLife, Language (the list comes from
+- **iPhone, iPad, Mac:** Settings, StudyAtrium, Language (the list comes from
   `CFBundleLocalizations` in `Platforms/iOS/Info.plist` and `Platforms/MacCatalyst/Info.plist`).
   Without a choice there, the app follows the device language.
-- **Android 13 and later:** Settings, Apps, StudyLife, Language (declared in
+- **Android 13 and later:** Settings, Apps, StudyAtrium, Language (declared in
   `Platforms/Android/Resources/xml/locales_config.xml`); older Android versions follow the system
   language.
 - **Windows:** the Windows display language.
@@ -804,7 +806,7 @@ of the Client project. Still German-only native code: the Android home screen wi
 
 Copyright (C) 2026 Lukas Koerber
 
-[AGPL-3.0](LICENSE) — consistent with the main [StudyLife](https://github.com/lukislp/studylife)
+[AGPL-3.0](LICENSE) — consistent with the main [StudyAtrium](https://github.com/lukislp/studylife)
 repo, since this app is built directly on top of its (AGPL-3.0) Client project via a project
 reference.
 

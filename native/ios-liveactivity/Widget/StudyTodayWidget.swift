@@ -213,11 +213,11 @@ private struct StudyTodayView: View {
             if let snapshot = entry.snapshot {
                 content(snapshot)
             } else if isAccessory {
-                Text("✦ StudyLife").font(.caption2)
+                Text("✦ StudyAtrium").font(.caption2)
             } else {
                 VStack(spacing: 6) {
                     Text("✦").font(.title2).foregroundStyle(wAccent)
-                    Text("StudyLife öffnen,\num Daten zu laden")
+                    Text("StudyAtrium öffnen,\num Daten zu laden")
                         .font(.caption)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(wFgMuted)
@@ -280,7 +280,7 @@ private struct StudyTodayView: View {
                         Text("Heute \(formatMinutes(snapshot.todayMinutes)) gelernt")
                             .font(.caption2)
                     } else {
-                        Text("✦ StudyLife").font(.caption2.weight(.semibold))
+                        Text("✦ StudyAtrium").font(.caption2.weight(.semibold))
                         Text("Heute \(formatMinutes(snapshot.todayMinutes)) gelernt")
                             .font(.caption2)
                         HStack(spacing: 6) {
@@ -568,7 +568,7 @@ private struct CourseProgressView: View {
             } else {
                 VStack(spacing: 6) {
                     Text("✦").font(.title2).foregroundStyle(wAccent)
-                    Text("StudyLife öffnen,\num Daten zu laden")
+                    Text("StudyAtrium öffnen,\num Daten zu laden")
                         .font(.caption)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(wFgMuted)

@@ -43,7 +43,7 @@ public enum StudyLifeTimerIntentHub {
 /// app process and navigates via the hub callback (DeepLinkService → /focus).
 public struct StudyLifeOpenFocusIntent: AppIntent {
     public static var title: LocalizedStringResource = "Fokus-Timer öffnen"
-    public static var description = IntentDescription("Öffnet die Fokus-Seite von StudyLife.")
+    public static var description = IntentDescription("Öffnet die Fokus-Seite von StudyAtrium.")
     public static var openAppWhenRun: Bool = true
 
     public init() {}
@@ -101,14 +101,14 @@ private func durationLabel(_ minutes: Int) -> String {
 }
 
 private let statsUnavailableDialog: IntentDialog =
-    "Ich konnte deine Daten gerade nicht abrufen. Öffne StudyLife einmal, dann sind sie aktuell."
+    "Ich konnte deine Daten gerade nicht abrufen. Öffne StudyAtrium einmal, dann sind sie aktuell."
 
 /// Siri/Shortcuts: read-only, answered straight from the local snapshot file the widgets also
 /// use - no app launch needed (openAppWhenRun stays at its default false), same
 /// "never blind-start/change anything" design as StudyLifeOpenFocusIntent.
 public struct StudyLifeStreakQueryIntent: AppIntent {
     public static var title: LocalizedStringResource = "Lernserie abfragen"
-    public static var description = IntentDescription("Sagt dir deine aktuelle Lernserie in StudyLife.")
+    public static var description = IntentDescription("Sagt dir deine aktuelle Lernserie in StudyAtrium.")
 
     public init() {}
 
@@ -118,15 +118,15 @@ public struct StudyLifeStreakQueryIntent: AppIntent {
         }
         let days = snapshot.streakDays
         if days == 0 {
-            return .result(dialog: "Du hast aktuell keine Lernserie in StudyLife.")
+            return .result(dialog: "Du hast aktuell keine Lernserie in StudyAtrium.")
         }
-        return .result(dialog: "Deine Lernserie in StudyLife beträgt \(days) \(days == 1 ? "Tag" : "Tage").")
+        return .result(dialog: "Deine Lernserie in StudyAtrium beträgt \(days) \(days == 1 ? "Tag" : "Tage").")
     }
 }
 
 public struct StudyLifeTodayQueryIntent: AppIntent {
     public static var title: LocalizedStringResource = "Heutige Lernzeit abfragen"
-    public static var description = IntentDescription("Sagt dir, wie viel du heute schon in StudyLife gelernt hast.")
+    public static var description = IntentDescription("Sagt dir, wie viel du heute schon in StudyAtrium gelernt hast.")
 
     public init() {}
 
@@ -136,15 +136,15 @@ public struct StudyLifeTodayQueryIntent: AppIntent {
         }
         let minutes = rolledOver(raw, now: Date()).todayMinutes
         if minutes == 0 {
-            return .result(dialog: "Du hast heute noch nicht in StudyLife gelernt.")
+            return .result(dialog: "Du hast heute noch nicht in StudyAtrium gelernt.")
         }
-        return .result(dialog: "Du hast heute \(durationLabel(minutes)) in StudyLife gelernt.")
+        return .result(dialog: "Du hast heute \(durationLabel(minutes)) in StudyAtrium gelernt.")
     }
 }
 
 public struct StudyLifeWeekQueryIntent: AppIntent {
     public static var title: LocalizedStringResource = "Wöchentliche Lernzeit abfragen"
-    public static var description = IntentDescription("Sagt dir, wie viel du diese Woche schon in StudyLife gelernt hast.")
+    public static var description = IntentDescription("Sagt dir, wie viel du diese Woche schon in StudyAtrium gelernt hast.")
 
     public init() {}
 
@@ -154,9 +154,9 @@ public struct StudyLifeWeekQueryIntent: AppIntent {
         }
         let minutes = rolledOver(raw, now: Date()).weekMinutes
         if minutes == 0 {
-            return .result(dialog: "Du hast diese Woche noch nicht in StudyLife gelernt.")
+            return .result(dialog: "Du hast diese Woche noch nicht in StudyAtrium gelernt.")
         }
-        return .result(dialog: "Du hast diese Woche \(durationLabel(minutes)) in StudyLife gelernt.")
+        return .result(dialog: "Du hast diese Woche \(durationLabel(minutes)) in StudyAtrium gelernt.")
     }
 }
 

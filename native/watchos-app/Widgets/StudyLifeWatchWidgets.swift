@@ -98,7 +98,7 @@ struct StudyLifeWatchComplicationView: View {
                     Text(snapshot.timerIsBreak == true ? "✦ Pause" : "✦ Fokus läuft").font(.caption2.weight(.semibold))
                     (Text("endet in ") + Text(timerInterval: Date.now...ends, countsDown: true)).font(.caption2.monospacedDigit())
                 } else {
-                    Text("✦ StudyLife").font(.caption2.weight(.semibold))
+                    Text("✦ StudyAtrium").font(.caption2.weight(.semibold))
                     Text("Heute \(formatWatchMinutes(snapshot.todayMinutes))").font(.caption2)
                 }
                 if snapshot.streakDays > 0 {
@@ -124,7 +124,7 @@ struct StudyLifeWatchComplication: Widget {
         StaticConfiguration(kind: "StudyLifeWatchToday", provider: StudyLifeWatchComplicationProvider()) { entry in
             StudyLifeWatchComplicationView(entry: entry)
         }
-        .configurationDisplayName("StudyLife")
+        .configurationDisplayName("StudyAtrium")
         .description("Lernfortschritt auf dem Ziffernblatt.")
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline, .accessoryCorner])
     }
