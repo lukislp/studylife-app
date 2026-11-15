@@ -126,10 +126,12 @@ public class ServerCheckerTests
     private sealed class StubHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> respond) : HttpMessageHandler
     {
         public List<Uri> Requests { get; } = [];
+        public List<HttpRequestMessage> Messages { get; } = [];
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Requests.Add(request.RequestUri!);
+            Messages.Add(request);
             return await respond(request);
         }
     }
@@ -147,6 +149,21 @@ public class ServerCheckerTests
 
         Assert.Equal(ServerCheckResult.StudyLife, await CheckAsync(handler));
         Assert.Equal("https://studylife.example.com/app/api/instance", handler.Requests.Single().ToString());
+    }
+
+    [Fact]
+    public async Task TheQuestion_NeverAcceptsACachedAnswer()
+    {
+        // Regression: the server sends "Cache-Control: private, max-age=60" for api/instance, and NSUrlSession
+        // answered the check from its URL cache with Wi-Fi off, so the bar never said "cannot be reached".
+        var handler = new StubHandler(_ => Task.FromResult(Json("""{"id":"3f2c","version":"3.29.1"}""")));
+
+        await CheckAsync(handler);
+
+        var headers = handler.Messages.Single().Headers;
+        Assert.True(headers.CacheControl?.NoCache);
+        Assert.True(headers.CacheControl?.NoStore);
+        Assert.Contains(headers.Pragma, p => p.Name == "no-cache");
     }
 
     [Theory]

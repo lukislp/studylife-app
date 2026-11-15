@@ -26,10 +26,11 @@ public enum ConnectivityChange
 }
 
 /// <summary>Maps reachability to <see cref="ConnectivityChange"/> and decides when to poke the server check. Pure
-/// apart from the one remembered value that drops repeated "lost" reports (nothing changed, so nothing to ask).</summary>
+/// apart from the one remembered value that drops repeated reports of the same loss (nothing changed, so nothing
+/// to ask).</summary>
 public sealed class ConnectivityWatch
 {
-    private bool _lost;
+    private NetworkReach? _lost;
 
     public static ConnectivityChange Classify(NetworkReach reach) => reach switch
     {
@@ -39,17 +40,19 @@ public sealed class ConnectivityWatch
     };
 
     /// <summary>True when the server check should run now. A restoration always re-asks (the network may have
-    /// switched from Wi-Fi to mobile data); a loss only when the previous report was not already a loss.</summary>
+    /// switched from Wi-Fi to mobile data); a loss when it differs from the previous report. "No network" and
+    /// "constrained" are told apart: the first is shown at once without asking the server, the second is judged by
+    /// the server check, so a switch between them must reach the bar.</summary>
     public bool ShouldAsk(NetworkReach reach)
     {
         switch (Classify(reach))
         {
             case ConnectivityChange.Restored:
-                _lost = false;
+                _lost = null;
                 return true;
             case ConnectivityChange.Lost:
-                if (_lost) return false;
-                _lost = true;
+                if (_lost == reach) return false;
+                _lost = reach;
                 return true;
             default:
                 return false;

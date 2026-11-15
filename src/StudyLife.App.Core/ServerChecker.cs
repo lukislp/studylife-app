@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 
 namespace StudyLife.App.Core;
@@ -35,6 +36,15 @@ public interface IServerChecker
 /// endpoint answer 404 and are reported as <see cref="ServerCheckResult.NotStudyLife"/>; the first-start
 /// screen lets the user continue anyway. A certificate the device does not trust is reported as such
 /// (<see cref="ServerCheckResult.UntrustedCertificate"/>), never accepted.
+/// <para>
+/// The answer must come from the server now, never from a cache: the server sends
+/// <c>Cache-Control: private, max-age=60</c> for api/instance, and Apple's NSUrlSession keeps such a response in
+/// the app's shared URL cache (on disk, across launches) and serves it without the network for a minute. The
+/// check then said "StudyLife server" with Wi-Fi off, so the sign-in bar never showed "cannot be reached". Every
+/// request therefore says <c>Cache-Control: no-cache, no-store</c> (and <c>Pragma: no-cache</c> for HTTP/1.0
+/// proxies); on Apple platforms the app also hands in a handler with the local cache switched off
+/// (<c>NSUrlSessionHandler.DisableCaching</c>), because the request header alone does not bind the platform cache.
+/// </para>
 /// </summary>
 public sealed class ServerChecker : IServerChecker
 {
@@ -74,7 +84,10 @@ public sealed class ServerChecker : IServerChecker
 
     private static async Task<ServerCheck> AskAsync(HttpClient http, Uri baseUri, CancellationToken cancellationToken)
     {
-        using var response = await http.GetAsync(new Uri(ServerAddress.WithTrailingSlash(baseUri), "api/instance"), cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(ServerAddress.WithTrailingSlash(baseUri), "api/instance"));
+        request.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true, NoStore = true };
+        request.Headers.Pragma.Add(new NameValueHeaderValue("no-cache"));
+        using var response = await http.SendAsync(request, cancellationToken);
         if (response.StatusCode is HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout)
             return ServerCheck.Of(ServerCheckResult.Unreachable);
         if (!response.IsSuccessStatusCode)

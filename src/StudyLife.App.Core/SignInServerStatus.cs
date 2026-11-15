@@ -5,6 +5,9 @@ public enum SignInServerNotice
 {
     /// <summary>Nothing to say (a StudyLife server whose passkeys work at this address, or not checked yet).</summary>
     None,
+    /// <summary>The device has no network at all (Wi-Fi, LAN and mobile data are off): said at once, from the
+    /// platform's reachability, without asking the server (that question cannot succeed).</summary>
+    NoNetwork,
     Unreachable,
     UntrustedCertificate,
     NotStudyLife,
@@ -18,7 +21,10 @@ public enum SignInServerNotice
 /// shown and what it says about the server. Signed out with a configured server, the action is always there,
 /// whatever the server answers (a mistyped, unreachable or untrusted address must never be a dead end; the
 /// shared sign-in page cannot offer it because it needs a working server). Signed in, the switch lives in
-/// Setup, so the bar is not shown.
+/// Setup, so the bar is not shown. The device's own reachability comes first: with no network at all the bar says
+/// so right away (<see cref="SignInServerNotice.NoNetwork"/>), whatever an earlier check answered. With any network
+/// (also a constrained one: a captive portal, a LAN that may or may not reach the server) the server check is the
+/// source of truth.
 /// </summary>
 public sealed record SignInServerStatus(bool ShowChangeServer, SignInServerNotice Notice, string? PasskeyDomain, Uri? SuggestedAddress)
 {
@@ -27,9 +33,11 @@ public sealed record SignInServerStatus(bool ShowChangeServer, SignInServerNotic
     /// <param name="signedIn">A session token exists.</param>
     /// <param name="server">The configured server address, null before the first start finished.</param>
     /// <param name="check">The answer of <see cref="IServerChecker"/> for <paramref name="server"/>, null while it runs.</param>
-    public static SignInServerStatus Decide(bool signedIn, Uri? server, ServerCheck? check)
+    /// <param name="reach">The platform's current reachability.</param>
+    public static SignInServerStatus Decide(bool signedIn, Uri? server, ServerCheck? check, NetworkReach reach)
     {
         if (signedIn || server is null) return Hidden;
+        if (reach == NetworkReach.None) return Shown(SignInServerNotice.NoNetwork);
         return check?.Result switch
         {
             ServerCheckResult.Unreachable => Shown(SignInServerNotice.Unreachable),
@@ -78,11 +86,18 @@ public enum ServerRecheck
     OnEventsOnly,
     /// <summary>A StudyLife server answered: nothing to wait for (connectivity or resume still re-check).</summary>
     Settled,
+    /// <summary>Not asked: the device has no network. No polling either; the next connectivity report (the network
+    /// is back) or the resume asks at once.</summary>
+    WaitForNetwork,
 }
 
-/// <summary>Which results of <see cref="IServerChecker"/> are retried, and how. Pure.</summary>
+/// <summary>Whether the server is asked at all, which results of <see cref="IServerChecker"/> are retried, and how. Pure.</summary>
 public static class ServerRecheckPolicy
 {
+    /// <summary>False when the device has no network at all: the question cannot succeed (and on Apple platforms
+    /// could only wait for the timeout), so it is not asked until the network returns.</summary>
+    public static bool WorthAsking(NetworkReach reach) => reach != NetworkReach.None;
+
     public static ServerRecheck For(ServerCheckResult result) => result switch
     {
         ServerCheckResult.Unreachable => ServerRecheck.Poll,

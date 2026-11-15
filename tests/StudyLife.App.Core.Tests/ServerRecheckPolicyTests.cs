@@ -23,4 +23,16 @@ public class ServerRecheckPolicyTests
     [Fact]
     public void EveryResultHasADecision() =>
         Assert.All(Enum.GetValues<ServerCheckResult>(), r => Assert.True(Enum.IsDefined(ServerRecheckPolicy.For(r))));
+
+    [Fact]
+    public void WithoutAnyNetwork_TheServerIsNotAsked() =>
+        Assert.False(ServerRecheckPolicy.WorthAsking(NetworkReach.None));
+
+    [Theory]
+    [InlineData(NetworkReach.Internet)]
+    [InlineData(NetworkReach.Local)]
+    [InlineData(NetworkReach.Constrained)]
+    [InlineData(NetworkReach.Unknown)]
+    public void WithAnyNetwork_OrWhenThePlatformDoesNotKnow_TheServerIsAsked(NetworkReach reach) =>
+        Assert.True(ServerRecheckPolicy.WorthAsking(reach));
 }
