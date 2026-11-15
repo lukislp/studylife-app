@@ -88,6 +88,19 @@
             if (el) el.scrollTop = 0;
         }
 
+        // 1:1 copy from StudyLife.Client/wwwroot/js/interop.js: keys scroll the focused element's
+        // nearest scroll container and html/body are clipped, so after navigation focus moves
+        // into the scroll region (tabindex=-1, no Tab stop) unless something meaningful holds it.
+        function focusScrollRegion(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var a = document.activeElement;
+            var idle = !a || a === document.body || a === document.documentElement ||
+                (a.id === id) || a.id === 'main-scroll' || (a.closest && a.closest('nav'));
+            if (!idle || a === el) return;
+            el.focus({ preventScroll: true });
+        }
+
         function scrollElementToBottom(id) {
             var el = document.getElementById(id);
             if (el) el.scrollTop = el.scrollHeight;
