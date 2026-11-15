@@ -100,8 +100,8 @@ else if (_needsServerUrl)
         var host = ServerUrls.BaseUri is { } uri ? ServerAddress.DisplayHost(uri) : "";
         return status.Notice switch
         {
-            // Until the shared client ships its own "no network" text, the unreachable one says it truthfully.
-            SignInServerNotice.NoNetwork or SignInServerNotice.Unreachable => string.Format(T.SignedOutUnreachable ?? "", host),
+            SignInServerNotice.NoNetwork => T.SignedOutNoNetwork,
+            SignInServerNotice.Unreachable => string.Format(T.SignedOutUnreachable ?? "", host),
             SignInServerNotice.UntrustedCertificate => T.UntrustedCertificate,
             SignInServerNotice.NotStudyLife => string.Format(T.SignedOutNotStudyLife ?? "", host),
             SignInServerNotice.PasskeysElsewhere => string.Format(T.PasskeyDomainHint ?? "", status.PasskeyDomain),
