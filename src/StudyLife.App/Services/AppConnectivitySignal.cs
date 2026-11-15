@@ -36,6 +36,10 @@ public sealed class AppConnectivitySignal : IConnectivitySignal, IDisposable
         }
     }
 
+    /// <summary>False while the app is in the background: the shared pages and AppRoot's server check then
+    /// neither ask nor keep a timer, and continue when <see cref="Restored"/> fires on resume.</summary>
+    public bool CanAsk => global::StudyLife.App.App.InForeground;
+
     public void Raise() => _handlers?.Invoke();
 
     private void Hook()
@@ -57,7 +61,7 @@ public sealed class AppConnectivitySignal : IConnectivitySignal, IDisposable
     private void OnConnectivityChanged(object? sender, ConnectivityChangedEventArgs e)
     {
         // Not while backgrounded: the next Resumed asks instead.
-        if (global::StudyLife.App.App.InForeground && e.NetworkAccess is NetworkAccess.Internet or NetworkAccess.Local) Raise();
+        if (CanAsk && e.NetworkAccess is NetworkAccess.Internet or NetworkAccess.Local) Raise();
     }
 
     public void Dispose()
