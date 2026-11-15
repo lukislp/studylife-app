@@ -29,6 +29,28 @@ relative.
 *Captured from the live demo in a phone-sized viewport — this app's native shell renders the
 exact same `StudyLife.Client` UI shown here, project-referenced rather than copied (see above).*
 
+## Which StudyLife the app bundles (the pin)
+
+The app bundles the shared client of `lukislp/studylife` at build time, so a released app version
+must always contain the same client. [`studylife.version`](studylife.version) names the
+`lukislp/studylife` release (a tag such as `v3.33.2`) that every CI job, every release build and
+the Apple TestFlight workflow check out into `./studylife`, through the local action
+[`.github/actions/checkout-studylife`](.github/actions/checkout-studylife/action.yml). Rebuilding
+an old app tag therefore reproduces its client, and a new StudyLife release only reaches the app
+through a pull request that raises the pin.
+
+That pull request is opened by Renovate ([`renovate.json`](renovate.json): a regex manager on
+`studylife.version` with the `github-releases` datasource for `lukislp/studylife`). Its title is
+`fix(deps): bump studylife to vX.Y.Z`; a `fix` is a patch release in the release policy
+(`.github/lktec-bot.yml`), so merging it cuts a new app patch release. To raise the pin by hand,
+change the tag in `studylife.version` and use the same commit type.
+
+The cross-repo test is deliberately the other way round: a pull request in `lukislp/studylife`
+builds its own tree and does not depend on this repository. To build the app against a local
+StudyLife checkout (for example one with unreleased changes), keep both repositories side by
+side as described above and check out whatever you need in `../studylife`; the pin only governs
+CI and releases, never a local build.
+
 ## What the app can do beyond the iOS PWA
 
 | Feature | PWA (iOS) | Native App |
@@ -330,8 +352,8 @@ unchanged.
 `main`) -> enter the release tag, e.g. `v1.8.30`, or leave it empty for the latest release ->
 "Run workflow". Then approve the two deployments of the environment `release` in the run
 ("Review deployments" -> select both -> "Approve and deploy"). The jobs check out exactly the
-tagged commit (the sibling `lukislp/studylife` checkout is its current `main`, as in the
-release run) and use no caches. After Apple's processing (usually minutes, sometimes an hour)
+tagged commit (the sibling `lukislp/studylife` checkout is the release pinned in that tag's
+`studylife.version`) and use no caches. After Apple's processing (usually minutes, sometimes an hour)
 the builds show up in App Store Connect -> TestFlight.
 
 **What App Store Connect checks that this repository answers.** An upload is rejected

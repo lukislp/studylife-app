@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Raises studylife.version (the pinned lukislp/studylife release) whenever studylife publishes a release. The commit is a fix(deps), so merging it cuts a patch release of the app. Dependabot keeps covering everything else.",
+  "extends": [
+    "config:recommended",
+    ":disableDependencyDashboard"
+  ],
+  "enabledManagers": [
+    "custom.regex"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "studylife.version holds one release tag",
+      "managerFilePatterns": [
+        "/^studylife\.version$/"
+      ],
+      "matchStrings": [
+        "(?<currentValue>v\d+\.\d+\.\d+)"
+      ],
+      "depNameTemplate": "lukislp/studylife",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "semanticCommits": "enabled",
+  "semanticCommitType": "fix",
+  "semanticCommitScope": "deps",
+  "commitMessageAction": "bump",
+  "commitMessageTopic": "studylife",
+  "labels": [
+    "dependencies"
+  ],
+  "schedule": [
+    "at any time"
+  ],
+  "prConcurrentLimit": 1
+}

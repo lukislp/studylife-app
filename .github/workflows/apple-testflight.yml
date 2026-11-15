@@ -168,11 +168,7 @@ jobs:
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
         run: bash scripts/apple/keychain.sh check ios
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: lukislp/studylife
-          path: studylife
-          persist-credentials: false
+      - uses: ./.github/actions/checkout-studylife
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "10.0.x"
@@ -292,11 +288,7 @@ jobs:
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
           REQUIRE_DEVELOPER_ID: ${{ inputs.macos_zip_only }}
         run: bash scripts/apple/keychain.sh check macos
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: lukislp/studylife
-          path: studylife
-          persist-credentials: false
+      - uses: ./.github/actions/checkout-studylife
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "10.0.x"
