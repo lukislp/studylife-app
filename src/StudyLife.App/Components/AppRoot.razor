@@ -8,6 +8,7 @@
 @inject ServerUrlStore ServerUrls
 @inject ServerEntry Entry
 @inject IServerChecker Checker
+@inject AppConnectivitySignal Connectivity
 @inject ServerSwitcher Switcher
 @inject SessionTokenStore TokenStore
 @inject IJSRuntime JS
@@ -115,13 +116,32 @@ else if (_needsServerUrl)
         finally { _switching = false; }
     }
 
-    /// <summary>Signed out: ask the configured server once, so the bar can say why sign-in may not work.</summary>
-    private async Task CheckServerForSignInAsync()
+    private Reasker? _serverReasker;
+
+    /// <summary>Signed out: ask the configured server so the bar can say why sign-in may not work, and keep
+    /// asking while it is unreachable (ServerRecheckPolicy: backoff), plus at once when connectivity returns or
+    /// the app resumes (AppConnectivitySignal). A wrong certificate or a foreign server is only re-checked on
+    /// those events, never polled. One check at a time (Reasker); stops signed in and on dispose; quiet while
+    /// the app is in the background.</summary>
+    private async Task<ReaskVerdict> CheckServerForSignInAsync(CancellationToken ct)
     {
-        if (TokenStore.Token is not null || ServerUrls.BaseUri is not { } server) return;
-        try { _serverCheck = await Checker.CheckAsync(server); }
-        catch { return; /* the bar keeps its action without a notice */ }
+        if (TokenStore.Token is not null || ServerUrls.BaseUri is not { } server) return ReaskVerdict.Done;
+        if (!global::StudyLife.App.App.InForeground) return ReaskVerdict.WaitForPoke;
+        ServerCheck check;
+        try { check = await Checker.CheckAsync(server, ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch { return ReaskVerdict.Retry; /* the bar keeps its action without a notice */ }
+        var wasUnreachable = _serverCheck?.Result == ServerCheckResult.Unreachable;
+        _serverCheck = check;
         await InvokeAsync(StateHasChanged);
+        // The shared sign-in page learns it too: it re-asks its own questions (password form) right now.
+        if (wasUnreachable && check.Result != ServerCheckResult.Unreachable) Connectivity.Raise();
+        return ServerRecheckPolicy.For(check.Result) switch
+        {
+            ServerRecheck.Poll => ReaskVerdict.Retry,
+            ServerRecheck.OnEventsOnly => ReaskVerdict.WaitForPoke,
+            _ => ReaskVerdict.Done,
+        };
     }
 
     protected override async Task OnInitializedAsync()
@@ -252,6 +272,7 @@ else if (_needsServerUrl)
         Timer.OnBreakStarted -= HandleFocusRoundCompleteForHealth;
         Timer.OnTick -= HandleTimerTickForStandNudge;
         _watchTimer?.Dispose();
+        _serverReasker?.Dispose();
         NativeNotificationTexts.Provider = null;
         BackgroundRefresh.SetHandler(null);
         _liveActivity?.Dispose();
@@ -343,7 +364,8 @@ else if (_needsServerUrl)
         await TokenStore.InitializeAsync();
 
         _ready = true;
-        _ = CheckServerForSignInAsync();
+        _serverReasker = new Reasker(CheckServerForSignInAsync, Connectivity, restartAfterDone: true);
+        _ = _serverReasker.StartAsync();
 
         // iOS integrations after boot: background refresh gets its work order
         // (warm caches + keep Spotlight current) and the search index gets its initial fill.

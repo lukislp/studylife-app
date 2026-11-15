@@ -538,6 +538,7 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
   hand-over order, when Health access is asked for); unit-tested in `tests/StudyLife.App.Core.Tests` (CI job `test-unit`,
   `dotnet test tests/StudyLife.App.Core.Tests`). The MAUI app implements its small interfaces
   (`AppHandOverSteps`, `NativeHealthData`).
+- Signed-out server check (`AppRoot`, `Services/AppConnectivitySignal.cs`, `ServerRecheckPolicy` in `StudyLife.App.Core`): the sign-in bar keeps re-checking an unreachable server (backoff 2 s, 5 s, 10 s, 30 s, then every 60 s, via the shared `Reasker`) and checks again at once when MAUI reports connectivity (`Connectivity.ConnectivityChanged` to Internet or Local) or the app resumes. A wrong certificate or a server that is not StudyLife is not polled, only re-checked on those events. One check at a time, stops once signed in and on dispose, quiet while the app is in the background. When the server turns reachable the shell raises the same `IConnectivitySignal`, so the shared sign-in page (password form) re-asks too. Needs the StudyLife release that introduced `IConnectivitySignal` and `Reasker` in `studylife.version`.
 - `Components/AppRoot.razor` — root: first-launch dialog → boot sequence (session token,
   UI language from the system setting for the app via `UiLanguageStartup`, before the dialog texts load) like in
   `StudyLife.Client/Program.cs` → renders

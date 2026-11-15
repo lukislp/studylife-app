@@ -95,6 +95,9 @@ public static class MauiProgram
         builder.Services.AddScoped<INativeTelemetry, NativeTelemetry>();
         builder.Services.AddScoped<IClientPlatform, AppClientPlatform>();
         builder.Services.AddScoped<SessionTokenStore>();
+        // "The network may be back" for the shared pages and AppRoot's server check (connectivity change, resume).
+        builder.Services.AddScoped<AppConnectivitySignal>();
+        builder.Services.AddScoped<IConnectivitySignal>(sp => sp.GetRequiredService<AppConnectivitySignal>());
         builder.Services.AddScoped(sp =>
         {
             // As long as the server isn't configured yet, AppRoot doesn't render the client

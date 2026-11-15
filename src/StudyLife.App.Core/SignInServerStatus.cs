@@ -67,3 +67,26 @@ public static class PasskeyScope
         return ServerAddress.WithTrailingSlash(new Uri($"https://{host}{server.AbsolutePath}"));
     }
 }
+
+/// <summary>How the sign-in bar's server check continues after an answer.</summary>
+public enum ServerRecheck
+{
+    /// <summary>Keep asking on a backoff: the answer can change by itself (the network comes back).</summary>
+    Poll,
+    /// <summary>Do not poll: the answer will not fix itself (wrong certificate, not a StudyLife server); ask
+    /// again only when connectivity changes or the app resumes.</summary>
+    OnEventsOnly,
+    /// <summary>A StudyLife server answered: nothing to wait for (connectivity or resume still re-check).</summary>
+    Settled,
+}
+
+/// <summary>Which results of <see cref="IServerChecker"/> are retried, and how. Pure.</summary>
+public static class ServerRecheckPolicy
+{
+    public static ServerRecheck For(ServerCheckResult result) => result switch
+    {
+        ServerCheckResult.Unreachable => ServerRecheck.Poll,
+        ServerCheckResult.UntrustedCertificate or ServerCheckResult.NotStudyLife => ServerRecheck.OnEventsOnly,
+        _ => ServerRecheck.Settled,
+    };
+}
