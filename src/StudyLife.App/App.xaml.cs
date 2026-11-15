@@ -17,7 +17,7 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        var window = new Window(new MainPage()) { Title = "StudyLife" };
+        var window = new Window(new MainPage()) { Title = "StudyAtrium" };
         window.Stopped += (_, _) => InForeground = false;
         window.Resumed += (_, _) =>
         {

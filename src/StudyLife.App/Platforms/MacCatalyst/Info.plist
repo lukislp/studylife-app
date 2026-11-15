@@ -5,7 +5,7 @@
     <!-- Only standard HTTPS (system TLS) and hashing, no own cryptography: exempt from export
          compliance, so TestFlight builds need no manual answer. -->
     <!-- The languages of the app's UI (the 26 of StudyLife.Client/i18ntext). Declaring them makes the
-         system offer Settings, StudyLife, Language; the app takes its language from there and has no
+         system offer Settings, StudyAtrium, Language; the app takes its language from there and has no
          picker of its own (Services/SystemAppLanguage.cs). Keep in step with UiLanguage.All. -->
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
@@ -72,11 +72,11 @@
          language is German like the iOS Info.plist; the translations are the same
          InfoPlist.strings files (Platforms/iOS/*.lproj), bundled into this target by the csproj. -->
     <key>NSMicrophoneUsageDescription</key>
-    <string>StudyLife nimmt deine Stimme auf, um Notizen per Spracheingabe zu diktieren.</string>
+    <string>StudyAtrium nimmt deine Stimme auf, um Notizen per Spracheingabe zu diktieren.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
-    <string>StudyLife nutzt als Ersatzlösung die Spracherkennung, um deine Spracheingabe in Notiztext umzuwandeln.</string>
+    <string>StudyAtrium nutzt als Ersatzlösung die Spracherkennung, um deine Spracheingabe in Notiztext umzuwandeln.</string>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>StudyLife verbindet sich mit deinem StudyLife-Server in deinem lokalen Netzwerk.</string>
+    <string>StudyAtrium verbindet sich mit deinem StudyAtrium-Server in deinem lokalen Netzwerk.</string>
     <!-- Return channel of the passkey login (see iOS/Info.plist) -->
     <key>CFBundleURLTypes</key>
     <array>

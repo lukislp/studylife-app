@@ -1,6 +1,6 @@
-# Contributing to StudyLife App
+# Contributing to StudyAtrium App
 
-Thanks for taking the time. The StudyLife companion app is a single-maintainer project, so the
+Thanks for taking the time. The StudyAtrium companion app is a single-maintainer project, so the
 process is deliberately small - but it is the same for every change, including the maintainer's
 own.
 
