@@ -79,9 +79,10 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<ServerUrlStore>();
         // The certificate check of the first start and the sign-in bar: a TLS trust failure is told apart from
-        // "unreachable" (ConnectionFailure), with the Apple-specific part supplied by the app.
+        // "unreachable" (ConnectionFailure), with the Apple-specific part supplied by the app; the answer never
+        // comes from a platform cache (ServerCheckHandler).
         builder.Services.AddSingleton<IServerChecker>(_ =>
-            new ServerChecker(failures: new ConnectionFailure(PlatformTlsFailure.IsTrustFailure)));
+            new ServerChecker(ServerCheckHandler.Create(), failures: new ConnectionFailure(PlatformTlsFailure.IsTrustFailure)));
         builder.Services.AddSingleton<ServerEntry>();
         builder.Services.AddSingleton<DeepLinkService>();
         builder.Services.AddScoped<INativeAppAuth, NativeAppAuth>();

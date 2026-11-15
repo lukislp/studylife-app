@@ -8,8 +8,10 @@ namespace StudyLife.App.Services;
 /// reports a connection (<see cref="NetworkAccess.Internet"/> or <see cref="NetworkAccess.Local"/>) or a loss
 /// (<see cref="NetworkAccess.None"/> or <see cref="NetworkAccess.ConstrainedInternet"/>, see
 /// <see cref="ConnectivityWatch"/>) while the app is in the foreground, and when the app comes back to the
-/// foreground (App.Resumed). A loss only makes the listeners ask again: the answer (unreachable or not) always
-/// comes from their own server check, never from the connectivity state. The shared
+/// foreground (App.Resumed). <see cref="Reach"/> is the platform's current reachability, mapped to App.Core's
+/// <see cref="NetworkReach"/>: with none at all the sign-in bar says "no network" at once and does not ask the
+/// server (SignInServerStatus, ServerRecheckPolicy); with any network the answer (unreachable or not) comes from
+/// the server check, never from the connectivity state. The shared
 /// sign-in pages and AppRoot's server check re-ask on it instead of waiting for their next retry. The platform
 /// events are only hooked while someone listens and unhooked with the scope, so nothing keeps running behind
 /// the UI. <see cref="Raise"/> lets the shell tell the pages about a result it found out itself.
@@ -46,6 +48,10 @@ public sealed class AppConnectivitySignal : IConnectivitySignal, IDisposable
     public bool CanAsk => global::StudyLife.App.App.InForeground;
 
     public void Raise() => _handlers?.Invoke();
+
+    /// <summary>The platform's reachability right now (read live, so the boot and every later render see the
+    /// current state).</summary>
+    public NetworkReach Reach => ToReach(Connectivity.Current.NetworkAccess);
 
     private void Hook()
     {

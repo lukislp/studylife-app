@@ -24,7 +24,18 @@ public class ConnectivityWatchTests
         var watch = new ConnectivityWatch();
         Assert.True(watch.ShouldAsk(NetworkReach.None));
         Assert.False(watch.ShouldAsk(NetworkReach.None));
+        Assert.True(watch.ShouldAsk(NetworkReach.Constrained));
         Assert.False(watch.ShouldAsk(NetworkReach.Constrained));
+    }
+
+    [Fact]
+    public void AConstrainedLinkGoingAway_ReachesTheBar()
+    {
+        // iOS often reports a constrained link first while Wi-Fi goes down, then none: the second report must
+        // still ask, so the bar switches to "no network" (before, it was dropped as a repeated loss).
+        var watch = new ConnectivityWatch();
+        Assert.True(watch.ShouldAsk(NetworkReach.Constrained));
+        Assert.True(watch.ShouldAsk(NetworkReach.None));
     }
 
     [Fact]
@@ -45,5 +56,6 @@ public class ConnectivityWatchTests
         Assert.True(watch.ShouldAsk(NetworkReach.None));
         Assert.False(watch.ShouldAsk(NetworkReach.Unknown));
         Assert.False(watch.ShouldAsk(NetworkReach.None));
+        Assert.True(watch.ShouldAsk(NetworkReach.Constrained));
     }
 }

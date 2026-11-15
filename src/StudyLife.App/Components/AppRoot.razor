@@ -87,12 +87,12 @@ else if (_needsServerUrl)
     private string? _urlError;
     private AppFirstRunText T = new();
     private NativeNotificationText N = new();
-    private ServerCheck? _serverCheck;
+    private SignInServerProbe? _serverProbe;
     private bool _switching;
     private string? _language;
 
     private SignInServerStatus SignInStatus =>
-        SignInServerStatus.Decide(TokenStore.Token is not null, ServerUrls.BaseUri, _serverCheck);
+        SignInServerStatus.Decide(TokenStore.Token is not null, ServerUrls.BaseUri, _serverProbe?.LastCheck, Connectivity.Reach);
 
     /// <summary>The bar's text for a decided notice (the texts live in AppFirstRunText, like the first start's).</summary>
     private string? NoticeText(SignInServerStatus status)
@@ -100,7 +100,8 @@ else if (_needsServerUrl)
         var host = ServerUrls.BaseUri is { } uri ? ServerAddress.DisplayHost(uri) : "";
         return status.Notice switch
         {
-            SignInServerNotice.Unreachable => string.Format(T.SignedOutUnreachable ?? "", host),
+            // Until the shared client ships its own "no network" text, the unreachable one says it truthfully.
+            SignInServerNotice.NoNetwork or SignInServerNotice.Unreachable => string.Format(T.SignedOutUnreachable ?? "", host),
             SignInServerNotice.UntrustedCertificate => T.UntrustedCertificate,
             SignInServerNotice.NotStudyLife => string.Format(T.SignedOutNotStudyLife ?? "", host),
             SignInServerNotice.PasskeysElsewhere => string.Format(T.PasskeyDomainHint ?? "", status.PasskeyDomain),
@@ -119,29 +120,31 @@ else if (_needsServerUrl)
     private Reasker? _serverReasker;
 
     /// <summary>Signed out: ask the configured server so the bar can say why sign-in may not work, and keep
-    /// asking while it is unreachable (ServerRecheckPolicy: backoff), plus at once when connectivity returns or
-    /// the app resumes (AppConnectivitySignal). A wrong certificate or a foreign server is only re-checked on
-    /// those events, never polled. One check at a time (Reasker); stops signed in and on dispose; quiet while
-    /// the app is in the background.</summary>
+    /// asking while it is unreachable (ServerRecheckPolicy: backoff), plus at once when connectivity changes or
+    /// the app resumes (AppConnectivitySignal). Without any network the server is not asked and the bar says so
+    /// at once; the next connectivity report asks again. A wrong certificate or a foreign server is only
+    /// re-checked on those events, never polled. One round is SignInServerProbe (App.Core): an unexpected failure
+    /// counts as unreachable, so the bar never stays silently without a notice. One check at a time (Reasker);
+    /// stops signed in and on dispose; quiet while the app is in the background.</summary>
     private async Task<ReaskVerdict> CheckServerForSignInAsync(CancellationToken ct)
     {
-        if (TokenStore.Token is not null || ServerUrls.BaseUri is not { } server) return ReaskVerdict.Done;
-        ServerCheck check;
-        try { check = await Checker.CheckAsync(server, ct); }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch { return ReaskVerdict.Retry; /* the bar keeps its action without a notice */ }
-        var wasUnreachable = _serverCheck?.Result == ServerCheckResult.Unreachable;
-        _serverCheck = check;
+        if (TokenStore.Token is not null || ServerUrls.BaseUri is not { } server || _serverProbe is not { } probe)
+            return ReaskVerdict.Done;
+        var round = await probe.AskAsync(server, Connectivity.Reach, ct);
         await InvokeAsync(StateHasChanged);
         // The shared sign-in page learns it too: it re-asks its own questions (password form) right now.
-        if (wasUnreachable && check.Result != ServerCheckResult.Unreachable) Connectivity.Raise();
-        return ServerRecheckPolicy.For(check.Result) switch
+        if (round.BecameReachable) Connectivity.Raise();
+        return round.Next switch
         {
             ServerRecheck.Poll => ReaskVerdict.Retry,
-            ServerRecheck.OnEventsOnly => ReaskVerdict.WaitForPoke,
+            ServerRecheck.OnEventsOnly or ServerRecheck.WaitForNetwork => ReaskVerdict.WaitForPoke,
             _ => ReaskVerdict.Done,
         };
     }
+
+    /// <summary>A connectivity change re-renders the bar at once (the "no network" notice follows the platform's
+    /// reachability without waiting for a check that may still be in flight); the Reasker asks the server.</summary>
+    private void HandleConnectivityChanged() => _ = InvokeAsync(StateHasChanged);
 
     protected override async Task OnInitializedAsync()
     {
@@ -272,6 +275,7 @@ else if (_needsServerUrl)
         Timer.OnTick -= HandleTimerTickForStandNudge;
         _watchTimer?.Dispose();
         _serverReasker?.Dispose();
+        Connectivity.Restored -= HandleConnectivityChanged;
         NativeNotificationTexts.Provider = null;
         BackgroundRefresh.SetHandler(null);
         _liveActivity?.Dispose();
@@ -363,6 +367,8 @@ else if (_needsServerUrl)
         await TokenStore.InitializeAsync();
 
         _ready = true;
+        _serverProbe = new SignInServerProbe(Checker);
+        Connectivity.Restored += HandleConnectivityChanged;
         _serverReasker = new Reasker(CheckServerForSignInAsync, Connectivity, restartAfterDone: true);
         _ = _serverReasker.StartAsync();
 
