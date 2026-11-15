@@ -5,6 +5,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/StudyLife.App.Core.Tests/StudyLife.App.Core.Tests.csproj" />
+    <Project Path="tests/StudyLife.App.Parity.Tests/StudyLife.App.Parity.Tests.csproj" />
   </Folder>
   <Project Path="../studylife/src/StudyLife.Client/StudyLife.Client.csproj" />
   <Project Path="../studylife/src/StudyLife.Shared/StudyLife.Shared.csproj" />

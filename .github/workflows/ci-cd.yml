@@ -113,27 +113,43 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
-  # Pure text comparison, no dotnet/workload install needed - catches the "works on web,
+  # Text comparison plus a reflection test over the shared client (no MAUI workload) - catches the "works on web,
   # throws immediately on native" DI/JS-interop mirroring gap (see scripts/check-native-parity.sh)
   # before any of the build jobs below even start. iOS device installs are deliberately not
   # part of CI at all (see the README), so this is the only automated net for that platform.
   test-native-parity:
     if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: block
           allowed-endpoints: >
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
             github.com:443
+            release-assets.githubusercontent.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: lukislp/studylife
           path: studylife
       - run: bash scripts/check-native-parity.sh
+      # The reflection half of the same check: every service a shared client component @injects
+      # (and every Program.cs registration) must be registered in MauiProgram.cs. Debug, so the
+      # referenced Blazor WASM project skips its native relink.
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+      - name: Test that every injected client service is registered in the app
+        run: dotnet test tests/StudyLife.App.Parity.Tests/StudyLife.App.Parity.Tests.csproj -c Debug
       # Profile checks and entitlement generation of the Apple release jobs (scripts/apple),
       # plus a syntax check of their shell scripts - the signed path itself only runs on main.
       - name: Test the Apple signing helpers

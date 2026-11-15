@@ -112,6 +112,13 @@ public static class MauiProgram
             };
             return new HttpClient(handler) { BaseAddress = baseUri };
         });
+        // Absolute links for other people/devices (invites, the progress link): IServerLinks reads
+        // the HttpClient's BaseAddress above, i.e. the configured server (NavigationManager.BaseUri
+        // would be the virtual app://0.0.0.1/ host). Same gap as LocalDateNames/MarketplaceClient:
+        // the Setup page's cards @inject it and DI threw, so Setup did not open (TestFlight
+        // 1.12.5). Safe before a server is set: HttpServerLinks only reads BaseAddress (the
+        // .invalid placeholder at worst) and never requests it.
+        builder.Services.AddScoped<IServerLinks, HttpServerLinks>();
         builder.Services.AddScoped<AppStateService>();
         builder.Services.AddScoped<TimerService>();
         builder.Services.AddScoped<NotificationService>();
