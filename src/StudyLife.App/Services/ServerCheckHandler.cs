@@ -12,7 +12,7 @@ public static class ServerCheckHandler
     public static HttpMessageHandler? Create()
     {
 #if IOS || MACCATALYST
-        return new Foundation.NSUrlSessionHandler { DisableCaching = true };
+        return new System.Net.Http.NSUrlSessionHandler { DisableCaching = true };
 #else
         return null;
 #endif
