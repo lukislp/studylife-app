@@ -1,11 +1,15 @@
+using StudyLife.App.Core;
 using StudyLife.Client.Services;
 
 namespace StudyLife.App.Services;
 
 /// <summary>
-/// The native shell's IConnectivitySignal (studylife repo): "the network may be back". Raised when MAUI
-/// reports a connection (<see cref="NetworkAccess.Internet"/> or <see cref="NetworkAccess.Local"/>) while the app
-/// is in the foreground, and when the app comes back to the foreground (App.Resumed). The shared
+/// The native shell's IConnectivitySignal (studylife repo): "the network changed, ask again". Raised when MAUI
+/// reports a connection (<see cref="NetworkAccess.Internet"/> or <see cref="NetworkAccess.Local"/>) or a loss
+/// (<see cref="NetworkAccess.None"/> or <see cref="NetworkAccess.ConstrainedInternet"/>, see
+/// <see cref="ConnectivityWatch"/>) while the app is in the foreground, and when the app comes back to the
+/// foreground (App.Resumed). A loss only makes the listeners ask again: the answer (unreachable or not) always
+/// comes from their own server check, never from the connectivity state. The shared
 /// sign-in pages and AppRoot's server check re-ask on it instead of waiting for their next retry. The platform
 /// events are only hooked while someone listens and unhooked with the scope, so nothing keeps running behind
 /// the UI. <see cref="Raise"/> lets the shell tell the pages about a result it found out itself.
@@ -14,6 +18,7 @@ public sealed class AppConnectivitySignal : IConnectivitySignal, IDisposable
 {
     private readonly object _gate = new();
     private Action? _handlers;
+    private readonly ConnectivityWatch _watch = new();
     private bool _hooked;
 
     public event Action? Restored
@@ -61,8 +66,20 @@ public sealed class AppConnectivitySignal : IConnectivitySignal, IDisposable
     private void OnConnectivityChanged(object? sender, ConnectivityChangedEventArgs e)
     {
         // Not while backgrounded: the next Resumed asks instead.
-        if (CanAsk && e.NetworkAccess is NetworkAccess.Internet or NetworkAccess.Local) Raise();
+        if (!CanAsk) return;
+        bool ask;
+        lock (_gate) ask = _watch.ShouldAsk(ToReach(e.NetworkAccess));
+        if (ask) Raise();
     }
+
+    private static NetworkReach ToReach(NetworkAccess access) => access switch
+    {
+        NetworkAccess.Internet => NetworkReach.Internet,
+        NetworkAccess.Local => NetworkReach.Local,
+        NetworkAccess.ConstrainedInternet => NetworkReach.Constrained,
+        NetworkAccess.None => NetworkReach.None,
+        _ => NetworkReach.Unknown,
+    };
 
     public void Dispose()
     {
