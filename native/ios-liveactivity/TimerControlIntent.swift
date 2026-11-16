@@ -42,8 +42,8 @@ public enum StudyLifeTimerIntentHub {
 /// openAppWhenRun brings the app to the foreground, perform() then runs in the
 /// app process and navigates via the hub callback (DeepLinkService → /focus).
 public struct StudyLifeOpenFocusIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Fokus-Timer öffnen"
-    public static var description = IntentDescription("Öffnet die Fokus-Seite von StudyAtrium.")
+    public static var title: LocalizedStringResource = "Open focus timer"
+    public static var description = IntentDescription("Opens the focus page of StudyAtrium.")
     public static var openAppWhenRun: Bool = true
 
     public init() {}
@@ -96,19 +96,19 @@ private func rolledOver(_ raw: SiriStatsSnapshot, now: Date) -> SiriStatsSnapsho
 
 private func durationLabel(_ minutes: Int) -> String {
     minutes >= 60
-        ? "\(minutes / 60) Stunden und \(minutes % 60) Minuten"
-        : "\(minutes) Minuten"
+        ? String(localized: "\(minutes / 60) hours and \(minutes % 60) minutes")
+        : String(localized: "\(minutes) minutes")
 }
 
 private let statsUnavailableDialog: IntentDialog =
-    "Ich konnte deine Daten gerade nicht abrufen. Öffne StudyAtrium einmal, dann sind sie aktuell."
+    "I could not fetch your data right now. Open StudyAtrium once and it will be up to date."
 
 /// Siri/Shortcuts: read-only, answered straight from the local snapshot file the widgets also
 /// use - no app launch needed (openAppWhenRun stays at its default false), same
 /// "never blind-start/change anything" design as StudyLifeOpenFocusIntent.
 public struct StudyLifeStreakQueryIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Lernserie abfragen"
-    public static var description = IntentDescription("Sagt dir deine aktuelle Lernserie in StudyAtrium.")
+    public static var title: LocalizedStringResource = "Ask for study streak"
+    public static var description = IntentDescription("Tells you your current study streak in StudyAtrium.")
 
     public init() {}
 
@@ -118,15 +118,18 @@ public struct StudyLifeStreakQueryIntent: AppIntent {
         }
         let days = snapshot.streakDays
         if days == 0 {
-            return .result(dialog: "Du hast aktuell keine Lernserie in StudyAtrium.")
+            return .result(dialog: "You currently have no study streak in StudyAtrium.")
         }
-        return .result(dialog: "Deine Lernserie in StudyAtrium beträgt \(days) \(days == 1 ? "Tag" : "Tage").")
+        if days == 1 {
+            return .result(dialog: "Your study streak in StudyAtrium is 1 day.")
+        }
+        return .result(dialog: "Your study streak in StudyAtrium is \(days) days.")
     }
 }
 
 public struct StudyLifeTodayQueryIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Heutige Lernzeit abfragen"
-    public static var description = IntentDescription("Sagt dir, wie viel du heute schon in StudyAtrium gelernt hast.")
+    public static var title: LocalizedStringResource = "Ask for today's study time"
+    public static var description = IntentDescription("Tells you how much you have studied in StudyAtrium today.")
 
     public init() {}
 
@@ -136,15 +139,15 @@ public struct StudyLifeTodayQueryIntent: AppIntent {
         }
         let minutes = rolledOver(raw, now: Date()).todayMinutes
         if minutes == 0 {
-            return .result(dialog: "Du hast heute noch nicht in StudyAtrium gelernt.")
+            return .result(dialog: "You have not studied in StudyAtrium today yet.")
         }
-        return .result(dialog: "Du hast heute \(durationLabel(minutes)) in StudyAtrium gelernt.")
+        return .result(dialog: "You studied \(durationLabel(minutes)) in StudyAtrium today.")
     }
 }
 
 public struct StudyLifeWeekQueryIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Wöchentliche Lernzeit abfragen"
-    public static var description = IntentDescription("Sagt dir, wie viel du diese Woche schon in StudyAtrium gelernt hast.")
+    public static var title: LocalizedStringResource = "Ask for weekly study time"
+    public static var description = IntentDescription("Tells you how much you have studied in StudyAtrium this week.")
 
     public init() {}
 
@@ -154,9 +157,9 @@ public struct StudyLifeWeekQueryIntent: AppIntent {
         }
         let minutes = rolledOver(raw, now: Date()).weekMinutes
         if minutes == 0 {
-            return .result(dialog: "Du hast diese Woche noch nicht in StudyAtrium gelernt.")
+            return .result(dialog: "You have not studied in StudyAtrium this week yet.")
         }
-        return .result(dialog: "Du hast diese Woche \(durationLabel(minutes)) in StudyAtrium gelernt.")
+        return .result(dialog: "You studied \(durationLabel(minutes)) in StudyAtrium this week.")
     }
 }
 
@@ -189,7 +192,7 @@ public struct StudyLifeAppShortcuts: AppShortcutsProvider {
 
 @available(iOS 17.0, *)
 public struct StudyLifeTimerToggleIntent: LiveActivityIntent {
-    public static var title: LocalizedStringResource = "Fokus-Timer pausieren oder fortsetzen"
+    public static var title: LocalizedStringResource = "Pause or resume focus timer"
     public static var isDiscoverable: Bool = false
 
     public init() {}

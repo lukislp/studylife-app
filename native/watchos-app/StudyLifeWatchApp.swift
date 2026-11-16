@@ -53,14 +53,14 @@ final class WatchSessionDelegate: NSObject, WCSessionDelegate, ObservableObject 
             // means "a focus round just finished" - not "paused"/"stopped" - so only here is
             // it correct to claim completion and ask for a rating.
             if let completedAt = decoded?.sessionCompletedAt, completedAt != previous?.sessionCompletedAt {
-                Self.postLocalNotification(title: "Fokuszeit vorbei", body: "Wie lief die Session?")
+                Self.postLocalNotification(title: String(localized: "Focus time is over"), body: String(localized: "How did the session go?"))
                 self.showRatingPrompt = true
             }
             // standNudgeAt: same one-shot-timestamp pattern - fires a distinct haptic (not
             // reused from playTransitionHaptic, since this isn't a phase transition at all).
             if let nudgeAt = decoded?.standNudgeAt, nudgeAt != previous?.standNudgeAt {
                 WKInterfaceDevice.current().play(.notification)
-                Self.postLocalNotification(title: "Kurz aufstehen?", body: "Zeit für eine kurze Dehnpause.")
+                Self.postLocalNotification(title: String(localized: "Stand up for a moment?"), body: String(localized: "Time for a short stretch."))
             }
         }
     }

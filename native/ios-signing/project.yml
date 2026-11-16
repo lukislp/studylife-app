@@ -68,6 +68,8 @@ targets:
       - path: ../ios-liveactivity/UpcomingSessionActivity.swift
       - path: ../ios-liveactivity/Widget/StudyLifeWidgets.swift
       - path: ../ios-liveactivity/Widget/StudyTodayWidget.swift
+      # English keys, German translations (see scripts/apple/test_localization.py)
+      - path: ../ios-liveactivity/Widget/Localizable.xcstrings
     info:
       path: WidgetShell/Info.plist
       properties:
@@ -147,6 +149,7 @@ targets:
       - path: ../watchos-app/RatingPromptView.swift
       - path: ../watchos-app/StatsView.swift
       - path: ../watchos-app/ExtendedRuntimeSession.swift
+      - path: ../watchos-app/Localizable.xcstrings
       - path: WatchShell/Assets.xcassets
     info:
       path: WatchShell/Info.plist
@@ -188,6 +191,7 @@ targets:
     sources:
       - path: ../watchos-app/Widgets/StudyLifeWatchWidgets.swift
       - path: ../watchos-app/WatchSnapshot.swift
+      - path: ../watchos-app/Widgets/Localizable.xcstrings
     info:
       path: WatchWidgetsShell/Info.plist
       properties:
