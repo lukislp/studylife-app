@@ -1,3 +1,4 @@
+using StudyLife.App.Core;
 using StudyLife.Client.Services;
 
 namespace StudyLife.App.Services;
@@ -39,6 +40,11 @@ public sealed class AppClientPlatform : IClientPlatform
     /// <summary>The app's language is the system's language setting for the app (SystemAppLanguage): the
     /// shared UI shows a hint that leads there instead of its language picker.</summary>
     public bool LanguageFromSystem => true;
+
+    /// <summary>Apple's store builds show no add-on registration and no marketplace in Setup: the
+    /// marketplace would read like a plug-in store and loads a remote catalogue that can change after
+    /// review (App Review 2.5.2, 3.1.1, 4.7). Android and Windows keep them, like the browser.</summary>
+    public bool ShowsDeveloperIntegrations => AppStorePolicy.ShowsDeveloperIntegrations(Name);
 
     public Task OpenLanguageSettingsAsync() => SystemAppLanguage.OpenSettingsAsync();
 

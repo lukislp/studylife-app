@@ -1,0 +1,22 @@
+/* German translations of the App Intents (Siri, Shortcuts) strings that run in the app process.
+   English is the key and the development language, so it needs no file. Keep in step with
+   native/ios-liveactivity/Widget/Localizable.xcstrings (scripts/apple/test_localization.py checks it). */
+"%lld hours and %lld minutes" = "%lld Stunden und %lld Minuten";
+"%lld minutes" = "%lld Minuten";
+"Ask for study streak" = "Lernserie abfragen";
+"Ask for today's study time" = "Heutige Lernzeit abfragen";
+"Ask for weekly study time" = "Wöchentliche Lernzeit abfragen";
+"I could not fetch your data right now. Open StudyAtrium once and it will be up to date." = "Ich konnte deine Daten gerade nicht abrufen. Öffne StudyAtrium einmal, dann sind sie aktuell.";
+"Open focus timer" = "Fokus-Timer öffnen";
+"Opens the focus page of StudyAtrium." = "Öffnet die Fokus-Seite von StudyAtrium.";
+"Pause or resume focus timer" = "Fokus-Timer pausieren oder fortsetzen";
+"Tells you how much you have studied in StudyAtrium this week." = "Sagt dir, wie viel du diese Woche schon in StudyAtrium gelernt hast.";
+"Tells you how much you have studied in StudyAtrium today." = "Sagt dir, wie viel du heute schon in StudyAtrium gelernt hast.";
+"Tells you your current study streak in StudyAtrium." = "Sagt dir deine aktuelle Lernserie in StudyAtrium.";
+"You currently have no study streak in StudyAtrium." = "Du hast aktuell keine Lernserie in StudyAtrium.";
+"You have not studied in StudyAtrium this week yet." = "Du hast diese Woche noch nicht in StudyAtrium gelernt.";
+"You have not studied in StudyAtrium today yet." = "Du hast heute noch nicht in StudyAtrium gelernt.";
+"You studied %@ in StudyAtrium this week." = "Du hast diese Woche %@ in StudyAtrium gelernt.";
+"You studied %@ in StudyAtrium today." = "Du hast heute %@ in StudyAtrium gelernt.";
+"Your study streak in StudyAtrium is %lld days." = "Deine Lernserie in StudyAtrium beträgt %lld Tage.";
+"Your study streak in StudyAtrium is 1 day." = "Deine Lernserie in StudyAtrium beträgt 1 Tag.";

@@ -26,7 +26,7 @@ struct ContentView: View {
                     } else {
                         VStack(spacing: 4) {
                             Text("✦").font(.title2).foregroundStyle(wAccent)
-                            Text("Öffne StudyAtrium\nauf dem iPhone")
+                            Text("Open StudyAtrium\non your iPhone")
                                 .font(.caption2)
                                 .multilineTextAlignment(.center)
                         }
@@ -48,7 +48,7 @@ struct ContentView: View {
     private func alwaysOnContent(_ snapshot: WatchSnapshot) -> some View {
         if let ends = snapshot.activeTimerEnd {
             VStack(alignment: .leading, spacing: 2) {
-                Text(snapshot.timerIsBreak == true ? "Pause" : "Fokus")
+                Text(snapshot.timerIsBreak == true ? String(localized: "Break") : String(localized: "Focus"))
                     .font(.caption).foregroundStyle(.secondary)
                 Text(timerInterval: Date.now...ends, countsDown: true)
                     .font(.system(size: 26, weight: .light).monospacedDigit())
@@ -56,7 +56,7 @@ struct ContentView: View {
             }
         } else {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Heute").font(.caption).foregroundStyle(.secondary)
+                Text("Today").font(.caption).foregroundStyle(.secondary)
                 Text(formatWatchMinutes(snapshot.todayMinutes))
                     .font(.system(size: 26, weight: .light).monospacedDigit())
             }
@@ -67,7 +67,7 @@ struct ContentView: View {
     private func content(_ snapshot: WatchSnapshot) -> some View {
         if let ends = snapshot.activeTimerEnd {
             VStack(alignment: .leading, spacing: 2) {
-                Text(snapshot.timerIsBreak == true ? "✦ Pause" : "✦ Fokus läuft")
+                Text(snapshot.timerIsBreak == true ? String(localized: "✦ Break") : String(localized: "✦ Focus running"))
                     .font(.caption).foregroundStyle(.secondary)
                 Text(timerInterval: Date.now...ends, countsDown: true)
                     .font(.system(size: 26, weight: .light).monospacedDigit())
@@ -76,7 +76,7 @@ struct ContentView: View {
             }
         } else {
             VStack(alignment: .leading, spacing: 2) {
-                Text("✦ Heute").font(.caption).foregroundStyle(.secondary)
+                Text("✦ Today").font(.caption).foregroundStyle(.secondary)
                 Text(formatWatchMinutes(snapshot.todayMinutes))
                     .font(.system(size: 26, weight: .light).monospacedDigit())
                     .foregroundStyle(snapshot.todayMinutes > 0 ? wAccent : .secondary)
@@ -86,7 +86,7 @@ struct ContentView: View {
         HStack(spacing: 4) {
             Image(systemName: "flame.fill")
                 .foregroundStyle(snapshot.streakDays > 0 ? .orange : .secondary)
-            Text(snapshot.streakDays == 1 ? "1 Tag Serie" : "\(snapshot.streakDays) Tage Serie")
+            Text(snapshot.streakDays == 1 ? String(localized: "1 day streak") : String(localized: "\(snapshot.streakDays) days in a row"))
         }
         .font(.caption)
 
@@ -99,7 +99,7 @@ struct ContentView: View {
             Button {
                 sendTimerCommand(snapshot.activeTimerEnd != nil ? .pause : .start)
             } label: {
-                Label(snapshot.activeTimerEnd != nil ? "Pause" : "Start",
+                Label(snapshot.activeTimerEnd != nil ? String(localized: "Pause") : String(localized: "Start"),
                       systemImage: snapshot.activeTimerEnd != nil ? "pause.fill" : "play.fill")
             }
             .tint(wAccent)
@@ -130,7 +130,7 @@ struct ContentView: View {
                 .padding(.trailing, 2)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text("Woche").font(.caption2).foregroundStyle(.secondary)
+                Text("Week").font(.caption2).foregroundStyle(.secondary)
                 Text(formatWatchMinutes(snapshot.weekMinutes)).font(.caption2)
             }
         }
@@ -139,7 +139,7 @@ struct ContentView: View {
         if let title = snapshot.currentTitle, let ends = snapshot.currentEndsAt {
             Divider()
             Text("▶ \(title)").font(.caption2.weight(.semibold)).lineLimit(1)
-            Text("bis \(clockLabel(ends))").font(.caption2).foregroundStyle(.secondary)
+            Text("until \(clockLabel(ends))").font(.caption2).foregroundStyle(.secondary)
         } else if let title = snapshot.nextTitle {
             Divider()
             Text("→ \(title)").font(.caption2).lineLimit(1)
@@ -147,7 +147,7 @@ struct ContentView: View {
 
         if let recent = snapshot.recentSessions, !recent.isEmpty {
             Divider()
-            Text("Zuletzt").font(.caption2).foregroundStyle(.secondary)
+            Text("Recent").font(.caption2).foregroundStyle(.secondary)
             ForEach(recent) { entry in
                 HStack {
                     Text(entry.title).font(.caption2).lineLimit(1)

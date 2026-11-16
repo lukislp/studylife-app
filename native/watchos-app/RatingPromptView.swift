@@ -9,7 +9,7 @@ struct RatingPromptView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Text("Wie lief die Session?").font(.headline).multilineTextAlignment(.center)
+            Text("How did the session go?").font(.headline).multilineTextAlignment(.center)
             HStack(spacing: 16) {
                 ratingButton("👎", rating: 0)
                 ratingButton("😐", rating: 1)

@@ -16,6 +16,6 @@ struct ModePickerView: View {
                 Text("\(mode.emoji) \(mode.name)")
             }
         }
-        .navigationTitle("Modus")
+        .navigationTitle("Mode")
     }
 }

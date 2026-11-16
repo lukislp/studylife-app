@@ -104,7 +104,7 @@
     <array>
         <dict>
             <key>CFBundleTypeName</key>
-            <string>Kalenderdatei</string>
+            <string>Calendar file</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
             <key>LSHandlerRank</key>
