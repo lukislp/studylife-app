@@ -47,6 +47,21 @@ That pull request is opened by Renovate ([`renovate.json`](renovate.json): a reg
 (`.github/lktec-bot.yml`), so merging it cuts a new app patch release. To raise the pin by hand,
 change the tag in `studylife.version` and use the same commit type.
 
+A tag can be moved, so the action does not trust it alone: after the checkout it downloads the
+release's `server.zip`, verifies its build provenance with `gh attestation verify` (signed by
+studylife's own `ci-cd.yml` on `main`) and stops the job unless the commit named there is the
+commit the tag points to. The file itself stays a bare tag, because Renovate and lktec-bot read and
+raise it in that form. Jobs that use the action need `api.github.com`,
+`release-assets.githubusercontent.com` and `tuf-repo-cdn.sigstore.dev` in their Harden Runner
+list.
+
+The MAUI workloads are pinned to one workload set (`dotnet workload install ... --version
+10.0.401`) in every job, so a commit always builds against the same platform packs. Raise the set
+in all jobs together. The unit tests (`StudyLife.App.Core.Tests`) restore in locked mode from their
+`packages.lock.json`. The app project has no lock file: its restore graph contains the pinned
+studylife client, whose packages change with every pin bump (Renovate does not regenerate lock
+files), and CI narrows its target frameworks per job.
+
 The cross-repo test is deliberately the other way round: a pull request in `lukislp/studylife`
 builds its own tree and does not depend on this repository. To build the app against a local
 StudyAtrium checkout (for example one with unreleased changes), keep both repositories side by
