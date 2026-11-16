@@ -545,8 +545,13 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
   UI language from the system setting for the app via `UiLanguageStartup`, before the dialog texts load) like in
   `StudyLife.Client/Program.cs` → renders
   `StudyLife.Client.App`. Also consumes quick-action routes (`DeepLinkService`).
-- `wwwroot/index.html` — 1:1 copy of the client `index.html` scripts + a native bridge
-  block that redirects Wake Lock/Notifications/Badge/Vibration to
+- `wwwroot/index.html` — the app's host page. It carries its own Content-Security-Policy
+  meta tag (the server's CSP header never reaches the bundled page; each directive is
+  explained in the comment above it) and loads no inline script, so injected markup cannot
+  run script. `scripts/check-native-parity.sh` fails CI if the CSP goes missing, if
+  script-src gets loosened, or if an inline script or handler comes back.
+- `wwwroot/js/native-interop.js` — 1:1 copy of the client `js/interop.js` functions;
+  `wwwroot/js/native-bridge.js` redirects Wake Lock/Notifications/Badge/Print/Vibration to
   `Services/NativeBridge.cs` (JSInvokable). Function names/signatures unchanged ⇒ client
   services notice no difference.
 - Web Push stays PWA-only (`subscribePush` returns `null` in the app); the app uses local
@@ -618,7 +623,7 @@ gated on the same `UserSettings.TelemetryConsent` toggle as the browser client's
 
 Nothing diagnostic is ever shown to a user of a release build. `Services/DeveloperDiagnostics.cs`
 is the single place that decides what happens to a diagnostic; printing (`NativeBridge`), the
-Live Activity self-check (`TimerLiveActivity`) and unexpected JavaScript errors (`wwwroot/index.html`
+Live Activity self-check (`TimerLiveActivity`) and unexpected JavaScript errors (`wwwroot/js/native-interop.js`
 -> `NativeBridge.ReportJsError`) all go through it:
 
 | Build | Platform log | Telemetry queue (`error` event) | Red banner + notification | JS error |
