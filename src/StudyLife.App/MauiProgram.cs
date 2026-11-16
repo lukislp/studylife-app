@@ -110,9 +110,14 @@ public static class MauiProgram
             // Third argument (IServiceProvider) added by telemetry phase 2 (studylife repo):
             // SessionHandler resolves TelemetryService lazily through it to time every own-API
             // round trip, avoiding a DI construction cycle (see SessionHandler's doc comment).
+            // BeforeSignOutHandler sits inside the session handler, so the push unregistration it sends right
+            // before a sign-out carries the same session header (the logged-out hook would be too late).
             var handler = new SessionHandler(sp.GetRequiredService<SessionTokenStore>(), baseUri, sp)
             {
-                InnerHandler = new HttpClientHandler()
+                InnerHandler = new BeforeSignOutHandler(baseUri, NativePush.CreateSignOutUnregistration)
+                {
+                    InnerHandler = new HttpClientHandler()
+                }
             };
             return new HttpClient(handler) { BaseAddress = baseUri };
         });

@@ -570,6 +570,12 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
   app contact.
 - `Services/SharedNoteIntake.cs` — drains text handed in via the OS share sheet (Android
   `ACTION_SEND` intent, iOS share extension via an App Group inbox file) into a new note.
+  Any Android app can send `ACTION_SEND` to the app directly, so on Android nothing is queued
+  before the user confirmed it (`Platforms/Android/SharedTextConfirmation.cs`: a dialog with the
+  beginning of the text under the app's name and the system's own OK/Cancel). Both paths are
+  bounded (`IntakeLimits` in `StudyLife.App.Core`, mirrored in the share extension): one shared
+  text is cut after 20,000 characters, at most 20 wait for the app, and an opened `.ics` file
+  larger than the calendar page's own 5 MB upload limit is ignored.
 - `Services/HealthBridge.cs` — facade over the Swift Apple HealthKit bridge
   (`native/ios-liveactivity/HealthBridge.swift`); backs the studylife repo's
   `INativeHealthData` (HRV, sleep onset, step count, cardio fitness/VO2max) - read-only, one
@@ -672,7 +678,7 @@ capability the app does not use has no string.
 
 | Prompt | Key | What uses it |
 | --- | --- | --- |
-| Microphone | `NSMicrophoneUsageDescription` | Notes dictation: `getUserMedia` + `MediaRecorder` in the web view. The recording goes to the user's own server for transcription. |
+| Microphone | `NSMicrophoneUsageDescription` | Notes dictation: `getUserMedia` + `MediaRecorder` in the web view. The recording goes to the user's own server for transcription. On iOS the web view grants it only to the app's own page in its top frame (`MediaCapturePolicy`); any other origin or an iframe is denied. |
 | Speech recognition | `NSSpeechRecognitionUsageDescription` | Fallback of the same dictation: the web view's `webkitSpeechRecognition` (Apple's speech recognition), used when recording is not possible. Without the key the first use would crash the app. |
 | Local network | `NSLocalNetworkUsageDescription` | Connecting to a StudyAtrium server on the user's LAN (a NAS, a Raspberry Pi, a `.local` name). |
 | Health (iOS) | `NSHealthShareUsageDescription`, `NSHealthUpdateUsageDescription` | Readiness score, movement breaks, VO2max; Mindful Minutes. Read on the device only. |
@@ -767,7 +773,11 @@ Nothing of the account's content. Every sign-out removes the copies the app keep
 view (`NativeLocalCopies.WipeAsync`, the one function account deletion and the server switch use
 as well): the home screen widget snapshot (iOS App Group container, Android app data) and a
 widget refresh, the copy on a paired Apple Watch (replaced by an empty snapshot), the "next
-session starts soon" Live Activity, and the Spotlight index entries (notes and courses). This
+session starts soon" Live Activity, and the Spotlight index entries (notes and courses). The
+Spotlight entries live in the app's own index under complete file protection (readable only while
+the device is unlocked). Right before a manual sign-out the app also tells the server to stop
+sending pushes to this device (`BeforeSignOutHandler`: the "logged out" hook comes too late for
+that, the session is gone by then). This
 holds for a manual sign-out, for a session the server declared invalid (expired or revoked), and
 for the sign-out that account deletion and the server switch end in: the shared client has a single
 "logged out" hook for all of them and `AppRoot` composes the wipe behind it (`SignOutLocalCopies`).
