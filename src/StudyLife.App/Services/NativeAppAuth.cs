@@ -1,7 +1,6 @@
 using StudyLife.App.Core;
 using StudyLife.Client.Services;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 #if WINDOWS
@@ -22,8 +21,10 @@ namespace StudyLife.App.Services;
 /// - Windows: default browser + loopback HTTP listener (RFC 8252 pattern) - unpackaged
 ///   Windows apps can't register custom schemes; the auth page gets the loopback URL
 ///   via ?appret=... (client validates strictly against 127.0.0.1/localhost).
-/// No server-side special case: the token comes from the same login/complete resp.
-/// register/complete response as on the web.
+/// The page hands the sign-in back only as a PKCE code bound to this request's challenge, and with
+/// this request's random state (AppSignInRequest, 2026-11-16 audit M2): a redirect without the
+/// state, or with a raw token, is refused, so another app firing studylife://auth or a web page
+/// hitting the loopback port cannot sign the app into a foreign account.
 /// </summary>
 public sealed class NativeAppAuth : INativeAppAuth
 {
@@ -123,25 +124,13 @@ public sealed class NativeAppAuth : INativeAppAuth
 #if WINDOWS
         return await AuthenticateViaLoopbackAsync(path, language, fragment);
 #else
-        var codeVerifier = GenerateCodeVerifier();
-        var codeChallenge = ComputeCodeChallenge(codeVerifier);
-        var startUrl = new Uri(_urls.BaseUri!,
-            $"{path}?app=1&appchallenge={Uri.EscapeDataString(codeChallenge)}{language}{fragment}");
+        var request = AppSignInRequest.Create();
+        var startUrl = new Uri(_urls.BaseUri!, $"{path}?{request.StartQuery()}{language}{fragment}");
         try
         {
             var result = await WebAuthenticator.Default.AuthenticateAsync(
                 startUrl, new Uri($"{CallbackScheme}://auth"));
-
-            // PKCE handoff (new server): the redirect only ever carries the opaque code, never
-            // the bearer token itself, so this must be redeemed before it's usable. Old servers
-            // still put the token directly in the redirect - kept as a fallback below.
-            if (result.Properties.TryGetValue("code", out var code) && code is { Length: > 0 })
-                return await ExchangeCodeAsync(code, codeVerifier);
-            if (result.Properties.TryGetValue("token", out var token) && token is { Length: > 0 })
-                return token;
-            if (result.Properties.ContainsKey("linked"))
-                return "";
-            return null;
+            return await CompleteAsync(request, result.Properties);
         }
         catch (TaskCanceledException)
         {
@@ -150,16 +139,18 @@ public sealed class NativeAppAuth : INativeAppAuth
 #endif
     }
 
-    /// <summary>PKCE (RFC 7636): the code returned via the studylife:// / loopback redirect is
-    /// useless to anything that intercepts it without this verifier, which never leaves this
-    /// process's memory - only its SHA-256 (the challenge) is ever sent to the server.</summary>
-    private static string GenerateCodeVerifier() => Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
-
-    private static string ComputeCodeChallenge(string codeVerifier) =>
-        Base64UrlEncode(SHA256.HashData(Encoding.ASCII.GetBytes(codeVerifier)));
-
-    private static string Base64UrlEncode(byte[] bytes) =>
-        Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    /// <summary>The redirect back, checked by the request (state, code) and redeemed: the session
+    /// token, "" for a finished device link, null for anything else (cancelled, forged, failed).</summary>
+    private async Task<string?> CompleteAsync(AppSignInRequest request, IReadOnlyDictionary<string, string> parameters)
+    {
+        var result = request.Interpret(parameters);
+        return result.Outcome switch
+        {
+            AppSignInOutcome.Code => await ExchangeCodeAsync(result.Code!, request.CodeVerifier),
+            AppSignInOutcome.Linked => "",
+            _ => null,
+        };
+    }
 
     /// <summary>Redeems a handoff code for the real session token (POST api/auth/exchange).
     /// Non-2xx/exception/empty token all collapse to null, same "cancelled or failed" convention
@@ -194,19 +185,16 @@ public sealed class NativeAppAuth : INativeAppAuth
     private async Task<string?> AuthenticateViaLoopbackAsync(string path, string language, string fragment)
     {
         // Loopback listener on a free port; the auth page redirects to
-        // http://127.0.0.1:{port}/?token=... once done. Loopback prefixes need no
+        // http://127.0.0.1:{port}/?code=...&state=... once done. Loopback prefixes need no
         // URL ACL/admin rights.
         var port = GetFreeLoopbackPort();
         using var listener = new HttpListener();
         listener.Prefixes.Add($"http://127.0.0.1:{port}/");
         listener.Start();
 
-        var codeVerifier = GenerateCodeVerifier();
-        var codeChallenge = ComputeCodeChallenge(codeVerifier);
+        var request = AppSignInRequest.Create();
         var returnUrl = $"http://127.0.0.1:{port}/";
-        var startUrl = new Uri(_urls.BaseUri!,
-            $"{path}?app=1&appret={Uri.EscapeDataString(returnUrl)}" +
-            $"&appchallenge={Uri.EscapeDataString(codeChallenge)}{language}{fragment}");
+        var startUrl = new Uri(_urls.BaseUri!, $"{path}?{request.StartQuery(returnUrl)}{language}{fragment}");
         await Launcher.Default.OpenAsync(startUrl);
 
         // 5 minutes is generous for the passkey dialog + a possible cross-device QR scan.
@@ -216,9 +204,9 @@ public sealed class NativeAppAuth : INativeAppAuth
             return null;
 
         var context = await contextTask;
-        var code = context.Request.QueryString["code"];
-        var token = context.Request.QueryString["token"];
-        var linked = context.Request.QueryString["linked"];
+        var query = context.Request.QueryString;
+        var parameters = query.AllKeys.Where(k => k is not null)
+            .ToDictionary(k => k!, k => query[k] ?? "");
 
         // Localized instead of a hardcoded bilingual string. Toolbelt.Blazor.I18nText's
         // GetTextTableAsync needs a ComponentBase owner for its lifecycle tracking, which
@@ -240,14 +228,8 @@ public sealed class NativeAppAuth : INativeAppAuth
         await context.Response.OutputStream.WriteAsync(bytes);
         context.Response.Close();
 
-        // Same PKCE-first-then-legacy-token fallback as the mobile branch, see there.
-        if (code is { Length: > 0 })
-            return await ExchangeCodeAsync(code, codeVerifier);
-        if (token is { Length: > 0 })
-            return token;
-        if (linked == "1")
-            return "";
-        return null;
+        // Same checks as the mobile branch: this request's state, then the code.
+        return await CompleteAsync(request, parameters);
     }
 
     private static int GetFreeLoopbackPort()

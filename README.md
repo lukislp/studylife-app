@@ -127,9 +127,13 @@ WebAuthn doesn't exist in native WebViews (WKWebView/Android WebView). The app t
 opens the server's **actual** login page in a system browser sheet when logging
 in/registering/linking a device (iOS: `ASWebAuthenticationSession`, Android: Custom
 Tabs) — passkeys work fully there (Face ID, iCloud Keychain, Google Password Manager).
-After completion, the page hands the session token back to the app via a
-`studylife://auth?token=…` redirect (client-side, gated on `?app=1` — no server-side
-special path, the normal web flow is untouched).
+After completion, the page hands the sign-in back as a short-lived, single-use code in a
+`studylife://auth?code=…&state=…` redirect (Windows: the loopback listener). The app opens the
+page with a PKCE challenge and a random state (`AppSignInRequest` in `StudyLife.App.Core`), accepts
+the redirect only when it carries that state, and redeems the code with its verifier at
+`/api/auth/exchange`. A raw token in the redirect is never accepted, so another app firing
+`studylife://auth` or a web page hitting the loopback port cannot sign the app into a different
+account. Needs a server whose sign-in pages echo the state (lukislp/studylife PR #541 or later).
 
 No associated-domains entitlement needed ⇒ **works with a free Apple account**.
 
