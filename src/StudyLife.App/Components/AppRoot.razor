@@ -74,6 +74,10 @@ else if (_needsServerUrl)
                     @(_checking ? T.CheckingConnection : _canUseAnyway ? T.UseAnyway : T.Connect)
                 </button>
             </div>
+            @* The privacy policy has to be reachable before anything is entered (App Store guideline 5.1.1(i)). *@
+            <p class="ss-desc" style="margin-top:1rem; font-size:0.8rem;">
+                <a href="@PrivacyPolicyLink.For(_language)" target="_blank" rel="noopener noreferrer">@About.PrivacyPolicy</a>
+            </p>
         </div>
     </div>
 }
@@ -86,6 +90,7 @@ else if (_needsServerUrl)
     private string _urlInput = "";
     private string? _urlError;
     private AppFirstRunText T = new();
+    private AboutText About = new();
     private NativeNotificationText N = new();
     private SignInServerProbe? _serverProbe;
     private bool _switching;
@@ -165,6 +170,7 @@ else if (_needsServerUrl)
         // no server connection - so this is unproblematic even though the server URL dialog
         // itself isn't configured yet.
         T = await I18nText.GetTextTableAsync<AppFirstRunText>(this);
+        About = await I18nText.GetTextTableAsync<AboutText>(this);
         N = await I18nText.GetTextTableAsync<NativeNotificationText>(this);
         NativeNotificationTexts.Provider = () => N;
 
@@ -286,16 +292,15 @@ else if (_needsServerUrl)
         _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, justCompleted: true));
     }
 
-    /// <summary>Timer.CurrentMode still reflects the in-progress mode at this point (only
-    /// LoadMode/Reset clear it) - logs exactly the one focus round that just ended
-    /// (mode.FocusMinutes), not the whole mode's total, so stopping early after only some
-    /// rounds still keeps every already-completed round's Mindful Minutes.</summary>
+    /// <summary>Logs the focus round(s) that just ended with the intervals the timer really ran: the
+    /// actual start and end, one entry per uninterrupted stretch, so paused time is not counted as
+    /// mindful time. Rounds are logged one by one as they finish, so stopping early after only some
+    /// rounds still keeps every already-completed round's Mindful Minutes. After a suspended device
+    /// caught up on several missed phases, every finished round is handed over, not only the last.</summary>
     private void HandleFocusRoundCompleteForHealth()
     {
-        if (Timer.CurrentMode is not { } mode) return;
-        var end = DateTime.UtcNow;
-        var start = end.AddMinutes(-mode.FocusMinutes);
-        HealthBridge.LogMindfulSession(start, end);
+        foreach (var interval in Timer.TakeFinishedFocusIntervals())
+            HealthBridge.LogMindfulSession(interval.StartUtc, interval.EndUtc);
     }
 
     private (bool Running, bool IsBreak, int Round) _lastWidgetTimerState;

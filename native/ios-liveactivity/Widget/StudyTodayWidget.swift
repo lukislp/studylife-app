@@ -191,8 +191,8 @@ struct StudyTodayWidget: Widget {
         StaticConfiguration(kind: "StudyLifeToday", provider: StudyTodayProvider()) { entry in
             StudyTodayView(entry: entry)
         }
-        .configurationDisplayName("Lernfortschritt")
-        .description("Heutige Lernzeit, Serie und nächste Session.")
+        .configurationDisplayName("Study progress")
+        .description("Today's study time, streak and next session.")
         // accessory* = lock screen widgets (above/below the clock) - same data source,
         // iOS renders them monochrome/vibrant, colors barely matter there.
         .supportedFamilies([.systemSmall, .systemMedium,
@@ -217,7 +217,7 @@ private struct StudyTodayView: View {
             } else {
                 VStack(spacing: 6) {
                     Text("✦").font(.title2).foregroundStyle(wAccent)
-                    Text("StudyAtrium öffnen,\num Daten zu laden")
+                    Text("Open StudyAtrium\nto load data")
                         .font(.caption)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(wFgMuted)
@@ -249,7 +249,7 @@ private struct StudyTodayView: View {
                             .font(.system(size: 13, weight: .semibold).monospacedDigit())
                             .multilineTextAlignment(.center)
                             .minimumScaleFactor(0.6)
-                        Text(snapshot.timerIsBreak == true ? "Pause" : "Fokus")
+                        Text(snapshot.timerIsBreak == true ? String(localized: "Break") : String(localized: "Focus"))
                             .font(.system(size: 9))
                     }
                 } else {
@@ -267,21 +267,21 @@ private struct StudyTodayView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 VStack(alignment: .leading, spacing: 1) {
                     if let ends = snapshot.activeTimerEnd {
-                        Text(snapshot.timerIsBreak == true ? "✦ Pause ☕" : "✦ Fokus läuft")
+                        Text(snapshot.timerIsBreak == true ? String(localized: "✦ Break ☕") : String(localized: "✦ Focus running"))
                             .font(.caption2.weight(.semibold))
-                        (Text("endet in ") + Text(timerInterval: Date.now...ends, countsDown: true))
+                        (Text("ends in ") + Text(timerInterval: Date.now...ends, countsDown: true))
                             .font(.caption2.monospacedDigit())
-                        Text("Heute \(formatMinutes(snapshot.todayMinutes)) gelernt")
+                        Text("\(formatMinutes(snapshot.todayMinutes)) studied today")
                             .font(.caption2)
                     } else if let title = snapshot.currentTitle, let ends = snapshot.currentEndsAt {
                         // Planned study time is running right now (without a focus timer).
                         Text("▶ \(title)").font(.caption2.weight(.semibold)).lineLimit(1)
                         Text("Lernzeit bis \(clockLabel(ends))").font(.caption2)
-                        Text("Heute \(formatMinutes(snapshot.todayMinutes)) gelernt")
+                        Text("\(formatMinutes(snapshot.todayMinutes)) studied today")
                             .font(.caption2)
                     } else {
                         Text("✦ StudyAtrium").font(.caption2.weight(.semibold))
-                        Text("Heute \(formatMinutes(snapshot.todayMinutes)) gelernt")
+                        Text("\(formatMinutes(snapshot.todayMinutes)) studied today")
                             .font(.caption2)
                         HStack(spacing: 6) {
                             if snapshot.streakDays > 0 {
@@ -299,7 +299,7 @@ private struct StudyTodayView: View {
             }
         case .accessoryInline:
             if let ends = snapshot.activeTimerEnd {
-                Text("✦ \(snapshot.timerIsBreak == true ? "Pause" : "Fokus") ")
+                Text("✦ \(snapshot.timerIsBreak == true ? String(localized: "Break") : String(localized: "Focus")) ")
                     + Text(timerInterval: Date.now...ends, countsDown: true)
             } else {
                 Text("✦ \(formatMinutes(snapshot.todayMinutes))"
@@ -315,20 +315,20 @@ private struct StudyTodayView: View {
                     Link(destination: Self.focusURL) {
                         HStack(spacing: 6) {
                             Image(systemName: "play.circle.fill").foregroundStyle(wAccent)
-                            Text("Fokus starten").font(.caption.weight(.semibold)).foregroundStyle(wAccent)
+                            Text("Start focus").font(.caption.weight(.semibold)).foregroundStyle(wAccent)
                         }
                         .padding(.vertical, 4).padding(.horizontal, 10)
                         .background(wAccent.opacity(0.15), in: Capsule())
                     }
                     statRow(icon: "calendar", tint: wAccent,
-                            value: formatMinutes(snapshot.weekMinutes), label: "diese Woche")
+                            value: formatMinutes(snapshot.weekMinutes), label: String(localized: "this week"))
                     statRow(icon: "flame.fill", tint: .orange,
                             value: "\(snapshot.streakDays)",
-                            label: snapshot.streakDays == 1 ? "Tag Serie" : "Tage Serie")
+                            label: snapshot.streakDays == 1 ? String(localized: "day streak") : String(localized: "days in a row"))
                     if let title = snapshot.currentTitle, let ends = snapshot.currentEndsAt {
                         // Planned study time is running RIGHT NOW - takes precedence over "next session".
                         statRow(icon: "play.circle.fill", tint: wAccent,
-                                value: "bis \(clockLabel(ends))", label: title)
+                                value: String(localized: "until \(clockLabel(ends))"), label: title)
                     } else if let title = snapshot.nextTitle {
                         statRow(icon: "arrow.right.circle", tint: wFg,
                                 value: nextTimeLabel(snapshot), label: title)
@@ -360,19 +360,19 @@ private struct StudyTodayView: View {
             if let ends = snapshot.activeTimerEnd {
                 HStack(spacing: 4) {
                     Text("✦").foregroundStyle(wAccent)
-                    Text(snapshot.timerIsBreak == true ? "Pause ☕" : "Fokus läuft")
+                    Text(snapshot.timerIsBreak == true ? String(localized: "Break ☕") : String(localized: "Focus running"))
                         .font(.caption).foregroundStyle(wFgMuted)
                 }
                 Text(timerInterval: Date.now...ends, countsDown: true)
                     .font(.system(size: 30, weight: .light).monospacedDigit())
                     .foregroundStyle(wAccent)
                     .minimumScaleFactor(0.5)
-                Text("heute schon \(formatMinutes(snapshot.todayMinutes))")
+                Text("\(formatMinutes(snapshot.todayMinutes)) so far today")
                     .font(.caption2).foregroundStyle(wFgMuted)
             } else {
                 HStack(spacing: 4) {
                     Text("✦").foregroundStyle(wAccent)
-                    Text("Heute").font(.caption).foregroundStyle(wFgMuted)
+                    Text("Today").font(.caption).foregroundStyle(wFgMuted)
                 }
                 Text(formatMinutes(snapshot.todayMinutes))
                     .font(.system(size: 30, weight: .light).monospacedDigit())
@@ -470,7 +470,7 @@ private struct StandByAwareTodayColumn: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
                 Text("✦").foregroundStyle(wAccent)
-                Text("Heute").font(.caption).foregroundStyle(wFgMuted)
+                Text("Today").font(.caption).foregroundStyle(wFgMuted)
             }
             Text(formatMinutesStatic(snapshot.todayMinutes))
                 .font(.system(size: 30, weight: .light).monospacedDigit())
@@ -551,8 +551,8 @@ struct CourseProgressWidget: Widget {
         StaticConfiguration(kind: "StudyLifeCourses", provider: CourseProgressProvider()) { entry in
             CourseProgressView(entry: entry)
         }
-        .configurationDisplayName("Kursfortschritt")
-        .description("ECTS-Fortschritt und meistgelernte Kurse.")
+        .configurationDisplayName("Course progress")
+        .description("ECTS progress and most-studied courses.")
         .supportedFamilies([.systemMedium, .systemLarge])
     }
 }
@@ -568,7 +568,7 @@ private struct CourseProgressView: View {
             } else {
                 VStack(spacing: 6) {
                     Text("✦").font(.title2).foregroundStyle(wAccent)
-                    Text("StudyAtrium öffnen,\num Daten zu laden")
+                    Text("Open StudyAtrium\nto load data")
                         .font(.caption)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(wFgMuted)
@@ -584,7 +584,7 @@ private struct CourseProgressView: View {
         let maxCourses = family == .systemLarge ? 4 : 2
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Kursfortschritt").font(.caption.weight(.semibold)).foregroundStyle(wFgMuted)
+                Text("Course progress").font(.caption.weight(.semibold)).foregroundStyle(wFgMuted)
                 Spacer()
                 Text("\(ectsLabel(earned)) / \(ectsLabel(total)) ECTS")
                     .font(.caption.weight(.semibold).monospacedDigit())
@@ -601,7 +601,7 @@ private struct CourseProgressView: View {
                 }
             } else {
                 Spacer(minLength: 0)
-                Text("Noch keine aktiven Kurse mit Lernzeit")
+                Text("No active courses with study time yet")
                     .font(.caption2).foregroundStyle(wFgMuted)
             }
             Spacer(minLength: 0)

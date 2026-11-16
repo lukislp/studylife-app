@@ -806,13 +806,29 @@ so the server's own texts (push notifications, reports, reminders) follow it. Th
 and device-link pages the app opens in the system browser get the app's language as `applang`, so
 they do not fall back to whatever that browser stored.
 
-Native-only surfaces added by this repo (home screen widgets, Live Activity, Siri Shortcuts, the
-Apple Watch companion app, the iOS permission prompts and home-screen shortcuts) use standard
-iOS/watchOS `.lproj`/`Localizable.strings` localization and so follow the same setting. Siri's
-spoken trigger phrases are the one exception, currently German/English only. The notifications
-the shell raises itself (stand-up nudge, streak milestone) use the `NativeNotificationText` table
-of the Client project. Still German-only native code: the Android home screen widget
-(`Platforms/Android/StudyTodayWidgetProvider.cs`).
+Native-only surfaces added by this repo follow the same system setting, but they are localised
+separately from the web UI, and not yet in all 26 languages:
+
+- **Widgets, Live Activity, Watch app and watch complications** (`native/`): the Swift code uses
+  English text as the key (`Text("Today")`, `String(localized: "Break")`), and one string catalog per
+  Xcode target carries the translations: `native/ios-liveactivity/Widget/Localizable.xcstrings`,
+  `native/watchos-app/Localizable.xcstrings` and `native/watchos-app/Widgets/Localizable.xcstrings`
+  (wired into `native/ios-signing/project.yml`). Today they hold English (the key) and German; every
+  other language shows the English text.
+- **Siri and Shortcuts answers** (App Intents): the same keys, in the widget catalog for the extension
+  and in `src/StudyLife.App/Platforms/iOS/de.lproj/Localizable.strings` for the app process. Siri's
+  spoken trigger phrases are the one exception, currently German and English only.
+- **Permission prompts, home-screen shortcuts and the calendar file type name**: the 26
+  `Platforms/iOS/<language>.lproj/InfoPlist.strings` files.
+- `scripts/apple/test_localization.py` (CI) checks that every catalog entry has a German translation
+  with matching placeholders, that every localised literal in the Swift sources has an entry, that the
+  app's `Localizable.strings` equals the widget catalog and that no German text is left in the views.
+
+The notifications the shell raises itself (stand-up nudge, streak milestone) use the
+`NativeNotificationText` table of the Client project. Still German-only native code: the Android home
+screen widget (`Platforms/Android/StudyTodayWidgetProvider.cs`). To add a language, add its
+translation to each catalog entry (Xcode: open the catalog and add the language) and its file under
+`Platforms/iOS/<language>.lproj/Localizable.strings`.
 
 ## License
 
