@@ -12,7 +12,7 @@ namespace StudyLife.App.Services;
 /// with the server (api/push/subscribe-apns). Only active if the app is signed with the
 /// aps-environment entitlement (paid developer profile, AppleSigningInfo.HasPushEntitlement) -
 /// with free signing, IsAvailable stays false and NotificationService behaves like on the
-/// web (subscribePush returns null there, see the index.html bridge).
+/// web (subscribePush returns null there, see js/native-interop.js).
 /// </summary>
 public sealed class NativePush : INativePush
 {
