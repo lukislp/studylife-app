@@ -580,6 +580,13 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
   `INativeHealthData` (HRV, sleep onset, step count, cardio fitness/VO2max) - read-only, one
   combined authorization prompt shown when the user taps "Connect Apple Health" in Setup (never
   at startup), data never leaves the device.
+- `Services/NativeFileDownloadService.cs` — backs the studylife repo's `IFileDownloadService`,
+  which every download of the client uses (backup and JSON export, the export before deleting an
+  account, recovery codes). The WebView cannot run the browser's blob download (iOS cancels the
+  `blob:` navigation silently), so the file goes to the cache (`StudyLife.App.Core/ExportFiles.cs`,
+  previous export removed first) and the system share sheet opens (iOS/Mac Catalyst: presented from
+  the WebView's window, anchored to its middle; Android: MAUI Share). Windows shows the "Save as"
+  dialog. A sheet that cannot be shown throws, so the client shows its error text.
 - `Services/NativeTelemetry.cs` + `Services/TelemetryBridge.cs` — back the studylife repo's
   `INativeTelemetry`/`IClientPlatform` (see "Telemetry (native)" below).
 
