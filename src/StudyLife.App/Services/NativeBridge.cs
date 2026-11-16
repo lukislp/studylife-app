@@ -32,6 +32,11 @@ public static class NativeBridge
 
     public static void SetWebView(WebKit.WKWebView webView) =>
         _webView = new WeakReference<WebKit.WKWebView>(webView);
+
+    /// <summary>The app's WebView, if it is still alive (also the anchor of the save/share sheet,
+    /// see NativeFileDownloadService).</summary>
+    internal static WebKit.WKWebView? CurrentWebView =>
+        _webView != null && _webView.TryGetTarget(out var webView) ? webView : null;
 #endif
 
     /// <summary>Native print dialog for the WebView content (report page): iOS via
