@@ -173,6 +173,11 @@ an update over the previous one and keeps the app's data.
 
 To update, install the APK of a newer release the same way.
 
+The app is excluded from Android backup and device-to-device transfer (`allowBackup="false"`
+plus `Resources/xml/data_extraction_rules.xml`): its web view holds the session token, and a
+restored copy on another phone would carry a live sign-in along. On a new phone, install the app
+and sign in again; your data lives on the StudyAtrium server.
+
 > **One-time step for builds up to v1.8.28.** Those releases were debug-signed with a key
 > that changed on every build and all had versionCode 1, so Android refuses to update them
 > ("App not installed"). Uninstall that build once, then install the current release.
