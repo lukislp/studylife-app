@@ -81,25 +81,25 @@ struct StudyLifeWatchComplicationView: View {
                         Text(timerInterval: Date.now...ends, countsDown: true)
                             .font(.system(size: 13, weight: .semibold).monospacedDigit())
                             .minimumScaleFactor(0.6)
-                        Text(snapshot.timerIsBreak == true ? "Pause" : "Fokus").font(.system(size: 9))
+                        Text(snapshot.timerIsBreak == true ? String(localized: "Break") : String(localized: "Focus")).font(.system(size: 9))
                     }
                 } else {
                     VStack(spacing: 0) {
                         Text(formatWatchMinutes(snapshot.todayMinutes))
                             .font(.system(size: 13, weight: .semibold).monospacedDigit())
                             .minimumScaleFactor(0.7)
-                        Text("heute").font(.system(size: 9))
+                        Text("today").font(.system(size: 9))
                     }
                 }
             }
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 1) {
                 if let ends = snapshot.activeTimerEnd {
-                    Text(snapshot.timerIsBreak == true ? "✦ Pause" : "✦ Fokus läuft").font(.caption2.weight(.semibold))
-                    (Text("endet in ") + Text(timerInterval: Date.now...ends, countsDown: true)).font(.caption2.monospacedDigit())
+                    Text(snapshot.timerIsBreak == true ? String(localized: "✦ Break") : String(localized: "✦ Focus running")).font(.caption2.weight(.semibold))
+                    (Text("ends in ") + Text(timerInterval: Date.now...ends, countsDown: true)).font(.caption2.monospacedDigit())
                 } else {
                     Text("✦ StudyAtrium").font(.caption2.weight(.semibold))
-                    Text("Heute \(formatWatchMinutes(snapshot.todayMinutes))").font(.caption2)
+                    Text("Today \(formatWatchMinutes(snapshot.todayMinutes))").font(.caption2)
                 }
                 if snapshot.streakDays > 0 {
                     Label("\(snapshot.streakDays)", systemImage: "flame.fill").font(.caption2)
@@ -108,7 +108,7 @@ struct StudyLifeWatchComplicationView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         case .accessoryInline:
             if let ends = snapshot.activeTimerEnd {
-                Text("✦ \(snapshot.timerIsBreak == true ? "Pause" : "Fokus") ") + Text(timerInterval: Date.now...ends, countsDown: true)
+                Text("✦ \(snapshot.timerIsBreak == true ? String(localized: "Break") : String(localized: "Focus")) ") + Text(timerInterval: Date.now...ends, countsDown: true)
             } else {
                 Text("✦ \(formatWatchMinutes(snapshot.todayMinutes))"
                      + (snapshot.streakDays > 0 ? " · \(snapshot.streakDays)🔥" : ""))
@@ -125,7 +125,7 @@ struct StudyLifeWatchComplication: Widget {
             StudyLifeWatchComplicationView(entry: entry)
         }
         .configurationDisplayName("StudyAtrium")
-        .description("Lernfortschritt auf dem Ziffernblatt.")
+        .description("Study progress on the watch face.")
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline, .accessoryCorner])
     }
 }

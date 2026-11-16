@@ -28,7 +28,7 @@ struct StatsSection: View {
             if let allTime = snapshot.allTimeHours, allTime > 0 {
                 HStack(spacing: 4) {
                     Image(systemName: "sum").foregroundStyle(.secondary)
-                    Text("Insgesamt gelernt").font(.caption2).foregroundStyle(.secondary)
+                    Text("Total studied").font(.caption2).foregroundStyle(.secondary)
                     Spacer(minLength: 4)
                     Text(String(format: "%.1f h", allTime)).font(.caption2.weight(.semibold))
                 }
@@ -39,7 +39,7 @@ struct StatsSection: View {
     @ViewBuilder
     private func weekPlanSection(_ upcoming: [WatchUpcomingSession]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Plan diese Woche").font(.caption2).foregroundStyle(.secondary)
+            Text("Plan this week").font(.caption2).foregroundStyle(.secondary)
             ForEach(upcoming.prefix(6)) { entry in
                 HStack(spacing: 6) {
                     Text(planDayLabel(entry.startsAt))
@@ -60,14 +60,14 @@ struct StatsSection: View {
     private func weekChart(_ daily: [WatchDailyMinutes]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Letzte 7 Tage").font(.caption2).foregroundStyle(.secondary)
+                Text("Last 7 days").font(.caption2).foregroundStyle(.secondary)
                 Spacer()
                 trendLabel(daily)
             }
             Chart(daily) { entry in
                 BarMark(
-                    x: .value("Tag", dayLabel(entry.day)),
-                    y: .value("Minuten", entry.minutes)
+                    x: .value("Day", dayLabel(entry.day)),
+                    y: .value("Minutes", entry.minutes)
                 )
                 .foregroundStyle(wAccent)
                 .cornerRadius(2)
@@ -103,7 +103,7 @@ struct StatsSection: View {
     private func ectsSection(earned: Double, total: Double) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Kursfortschritt").font(.caption2).foregroundStyle(.secondary)
+                Text("Course progress").font(.caption2).foregroundStyle(.secondary)
                 Spacer()
                 Text("\(ectsLabel(earned))/\(ectsLabel(total)) ECTS")
                     .font(.caption2.weight(.semibold))
@@ -116,7 +116,7 @@ struct StatsSection: View {
     @ViewBuilder
     private func courseSection(_ courses: [WatchCourseHours]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Meistgelernt").font(.caption2).foregroundStyle(.secondary)
+            Text("Most studied").font(.caption2).foregroundStyle(.secondary)
             ForEach(courses.prefix(4)) { course in
                 HStack(spacing: 6) {
                     Circle().fill(courseColor(course.color)).frame(width: 6, height: 6)
@@ -134,7 +134,7 @@ struct StatsSection: View {
         let date = Date(timeIntervalSince1970: epoch)
         let formatter = DateFormatter()
         formatter.dateFormat = "EE HH:mm"
-        formatter.locale = Locale(identifier: "de_DE")
+        formatter.locale = Locale.current
         return formatter.string(from: date)
     }
 
@@ -144,7 +144,7 @@ struct StatsSection: View {
         guard let date = parser.date(from: iso) else { return "" }
         let out = DateFormatter()
         out.dateFormat = "EE"
-        out.locale = Locale(identifier: "de_DE")
+        out.locale = Locale.current
         return out.string(from: date)
     }
 

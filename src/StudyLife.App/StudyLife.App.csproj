@@ -57,6 +57,10 @@
         <BundleResource Include="Platforms\iOS\Resources\PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
         <BundleResource Remove="Platforms\iOS\**\InfoPlist.strings" />
         <BundleResource Include="Platforms\iOS\**\InfoPlist.strings" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+        <!-- Localizable.strings: the translations of the App Intents (Siri answers, Shortcuts titles) that
+             run in the app process; English is the key, so only the translations need files. -->
+        <BundleResource Remove="Platforms\iOS\**\Localizable.strings" />
+        <BundleResource Include="Platforms\iOS\**\Localizable.strings" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
 
     <ItemGroup>
