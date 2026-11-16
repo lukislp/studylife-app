@@ -286,16 +286,15 @@ else if (_needsServerUrl)
         _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, justCompleted: true));
     }
 
-    /// <summary>Timer.CurrentMode still reflects the in-progress mode at this point (only
-    /// LoadMode/Reset clear it) - logs exactly the one focus round that just ended
-    /// (mode.FocusMinutes), not the whole mode's total, so stopping early after only some
-    /// rounds still keeps every already-completed round's Mindful Minutes.</summary>
+    /// <summary>Logs the focus round(s) that just ended with the intervals the timer really ran: the
+    /// actual start and end, one entry per uninterrupted stretch, so paused time is not counted as
+    /// mindful time. Rounds are logged one by one as they finish, so stopping early after only some
+    /// rounds still keeps every already-completed round's Mindful Minutes. After a suspended device
+    /// caught up on several missed phases, every finished round is handed over, not only the last.</summary>
     private void HandleFocusRoundCompleteForHealth()
     {
-        if (Timer.CurrentMode is not { } mode) return;
-        var end = DateTime.UtcNow;
-        var start = end.AddMinutes(-mode.FocusMinutes);
-        HealthBridge.LogMindfulSession(start, end);
+        foreach (var interval in Timer.TakeFinishedFocusIntervals())
+            HealthBridge.LogMindfulSession(interval.StartUtc, interval.EndUtc);
     }
 
     private (bool Running, bool IsBreak, int Round) _lastWidgetTimerState;
