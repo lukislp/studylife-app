@@ -14,7 +14,7 @@
 #   APPLE_MAC_INSTALLER_P12_BASE64      "Mac Installer Distribution" (macos only)
 #   APPLE_MAC_INSTALLER_P12_PASSWORD
 #   APPLE_DEVELOPER_ID_P12_BASE64       "Developer ID Application" (macos, OPTIONAL: without it
-#   APPLE_DEVELOPER_ID_P12_PASSWORD       no notarized StudyLife-macos.zip, TestFlight still runs;
+#   APPLE_DEVELOPER_ID_P12_PASSWORD       no notarized StudyAtrium-macos.zip, TestFlight still runs;
 #                                         REQUIRE_DEVELOPER_ID=true makes them mandatory)
 #   APPLE_PROFILE_IOS_BASE64            App Store profiles, base64 (ios only) for
 #   APPLE_PROFILE_IOS_WIDGETS_BASE64      app.studylife.mobile, .widgets, .share,
@@ -64,13 +64,13 @@ check() {
   echo "All $1 signing secrets are set."
   if [ "$1" = macos ]; then
     if developer_id_configured; then
-      echo "Developer ID secrets are set: StudyLife-macos.zip will be signed and notarized."
+      echo "Developer ID secrets are set: StudyAtrium-macos.zip will be signed and notarized."
     elif [ -n "${APPLE_DEVELOPER_ID_P12_BASE64:-}${APPLE_DEVELOPER_ID_P12_PASSWORD:-}" ]; then
       fail "Only one of APPLE_DEVELOPER_ID_P12_BASE64 / APPLE_DEVELOPER_ID_P12_PASSWORD is set - set both or neither."
     elif [ "${REQUIRE_DEVELOPER_ID:-}" = true ]; then
-      fail "This run only builds the notarized StudyLife-macos.zip, but APPLE_DEVELOPER_ID_P12_BASE64 and APPLE_DEVELOPER_ID_P12_PASSWORD are missing in the 'release' environment (README, \"Apple release signing\", \"The Mac release ZIP\")."
+      fail "This run only builds the notarized StudyAtrium-macos.zip, but APPLE_DEVELOPER_ID_P12_BASE64 and APPLE_DEVELOPER_ID_P12_PASSWORD are missing in the 'release' environment (README, \"Apple release signing\", \"The Mac release ZIP\")."
     else
-      echo "::notice::No Developer ID secrets: no notarized StudyLife-macos.zip (the release keeps its ad-hoc signed one), TestFlight upload is unaffected."
+      echo "::notice::No Developer ID secrets: no notarized StudyAtrium-macos.zip (the release keeps its ad-hoc signed one), TestFlight upload is unaffected."
     fi
   fi
 }

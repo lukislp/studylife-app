@@ -18,7 +18,7 @@
 # the single net10.0-android target (see test-android in ci-cd.yml):
 #
 #   scripts/build-android-apk.sh version-code 1.8.28   # prints 10828
-#   scripts/build-android-apk.sh build                 # builds StudyLife-android.apk
+#   scripts/build-android-apk.sh build                 # builds StudyAtrium-android.apk
 #
 # Environment for "build":
 #   APP_VERSION                 release version, x.y.z
@@ -27,7 +27,7 @@
 #   ANDROID_KEYSTORE_PASSWORD   keystore password
 #   ANDROID_KEY_ALIAS           key alias inside the keystore
 #   ANDROID_KEY_PASSWORD        key password, optional (defaults to the keystore password)
-#   APK_OUTPUT                  output path, optional (default StudyLife-android.apk)
+#   APK_OUTPUT                  output path, optional (default StudyAtrium-android.apk)
 #
 # The passwords reach MSBuild as env:NAME references, never as values on a command line.
 set -euo pipefail
@@ -59,7 +59,7 @@ fail() {
 
 build() {
   local version="${APP_VERSION:?APP_VERSION is not set}"
-  local output="${APK_OUTPUT:-StudyLife-android.apk}"
+  local output="${APK_OUTPUT:-StudyAtrium-android.apk}"
   local code
   code="$(version_code "$version")" || exit 1
 

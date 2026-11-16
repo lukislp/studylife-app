@@ -1,8 +1,8 @@
 #!/bin/bash
 # Builds the Mac Catalyst app once and packages it twice:
-#   - StudyLife-macos.pkg: App Sandbox, "Apple Distribution" + Mac App Store profile, signed
+#   - StudyAtrium-macos.pkg: App Sandbox, "Apple Distribution" + Mac App Store profile, signed
 #     with the "Mac Installer Distribution" certificate -> TestFlight.
-#   - StudyLife-macos.zip: the GitHub release asset. "Developer ID Application" + hardened
+#   - StudyAtrium-macos.zip: the GitHub release asset. "Developer ID Application" + hardened
 #     runtime, notarized and stapled when the Developer ID secrets exist; otherwise ad-hoc
 #     signed exactly like the unsigned builds before (Gatekeeper asks once).
 #
@@ -29,8 +29,8 @@ APP_VERSION="${APP_VERSION:?APP_VERSION is not set}"
 BUILD_NUMBER="${BUILD_NUMBER:-$(bash scripts/build-android-apk.sh version-code "$APP_VERSION")}"
 SIGNING="python3 $ROOT/scripts/apple/signing.py"
 APP_ID="app.studylife.mobile"
-PKG_OUTPUT="$ROOT/StudyLife-macos.pkg"
-ZIP_OUTPUT="$ROOT/StudyLife-macos.zip"
+PKG_OUTPUT="$ROOT/StudyAtrium-macos.pkg"
+ZIP_OUTPUT="$ROOT/StudyAtrium-macos.zip"
 MAS_ENTITLEMENTS="$ROOT/src/StudyLife.App/Platforms/MacCatalyst/Entitlements.plist"
 DEVID_ENTITLEMENTS="$ROOT/scripts/apple/entitlements/maccatalyst-developer-id.plist"
 
@@ -228,16 +228,16 @@ if [ -n "$DEVELOPER_ID_IDENTITY" ]; then
   xcrun stapler staple "$ZIP_APP"
   verify_notarized "$ZIP_APP" "stapled app"
   smoke_launch "$ZIP_APP" "Developer ID, hardened runtime"
-  summary_row "StudyLife-macos.zip" "Developer ID, notarized, stapled"
+  summary_row "StudyAtrium-macos.zip" "Developer ID, notarized, stapled"
 else
   [ "${REQUIRE_DEVELOPER_ID:-}" = true ] \
     && fail "REQUIRE_DEVELOPER_ID=true but no Developer ID identity was imported (APPLE_DEVELOPER_ID_P12_BASE64 / APPLE_DEVELOPER_ID_P12_PASSWORD)"
-  [ "$SIGN_MODE" = app-store ] && echo "::notice::No Developer ID certificate configured - StudyLife-macos.zip is ad-hoc signed (unsigned for Gatekeeper); the release keeps its own ad-hoc signed ZIP."
+  [ "$SIGN_MODE" = app-store ] && echo "::notice::No Developer ID certificate configured - StudyAtrium-macos.zip is ad-hoc signed (unsigned for Gatekeeper); the release keeps its own ad-hoc signed ZIP."
   # Ad hoc, with the hardened runtime, so pull requests prove the Developer ID entitlements
   # suffice; Gatekeeper treats the result as unsigned either way.
   sign_app "$ZIP_APP" - "$DEVID_ENTITLEMENTS" yes
   smoke_launch "$ZIP_APP" "ad hoc, hardened runtime"
-  summary_row "StudyLife-macos.zip" "ad-hoc signed (not notarized)"
+  summary_row "StudyAtrium-macos.zip" "ad-hoc signed (not notarized)"
 fi
 rm -f "$ZIP_OUTPUT"
 ditto -c -k --sequesterRsrc --keepParent "$ZIP_APP" "$ZIP_OUTPUT"
@@ -246,7 +246,7 @@ if [ -n "$DEVELOPER_ID_IDENTITY" ]; then
   # that lost the stapled ticket or broke the signature never reaches the release.
   mkdir -p "$WORK/unzipped"
   ditto -x -k "$ZIP_OUTPUT" "$WORK/unzipped"
-  verify_notarized "$WORK/unzipped/$(basename "$ZIP_APP")" "app unpacked from StudyLife-macos.zip"
+  verify_notarized "$WORK/unzipped/$(basename "$ZIP_APP")" "app unpacked from StudyAtrium-macos.zip"
 fi
-summary_row "StudyLife-macos.zip SHA-256" "\`$(shasum -a 256 "$ZIP_OUTPUT" | cut -d' ' -f1)\`"
+summary_row "StudyAtrium-macos.zip SHA-256" "\`$(shasum -a 256 "$ZIP_OUTPUT" | cut -d' ' -f1)\`"
 echo "Done: $PKG_OUTPUT, $ZIP_OUTPUT"

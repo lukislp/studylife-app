@@ -1,6 +1,6 @@
 # StudyAtrium App (iOS / Android / Mac / Windows)
 
-> Formerly StudyLife. The product is now called StudyAtrium; repository, bundle identifiers and file names keep the old name for compatibility.
+> Formerly StudyLife. The product is now called StudyAtrium; repository and bundle identifiers keep the old name for compatibility. Release assets are named `StudyAtrium-*` from the first release after the rename; older releases keep the `StudyLife-*` names.
 
 [![CI/CD](https://github.com/lukislp/studylife-app/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/lukislp/studylife-app/actions/workflows/ci-cd.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/lukislp/studylife-app/badge)](https://scorecard.dev/viewer/?uri=github.com/lukislp/studylife-app) [![CodeQL](https://github.com/lukislp/studylife-app/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/lukislp/studylife-app/security/code-scanning)
 [![Release](https://img.shields.io/github/v/release/lukislp/studylife-app)](https://github.com/lukislp/studylife-app/releases)
@@ -162,12 +162,12 @@ app gets them without any code of its own:
 ## Installing on Android
 
 Every [release](https://github.com/lukislp/studylife-app/releases/latest) attaches
-`StudyLife-android.apk`, signed with the project's release key. Its versionName is the
+`StudyAtrium-android.apk`, signed with the project's release key. Its versionName is the
 release version and its versionCode is derived from it (see
 [Release signing](#android-release-signing-maintainers)), so each newer release installs as
 an update over the previous one and keeps the app's data.
 
-1. Download `StudyLife-android.apk` from the latest release.
+1. Download `StudyAtrium-android.apk` from the latest release.
 2. Optionally verify it (next section).
 3. Open it on the phone and allow installing from this source when Android asks.
 
@@ -184,17 +184,17 @@ To update, install the APK of a newer release the same way.
 
 Each asset has a keyless Sigstore signature bundle (`<asset>.sigstore.json`) and the release
 carries a build provenance attestation (`provenance.intoto.jsonl`), both minted by this
-repository's release workflow on `main`. A notarized `StudyLife-macos.zip` (see "Apple release
+repository's release workflow on `main`. A notarized `StudyAtrium-macos.zip` (see "Apple release
 signing" below) is signed by the TestFlight workflow instead and has its own
-`StudyLife-macos.zip.intoto.jsonl`; the regular expression below accepts both workflows:
+`StudyAtrium-macos.zip.intoto.jsonl`; the regular expression below accepts both workflows:
 
 ```bash
-gh release download --repo lukislp/studylife-app --pattern 'StudyLife-android.apk*'
-cosign verify-blob --bundle StudyLife-android.apk.sigstore.json \
+gh release download --repo lukislp/studylife-app --pattern 'StudyAtrium-android.apk*'
+cosign verify-blob --bundle StudyAtrium-android.apk.sigstore.json \
   --certificate-identity-regexp '^https://github.com/lukislp/studylife-app/\.github/workflows/(ci-cd|apple-testflight)\.yml@refs/heads/main$' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com StudyLife-android.apk
-gh attestation verify StudyLife-android.apk --repo lukislp/studylife-app
-sha256sum StudyLife-android.apk
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com StudyAtrium-android.apk
+gh attestation verify StudyAtrium-android.apk --repo lukislp/studylife-app
+sha256sum StudyAtrium-android.apk
 ```
 
 The release run's job summary ("Android APK (release)") lists the APK's SHA-256 and the
@@ -202,8 +202,8 @@ SHA-256 fingerprint of the signing certificate. The certificate is the same for 
 release; check it with either of:
 
 ```bash
-apksigner verify --print-certs StudyLife-android.apk   # Android SDK build-tools
-keytool -printcert -jarfile StudyLife-android.apk      # any JDK
+apksigner verify --print-certs StudyAtrium-android.apk   # Android SDK build-tools
+keytool -printcert -jarfile StudyAtrium-android.apk      # any JDK
 ```
 
 A different fingerprint than the previous release means the APK was not signed with the
@@ -333,7 +333,7 @@ dotnet build -f net10.0-windows10.0.19041.0       # on Windows (dev/test target)
 
 Releases never wait for Apple signing or for an approval: every push to `main` with a
 release publishes the tag, the GitHub release, the Android APK, the Windows ZIP and an ad-hoc
-signed `StudyLife-macos.zip` (job `release-macos`, no Apple secret). The iPhone app (with its
+signed `StudyAtrium-macos.zip` (job `release-macos`, no Apple secret). The iPhone app (with its
 Apple Watch app) and the Mac app go to **TestFlight** (internal testers only, no Beta App
 Review) only when the owner starts the separate workflow **Apple TestFlight**
 (`.github/workflows/apple-testflight.yml`) for a release of his choice - releases can be
@@ -344,10 +344,10 @@ unchanged.
 | --- | --- | --- |
 | `test-ios` | `ci-cd.yml`, every PR and push | builds the full iOS bundle (`scripts/apple/release-ios.sh`) and signs it ad hoc |
 | `test-maccatalyst` | `ci-cd.yml`, every PR and push | builds the Mac app, signs both variants ad hoc with their real entitlements, launch-checks them (`scripts/apple/release-maccatalyst.sh`) |
-| `release-macos` | `ci-cd.yml`, push to `main` with a release | the same build with the release version, ad hoc signed (hardened runtime): `StudyLife-macos.zip` for the GitHub release |
+| `release-macos` | `ci-cd.yml`, push to `main` with a release | the same build with the release version, ad hoc signed (hardened runtime): `StudyAtrium-macos.zip` for the GitHub release |
 | `resolve` | `apple-testflight.yml`, manual | checks the chosen tag (form `vX.Y.Z`, has a GitHub release, its commit is on `main`) and resolves it to that commit |
-| `testflight-ios` | `apple-testflight.yml`, manual, approval | App Store signature, upload of `StudyLife-ios.ipa` to TestFlight (skipped with `macos_zip_only`) |
-| `testflight-macos` | `apple-testflight.yml`, manual, approval | App Sandbox + Mac App Store profile + installer signature, upload of `StudyLife-macos.pkg` to TestFlight; with the Developer ID secrets also a notarized `StudyLife-macos.zip` |
+| `testflight-ios` | `apple-testflight.yml`, manual, approval | App Store signature, upload of `StudyAtrium-ios.ipa` to TestFlight (skipped with `macos_zip_only`) |
+| `testflight-macos` | `apple-testflight.yml`, manual, approval | App Sandbox + Mac App Store profile + installer signature, upload of `StudyAtrium-macos.pkg` to TestFlight; with the Developer ID secrets also a notarized `StudyAtrium-macos.zip` |
 | `publish-notarized-zip` | `apple-testflight.yml`, after `testflight-macos` | only with a notarized ZIP: signs it (Sigstore), attests its provenance and replaces the release's ad-hoc signed ZIP |
 
 **Shipping a TestFlight build.** Actions -> "Apple TestFlight" -> "Run workflow" (branch
@@ -371,14 +371,14 @@ deployment branches: `main` only). Its secrets never reach pull requests or othe
 nothing runs with them before the owner approves. A missing TestFlight secret fails that job;
 nothing unsigned is uploaded.
 
-**The Mac release ZIP.** Every release carries the ad-hoc signed `StudyLife-macos.zip`
+**The Mac release ZIP.** Every release carries the ad-hoc signed `StudyAtrium-macos.zip`
 (Gatekeeper asks once: right-click "Open", or `xattr -cr`). If the optional Developer ID
 secrets are set, a TestFlight run also builds a Developer ID signed, notarized and stapled ZIP,
 and `publish-notarized-zip` uploads it over the ZIP of that release together with a new
-`StudyLife-macos.zip.sigstore.json` (signer: `apple-testflight.yml` on `main`) and
-`StudyLife-macos.zip.intoto.jsonl` (its build provenance). The release's
+`StudyAtrium-macos.zip.sigstore.json` (signer: `apple-testflight.yml` on `main`) and
+`StudyAtrium-macos.zip.intoto.jsonl` (its build provenance). The release's
 `provenance.intoto.jsonl` still lists the digest of the replaced ad-hoc ZIP; it stays valid for
-the other assets, and `gh attestation verify StudyLife-macos.zip --repo lukislp/studylife-app`
+the other assets, and `gh attestation verify StudyAtrium-macos.zip --repo lukislp/studylife-app`
 finds the new attestation. Without the Developer ID secrets the run leaves the release
 untouched (notice in the run).
 
@@ -408,13 +408,13 @@ exist on iOS only; the Mac build is a single bundle).
 *Verifying the notarized ZIP on a Mac:*
 
 ```bash
-gh release download v1.8.46 --repo lukislp/studylife-app --pattern 'StudyLife-macos.zip*'
-cosign verify-blob --bundle StudyLife-macos.zip.sigstore.json \
+gh release download v1.8.46 --repo lukislp/studylife-app --pattern 'StudyAtrium-macos.zip*'
+cosign verify-blob --bundle StudyAtrium-macos.zip.sigstore.json \
   --certificate-identity-regexp '^https://github.com/lukislp/studylife-app/\.github/workflows/apple-testflight\.yml@refs/heads/main$' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com StudyLife-macos.zip
-gh attestation verify StudyLife-macos.zip --repo lukislp/studylife-app
-shasum -a 256 StudyLife-macos.zip                  # matches the job summary
-mkdir unpacked && ditto -x -k StudyLife-macos.zip unpacked
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com StudyAtrium-macos.zip
+gh attestation verify StudyAtrium-macos.zip --repo lukislp/studylife-app
+shasum -a 256 StudyAtrium-macos.zip                  # matches the job summary
+mkdir unpacked && ditto -x -k StudyAtrium-macos.zip unpacked
 APP="$(find unpacked -maxdepth 1 -name '*.app' | head -1)"
 codesign --verify --deep --strict --verbose=2 "$APP"
 codesign -dvv "$APP" 2>&1 | grep -E '^(Authority|TeamIdentifier)='   # Developer ID Application: ..., team ID
@@ -470,7 +470,7 @@ profile does not grant a declared entitlement.
 | --- | --- | --- |
 | Apple Distribution certificate | iOS app + bundles, Mac TestFlight app | 1 year |
 | Mac Installer Distribution certificate (common name "3rd Party Mac Developer Installer") | the TestFlight `.pkg` | 1 year |
-| Developer ID Application certificate (optional; required for `macos_zip_only`) | notarized `StudyLife-macos.zip` | several years (see the portal) |
+| Developer ID Application certificate (optional; required for `macos_zip_only`) | notarized `StudyAtrium-macos.zip` | several years (see the portal) |
 | App Store profiles (iOS) for the five bundle IDs above | iOS | 1 year, or until the certificate is revoked |
 | Mac Catalyst App Store profile for `app.studylife.mobile` | Mac TestFlight | 1 year |
 | App Store Connect API key, role **Developer** (team key) | TestFlight upload (`altool`) and notarization (`notarytool`) | until revoked |

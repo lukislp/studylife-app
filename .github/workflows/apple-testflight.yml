@@ -5,7 +5,7 @@ name: Apple TestFlight
 # secrets of the GitHub Environment "release" and uploads them to TestFlight. Releases
 # themselves (ci-cd.yml) never wait for this workflow or for an approval; the owner decides
 # when a release goes to TestFlight. With the optional Developer ID secrets the Mac job also
-# notarizes StudyLife-macos.zip, and publish-notarized-zip replaces the ad-hoc signed ZIP of
+# notarizes StudyAtrium-macos.zip, and publish-notarized-zip replaces the ad-hoc signed ZIP of
 # that release with it. With macos_zip_only the run uploads nothing to TestFlight and only
 # produces that notarized ZIP (the Developer ID secrets are then required). README, "Apple
 # release signing".
@@ -26,7 +26,7 @@ on:
         default: ""
         type: string
       macos_zip_only:
-        description: "Only the notarized StudyLife-macos.zip for the release: no TestFlight upload, no iPhone build. Needs the Developer ID secrets."
+        description: "Only the notarized StudyAtrium-macos.zip for the release: no TestFlight upload, no iPhone build. Needs the Developer ID secrets."
         required: false
         default: false
         type: boolean
@@ -214,13 +214,13 @@ jobs:
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
           UPLOAD_TIMEOUT_SECONDS: "1800"
-        run: bash scripts/apple/upload-testflight.sh StudyLife-ios.ipa ios
+        run: bash scripts/apple/upload-testflight.sh StudyAtrium-ios.ipa ios
       - name: Remove the signing keychain and decoded files
         if: always()
         run: if [ -f scripts/apple/keychain.sh ]; then bash scripts/apple/keychain.sh cleanup; fi
 
   # The Mac app: TestFlight (.pkg, App Sandbox). With the optional Developer ID secrets also the
-  # notarized StudyLife-macos.zip, handed to publish-notarized-zip as an artifact. With
+  # notarized StudyAtrium-macos.zip, handed to publish-notarized-zip as an artifact. With
   # macos_zip_only the .pkg is still built and signed (same script) but not uploaded, and
   # REQUIRE_DEVELOPER_ID fails the job right away if the Developer ID secrets are missing.
   testflight-macos:
@@ -338,7 +338,7 @@ jobs:
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
           UPLOAD_TIMEOUT_SECONDS: "1800"
-        run: bash scripts/apple/upload-testflight.sh StudyLife-macos.pkg macos
+        run: bash scripts/apple/upload-testflight.sh StudyAtrium-macos.pkg macos
       # keychain.sh setup leaves DEVELOPER_ID_IDENTITY empty without the Developer ID secrets;
       # the ZIP is then ad-hoc signed and the release keeps the one ci-cd.yml attached.
       - name: Notarized ZIP for the release?
@@ -353,14 +353,14 @@ jobs:
         if: steps.zip.outputs.notarized == 'true'
         with:
           name: notarized-macos-zip
-          path: StudyLife-macos.zip
+          path: StudyAtrium-macos.zip
           if-no-files-found: error
           retention-days: 1
       - name: Remove the signing keychain and decoded files
         if: always()
         run: if [ -f scripts/apple/keychain.sh ]; then bash scripts/apple/keychain.sh cleanup; fi
 
-  # Replaces the release's ad-hoc signed StudyLife-macos.zip with the notarized one, signed the
+  # Replaces the release's ad-hoc signed StudyAtrium-macos.zip with the notarized one, signed the
   # way ci-cd.yml signs release assets: a keyless Sigstore bundle (identity: this workflow on
   # main) and a build provenance attestation, both uploaded next to the ZIP. No Apple secret
   # and no checkout here; the only job with write access to the repository.
@@ -400,7 +400,7 @@ jobs:
       - name: Sign the notarized ZIP
         run: |
           set -euo pipefail
-          f=release-assets/StudyLife-macos.zip
+          f=release-assets/StudyAtrium-macos.zip
           cosign sign-blob --yes --bundle "$f.sigstore.json" "$f"
           cosign verify-blob --bundle "$f.sigstore.json" \
             --certificate-identity-regexp '^https://github.com/lukislp/studylife-app/\.github/workflows/apple-testflight\.yml@refs/heads/main$' \
@@ -408,7 +408,7 @@ jobs:
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         id: provenance
         with:
-          subject-path: release-assets/StudyLife-macos.zip
+          subject-path: release-assets/StudyAtrium-macos.zip
       - name: Replace the ZIP in the release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -417,14 +417,14 @@ jobs:
           BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
         run: |
           set -euo pipefail
-          cp "$BUNDLE" release-assets/StudyLife-macos.zip.intoto.jsonl
+          cp "$BUNDLE" release-assets/StudyAtrium-macos.zip.intoto.jsonl
           gh release upload "$TAG" --repo "$REPO" --clobber \
-            "release-assets/StudyLife-macos.zip#macOS (Mac Catalyst, Developer ID signed and notarized)" \
-            release-assets/StudyLife-macos.zip.sigstore.json \
-            release-assets/StudyLife-macos.zip.intoto.jsonl
+            "release-assets/StudyAtrium-macos.zip#macOS (Mac Catalyst, Developer ID signed and notarized)" \
+            release-assets/StudyAtrium-macos.zip.sigstore.json \
+            release-assets/StudyAtrium-macos.zip.intoto.jsonl
           {
             echo "### Release $TAG"
             echo ""
-            echo "StudyLife-macos.zip replaced with the notarized build:"
-            echo "\`$(sha256sum release-assets/StudyLife-macos.zip | cut -d' ' -f1)\`"
+            echo "StudyAtrium-macos.zip replaced with the notarized build:"
+            echo "\`$(sha256sum release-assets/StudyAtrium-macos.zip | cut -d' ' -f1)\`"
           } >> "$GITHUB_STEP_SUMMARY"
