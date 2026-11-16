@@ -1,0 +1,490 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@ so far today": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "heute schon %@"
+          }
+        }
+      }
+    },
+    "%@ studied today": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute %@ gelernt"
+          }
+        }
+      }
+    },
+    "%lld hours and %lld minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Stunden und %lld Minuten"
+          }
+        }
+      }
+    },
+    "%lld minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Minuten"
+          }
+        }
+      }
+    },
+    "Ask for study streak": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lernserie abfragen"
+          }
+        }
+      }
+    },
+    "Ask for today's study time": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heutige Lernzeit abfragen"
+          }
+        }
+      }
+    },
+    "Ask for weekly study time": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wöchentliche Lernzeit abfragen"
+          }
+        }
+      }
+    },
+    "Break": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause"
+          }
+        }
+      }
+    },
+    "Break ☕": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause ☕"
+          }
+        }
+      }
+    },
+    "Course progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kursfortschritt"
+          }
+        }
+      }
+    },
+    "ECTS progress and most-studied courses.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ECTS-Fortschritt und meistgelernte Kurse."
+          }
+        }
+      }
+    },
+    "Focus": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus"
+          }
+        }
+      }
+    },
+    "Focus running": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus läuft"
+          }
+        }
+      }
+    },
+    "I could not fetch your data right now. Open StudyAtrium once and it will be up to date.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ich konnte deine Daten gerade nicht abrufen. Öffne StudyAtrium einmal, dann sind sie aktuell."
+          }
+        }
+      }
+    },
+    "Next session": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächste Session"
+          }
+        }
+      }
+    },
+    "No active courses with study time yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine aktiven Kurse mit Lernzeit"
+          }
+        }
+      }
+    },
+    "Open StudyAtrium\nto load data": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "StudyAtrium öffnen,\num Daten zu laden"
+          }
+        }
+      }
+    },
+    "Open focus timer": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus-Timer öffnen"
+          }
+        }
+      }
+    },
+    "Opens the focus page of StudyAtrium.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet die Fokus-Seite von StudyAtrium."
+          }
+        }
+      }
+    },
+    "Pause or resume focus timer": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus-Timer pausieren oder fortsetzen"
+          }
+        }
+      }
+    },
+    "Paused": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausiert"
+          }
+        }
+      }
+    },
+    "Phase over — open app": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phase vorbei — App öffnen"
+          }
+        }
+      }
+    },
+    "Round %lld of %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runde %lld von %lld"
+          }
+        }
+      }
+    },
+    "Start focus": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fokus starten"
+          }
+        }
+      }
+    },
+    "Study progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lernfortschritt"
+          }
+        }
+      }
+    },
+    "Tells you how much you have studied in StudyAtrium this week.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sagt dir, wie viel du diese Woche schon in StudyAtrium gelernt hast."
+          }
+        }
+      }
+    },
+    "Tells you how much you have studied in StudyAtrium today.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sagt dir, wie viel du heute schon in StudyAtrium gelernt hast."
+          }
+        }
+      }
+    },
+    "Tells you your current study streak in StudyAtrium.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sagt dir deine aktuelle Lernserie in StudyAtrium."
+          }
+        }
+      }
+    },
+    "Today": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute"
+          }
+        }
+      }
+    },
+    "Today's study time, streak and next session.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heutige Lernzeit, Serie und nächste Session."
+          }
+        }
+      }
+    },
+    "You currently have no study streak in StudyAtrium.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast aktuell keine Lernserie in StudyAtrium."
+          }
+        }
+      }
+    },
+    "You have not studied in StudyAtrium this week yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast diese Woche noch nicht in StudyAtrium gelernt."
+          }
+        }
+      }
+    },
+    "You have not studied in StudyAtrium today yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast heute noch nicht in StudyAtrium gelernt."
+          }
+        }
+      }
+    },
+    "You studied %@ in StudyAtrium this week.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast diese Woche %@ in StudyAtrium gelernt."
+          }
+        }
+      }
+    },
+    "You studied %@ in StudyAtrium today.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast heute %@ in StudyAtrium gelernt."
+          }
+        }
+      }
+    },
+    "Your study streak in StudyAtrium is %lld days.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Lernserie in StudyAtrium beträgt %lld Tage."
+          }
+        }
+      }
+    },
+    "Your study streak in StudyAtrium is 1 day.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Lernserie in StudyAtrium beträgt 1 Tag."
+          }
+        }
+      }
+    },
+    "day streak": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag Serie"
+          }
+        }
+      }
+    },
+    "days in a row": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tage Serie"
+          }
+        }
+      }
+    },
+    "ends in ": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "endet in "
+          }
+        }
+      }
+    },
+    "this week": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diese Woche"
+          }
+        }
+      }
+    },
+    "until %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bis %@"
+          }
+        }
+      }
+    },
+    "✦ Break ☕": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✦ Pause ☕"
+          }
+        }
+      }
+    },
+    "✦ Focus running": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✦ Fokus läuft"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

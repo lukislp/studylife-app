@@ -30,7 +30,7 @@ struct UpcomingSessionLiveActivity: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Nächste Session").font(.caption).foregroundStyle(fgMuted)
+                        Text("Next session").font(.caption).foregroundStyle(fgMuted)
                         Text(context.attributes.title).font(.headline).foregroundStyle(fg).lineLimit(1)
                     }
                 }
@@ -64,7 +64,7 @@ private struct UpcomingSessionLockScreenView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text("✦").foregroundStyle(accent)
-                    Text("Nächste Session").font(.caption).foregroundStyle(fgMuted)
+                    Text("Next session").font(.caption).foregroundStyle(fgMuted)
                 }
                 Text(title).font(.headline).foregroundStyle(fg).lineLimit(2)
             }
@@ -174,7 +174,7 @@ private struct LockScreenView: View {
                         .foregroundStyle(fgMuted)
                         .lineLimit(1)
                 }
-                Text(isStale ? "Phase vorbei — App öffnen" : phaseLabel(state))
+                Text(isStale ? String(localized: "Phase over — open app") : phaseLabel(state))
                     .font(.headline)
                     .foregroundStyle(isStale ? fgMuted : fg)
                 Text(roundLabel(state))
@@ -234,10 +234,10 @@ private struct CountdownText: View {
 }
 
 private func phaseLabel(_ state: TimerActivityAttributes.ContentState) -> String {
-    if state.isPaused { return "Pausiert" }
-    return state.isBreak ? "Pause ☕" : "Fokus"
+    if state.isPaused { return String(localized: "Paused") }
+    return state.isBreak ? String(localized: "Break ☕") : String(localized: "Focus")
 }
 
 private func roundLabel(_ state: TimerActivityAttributes.ContentState) -> String {
-    "Runde \(state.round) von \(state.totalRounds)"
+    String(localized: "Round \(state.round) of \(state.totalRounds)")
 }
