@@ -91,7 +91,9 @@ public static class MauiProgram
         builder.Services.AddScoped<AppHandOverSteps>();
         builder.Services.AddScoped<ServerSwitcher>();
         builder.Services.AddScoped<INativeIcsIntake, NativeIcsIntake>();
-        builder.Services.AddScoped<INativeFileExport, NativeFileExport>();
+        // Every download of the shared client (backup, export, recovery codes): the system
+        // save/share sheet instead of the browser's blob download, which a WebView cannot run.
+        builder.Services.AddScoped<IFileDownloadService, NativeFileDownloadService>();
         builder.Services.AddScoped<INativeHealthData, NativeHealthData>();
         builder.Services.AddScoped<INativeTelemetry, NativeTelemetry>();
         builder.Services.AddScoped<IClientPlatform, AppClientPlatform>();
