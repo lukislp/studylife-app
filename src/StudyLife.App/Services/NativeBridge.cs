@@ -11,7 +11,7 @@ using AndroidX.Core.App;
 namespace StudyLife.App.Services;
 
 /// <summary>
-/// Counterpart to the native bridge script block in wwwroot/index.html: the JS functions
+/// Counterpart to the native bridge script wwwroot/js/native-bridge.js: the JS functions
 /// overridden there (Wake Lock, Notifications, Badge, Vibration) land here as static
 /// [JSInvokable] methods and are mapped onto the respective platform APIs. The return values
 /// mimic web API semantics ('granted'/'denied'/'default'/'unsupported') so that
@@ -36,7 +36,7 @@ public static class NativeBridge
 
     /// <summary>Native print dialog for the WebView content (report page): iOS via
     /// UIPrintInteractionController + ViewPrintFormatter, Android via the PrintManager.
-    /// Windows never needs this (window.print works in WebView2, see index.html).</summary>
+    /// Windows never needs this (window.print works in WebView2, see js/native-bridge.js).</summary>
     [JSInvokable("NativePrint")]
     public static Task<bool> PrintAsync()
     {
@@ -195,7 +195,7 @@ public static class NativeBridge
     }
 
     /// <summary>Unexpected error caught by the web view's window error/unhandledrejection
-    /// handlers (index.html). Returns true when a developer banner showed it, false when the
+    /// handlers (js/native-interop.js). Returns true when a developer banner showed it, false when the
     /// page should show the app's normal error UI - see DeveloperDiagnostics.</summary>
     [JSInvokable("NativeReportJsError")]
     public static bool ReportJsError(string errorType, string message, string? stack) =>
