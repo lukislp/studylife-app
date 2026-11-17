@@ -7,6 +7,12 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
+        <!-- packages.lock.json pins every package of the tests with its content hash; CI restores
+             in locked mode (test-unit). Dependabot regenerates it with each bump of this project.
+             The app project has none: its restore graph includes the pinned studylife client,
+             whose packages change with every studylife bump (a Renovate pull request, which does
+             not regenerate lock files), and CI narrows its target frameworks per job. -->
+        <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     </PropertyGroup>
 
     <ItemGroup>

@@ -18,6 +18,29 @@ public static class SpotlightIndexer
     public const string NotePrefix = "note-";
     public const string CoursePrefix = "course-";
 
+#if IOS
+    private static readonly string[] Domains = ["studylife.notes", "studylife.courses"];
+
+    /// <summary>Note titles and excerpts are personal: the app's own index keeps them under complete file
+    /// protection, so they are only readable while the device is unlocked (the default index uses the
+    /// weaker "until first unlock"). A refresh while locked simply fails and the next one catches up.</summary>
+    private static readonly Lazy<CSSearchableIndex> Index =
+        new(() => new CSSearchableIndex("studylife-protected", CSFileProtection.Complete));
+
+    /// <summary>Builds before the protected index put their items into the default index; removed on every
+    /// reindex and clear so nothing stays there with the weaker protection.</summary>
+    private static Task ClearLegacyDefaultIndexAsync() =>
+        DeleteDomainsAsync(CSSearchableIndex.DefaultSearchableIndex);
+
+    private static async Task DeleteDomainsAsync(CSSearchableIndex? index)
+    {
+        if (index == null) return;
+        var done = new TaskCompletionSource();
+        index.DeleteWithDomain(Domains, _ => done.TrySetResult());
+        await Task.WhenAny(done.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+    }
+#endif
+
     /// <summary>Removes every note and course from the system search index after the account was
     /// deleted (INativeAppAuth.AccountDeletedAsync) - the index otherwise keeps titles and note
     /// excerpts until the next reindex, which never comes for a deleted account. No-op elsewhere.</summary>
@@ -26,11 +49,8 @@ public static class SpotlightIndexer
 #if IOS
         try
         {
-            var index = CSSearchableIndex.DefaultSearchableIndex;
-            if (index == null) return;
-            var done = new TaskCompletionSource();
-            index.DeleteWithDomain(new[] { "studylife.notes", "studylife.courses" }, _ => done.TrySetResult());
-            await Task.WhenAny(done.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+            await DeleteDomainsAsync(Index.Value);
+            await ClearLegacyDefaultIndexAsync();
         }
         catch { /* best effort - the index simply keeps its last state */ }
 #else
@@ -66,10 +86,10 @@ public static class SpotlightIndexer
                 items.Add(new CSSearchableItem($"{CoursePrefix}{course.Id}", "studylife.courses", attributes));
             }
 
-            var index = CSSearchableIndex.DefaultSearchableIndex;
-            if (index == null) return;
+            await ClearLegacyDefaultIndexAsync();
+            var index = Index.Value;
             // Replace old entries by domain (this way deleted notes disappear too).
-            index.DeleteWithDomain(new[] { "studylife.notes", "studylife.courses" }, _ =>
+            index.DeleteWithDomain(Domains, _ =>
                 index.Index(items.ToArray(), _ => { }));
         }
         catch { /* offline/error - index simply stays at its last state */ }

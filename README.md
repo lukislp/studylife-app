@@ -47,6 +47,21 @@ That pull request is opened by Renovate ([`renovate.json`](renovate.json): a reg
 (`.github/lktec-bot.yml`), so merging it cuts a new app patch release. To raise the pin by hand,
 change the tag in `studylife.version` and use the same commit type.
 
+A tag can be moved, so the action does not trust it alone: after the checkout it downloads the
+release's `server.zip`, verifies its build provenance with `gh attestation verify` (signed by
+studylife's own `ci-cd.yml` on `main`) and stops the job unless the commit named there is the
+commit the tag points to. The file itself stays a bare tag, because Renovate and lktec-bot read and
+raise it in that form. Jobs that use the action need `api.github.com`,
+`release-assets.githubusercontent.com` and `tuf-repo-cdn.sigstore.dev` in their Harden Runner
+list.
+
+The MAUI workloads are pinned to one workload set (`dotnet workload install ... --version
+10.0.401`) in every job, so a commit always builds against the same platform packs. Raise the set
+in all jobs together. The unit tests (`StudyLife.App.Core.Tests`) restore in locked mode from their
+`packages.lock.json`. The app project has no lock file: its restore graph contains the pinned
+studylife client, whose packages change with every pin bump (Renovate does not regenerate lock
+files), and CI narrows its target frameworks per job.
+
 The cross-repo test is deliberately the other way round: a pull request in `lukislp/studylife`
 builds its own tree and does not depend on this repository. To build the app against a local
 StudyAtrium checkout (for example one with unreleased changes), keep both repositories side by
@@ -176,6 +191,11 @@ an update over the previous one and keeps the app's data.
 3. Open it on the phone and allow installing from this source when Android asks.
 
 To update, install the APK of a newer release the same way.
+
+The app is excluded from Android backup and device-to-device transfer (`allowBackup="false"`
+plus `Resources/xml/data_extraction_rules.xml`): its web view holds the session token, and a
+restored copy on another phone would carry a live sign-in along. On a new phone, install the app
+and sign in again; your data lives on the StudyAtrium server.
 
 > **One-time step for builds up to v1.8.28.** Those releases were debug-signed with a key
 > that changed on every build and all had versionCode 1, so Android refuses to update them
@@ -574,6 +594,12 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
   app contact.
 - `Services/SharedNoteIntake.cs` — drains text handed in via the OS share sheet (Android
   `ACTION_SEND` intent, iOS share extension via an App Group inbox file) into a new note.
+  Any Android app can send `ACTION_SEND` to the app directly, so on Android nothing is queued
+  before the user confirmed it (`Platforms/Android/SharedTextConfirmation.cs`: a dialog with the
+  beginning of the text under the app's name and the system's own OK/Cancel). Both paths are
+  bounded (`IntakeLimits` in `StudyLife.App.Core`, mirrored in the share extension): one shared
+  text is cut after 20,000 characters, at most 20 wait for the app, and an opened `.ics` file
+  larger than the calendar page's own 5 MB upload limit is ignored.
 - `Services/HealthBridge.cs` — facade over the Swift Apple HealthKit bridge
   (`native/ios-liveactivity/HealthBridge.swift`); backs the studylife repo's
   `INativeHealthData` (HRV, sleep onset, step count, cardio fitness/VO2max) - read-only, one
@@ -683,7 +709,7 @@ capability the app does not use has no string.
 
 | Prompt | Key | What uses it |
 | --- | --- | --- |
-| Microphone | `NSMicrophoneUsageDescription` | Notes dictation: `getUserMedia` + `MediaRecorder` in the web view. The recording goes to the user's own server for transcription. |
+| Microphone | `NSMicrophoneUsageDescription` | Notes dictation: `getUserMedia` + `MediaRecorder` in the web view. The recording goes to the user's own server for transcription. On iOS the web view grants it only to the app's own page in its top frame (`MediaCapturePolicy`); any other origin or an iframe is denied. |
 | Speech recognition | `NSSpeechRecognitionUsageDescription` | Fallback of the same dictation: the web view's `webkitSpeechRecognition` (Apple's speech recognition), used when recording is not possible. Without the key the first use would crash the app. |
 | Local network | `NSLocalNetworkUsageDescription` | Connecting to a StudyAtrium server on the user's LAN (a NAS, a Raspberry Pi, a `.local` name). |
 | Health (iOS) | `NSHealthShareUsageDescription`, `NSHealthUpdateUsageDescription` | Readiness score, movement breaks, VO2max; Mindful Minutes. Read on the device only. |
@@ -778,7 +804,11 @@ Nothing of the account's content. Every sign-out removes the copies the app keep
 view (`NativeLocalCopies.WipeAsync`, the one function account deletion and the server switch use
 as well): the home screen widget snapshot (iOS App Group container, Android app data) and a
 widget refresh, the copy on a paired Apple Watch (replaced by an empty snapshot), the "next
-session starts soon" Live Activity, and the Spotlight index entries (notes and courses). This
+session starts soon" Live Activity, and the Spotlight index entries (notes and courses). The
+Spotlight entries live in the app's own index under complete file protection (readable only while
+the device is unlocked). Right before a manual sign-out the app also tells the server to stop
+sending pushes to this device (`BeforeSignOutHandler`: the "logged out" hook comes too late for
+that, the session is gone by then). This
 holds for a manual sign-out, for a session the server declared invalid (expired or revoked), and
 for the sign-out that account deletion and the server switch end in: the shared client has a single
 "logged out" hook for all of them and `AppRoot` composes the wipe behind it (`SignOutLocalCopies`).

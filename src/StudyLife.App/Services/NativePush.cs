@@ -25,9 +25,27 @@ public sealed class NativePush : INativePush
         _urls = urls;
     }
 
-    public bool IsAvailable => _urls.IsConfigured
-        && DeviceInfo.Platform == DevicePlatform.iOS
-        && AppleSigningInfo.HasPushEntitlement;
+    private const string UnsubscribePath = "api/push/unsubscribe-apns";
+
+    public bool IsAvailable => _urls.IsConfigured && CanUsePush;
+
+    private static bool CanUsePush => DeviceInfo.Platform == DevicePlatform.iOS && AppleSigningInfo.HasPushEntitlement;
+
+    /// <summary>The unregistration sent right before a plain sign-out (BeforeSignOutHandler, wired in
+    /// MauiProgram): the client's logged-out hook runs only after the server ended the session, too late for an
+    /// authenticated request. Built from the token this process already holds, never by asking APNs for one,
+    /// so signing out is not held up by a registration; without a token there is nothing to unregister.</summary>
+    public static Task<HttpRequestMessage?> CreateSignOutUnregistration(Uri baseUri)
+    {
+        if (!CanUsePush || ApnsTokenStore.CachedToken is not { } token)
+            return Task.FromResult<HttpRequestMessage?>(null);
+        return Task.FromResult<HttpRequestMessage?>(new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, UnsubscribePath))
+        {
+            Content = JsonContent.Create(UnsubscribeBody(token)),
+        });
+    }
+
+    private static object UnsubscribeBody(string token) => new { Token = token, DeviceName = DeviceInfo.Current.Name };
 
     public async Task<bool> RegisterAsync()
     {
@@ -59,8 +77,7 @@ public sealed class NativePush : INativePush
         if (token == null) return false;
         try
         {
-            var response = await _http.PostAsJsonAsync("api/push/unsubscribe-apns",
-                new { Token = token, DeviceName = DeviceInfo.Current.Name });
+            var response = await _http.PostAsJsonAsync(UnsubscribePath, UnsubscribeBody(token));
             return response.IsSuccessStatusCode;
         }
         catch (HttpRequestException)
@@ -89,6 +106,12 @@ public static class ApnsTokenStore
     private static readonly object Lock = new();
     private static TaskCompletionSource<string?>? _pending;
     private static string? _token;
+
+    /// <summary>The token delivered in this process, without registering for one.</summary>
+    public static string? CachedToken
+    {
+        get { lock (Lock) return _token; }
+    }
 
     public static Task<string?> GetTokenAsync()
     {
