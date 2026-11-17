@@ -13,6 +13,36 @@ public class AppDelegate : MauiUIApplicationDelegate
 {
     protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
 
+    // Hardware keyboard: the bare Left/Right arrow keys. UIKit keeps them for its own keyboard
+    // navigation before WebKit can dispatch them to the page (T and other letters arrive, the arrows
+    // do not), so the calendar could not switch weeks with them on the iPad. While a page asks for
+    // them (NativeBridge.ArrowKeys, see StudyLife.App.Core.HardwareArrowKeys) the app claims them
+    // with priority key commands and hands them to the page as keydown events. The app delegate is
+    // the end of the responder chain, so these commands apply wherever focus is; when no page asks,
+    // none are offered and the keys keep their native behaviour (text fields, dialogs, other pages).
+    private static readonly UIKeyCommand[] ArrowKeyCommands = CreateArrowKeyCommands();
+
+    private static UIKeyCommand[] CreateArrowKeyCommands()
+    {
+        var left = UIKeyCommand.Create(UIKeyCommand.LeftArrow, 0, new ObjCRuntime.Selector("studyAtriumArrowLeft:"));
+        var right = UIKeyCommand.Create(UIKeyCommand.RightArrow, 0, new ObjCRuntime.Selector("studyAtriumArrowRight:"));
+        if (OperatingSystem.IsIOSVersionAtLeast(15))
+        {
+            left.WantsPriorityOverSystemBehavior = true;
+            right.WantsPriorityOverSystemBehavior = true;
+        }
+        return [left, right];
+    }
+
+    public override UIKeyCommand[] KeyCommands =>
+        NativeBridge.ArrowKeys.Claimed ? [.. base.KeyCommands ?? [], .. ArrowKeyCommands] : base.KeyCommands ?? [];
+
+    [Export("studyAtriumArrowLeft:")]
+    public void ArrowLeftPressed(UIKeyCommand command) => NativeBridge.ForwardArrowKey(StudyLife.App.Core.ArrowKey.Left);
+
+    [Export("studyAtriumArrowRight:")]
+    public void ArrowRightPressed(UIKeyCommand command) => NativeBridge.ForwardArrowKey(StudyLife.App.Core.ArrowKey.Right);
+
     public override bool FinishedLaunching(UIApplication application, NSDictionary? launchOptions)
     {
         ClearStaleWebViewHttpCacheOnce();
