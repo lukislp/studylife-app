@@ -148,6 +148,7 @@ jobs:
             timestamp.apple.com:443
             timestamp.apple.com:80
             token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
             uploads.github.com:443
             www.apple.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -267,6 +268,7 @@ jobs:
             timestamp.apple.com:443
             timestamp.apple.com:80
             token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
             uploads.github.com:443
             www.apple.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

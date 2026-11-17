@@ -1,5 +1,6 @@
 using Foundation;
 using ObjCRuntime;
+using StudyLife.App.Core;
 using WebKit;
 
 namespace StudyLife.App;
@@ -24,9 +25,13 @@ internal sealed class MicPermissionUIDelegate(IWKUIDelegate? inner) : WKUIDelega
     // but nothing here runs outside a real WKWebView).
     private readonly NSObject? _inner = inner as NSObject;
 
+    /// <summary>Only the app's own page in the top frame gets the microphone (MediaCapturePolicy); everything
+    /// else is denied without a prompt. The system's own microphone permission still applies on top.</summary>
     public override void RequestMediaCapturePermission(WKWebView webView, WKSecurityOrigin origin, WKFrameInfo frame,
         WKMediaCaptureType type, Action<WKPermissionDecision> decisionHandler) =>
-        decisionHandler(WKPermissionDecision.Grant);
+        decisionHandler(MediaCapturePolicy.MayCapture(origin.Protocol, origin.Host, frame.MainFrame)
+            ? WKPermissionDecision.Grant
+            : WKPermissionDecision.Deny);
 
     public override bool RespondsToSelector(Selector? sel) =>
         base.RespondsToSelector(sel) || (_inner?.RespondsToSelector(sel) ?? false);

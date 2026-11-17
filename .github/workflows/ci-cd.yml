@@ -80,7 +80,10 @@ jobs:
       # a real single-targeted project needs no outer/inner build split and no
       # command-line selection at all, and it's still just a local edit to this one file.
       - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-android</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
-      - run: dotnet workload install maui-android
+      # Pinned to a workload set, like the Apple jobs: an unpinned install takes whatever set was
+      # published last, so the same commit could build against different Android packs from one
+      # day to the next. All jobs use the same set (10.0.401); raise it in every job together.
+      - run: dotnet workload install maui-android --version 10.0.401
       # Runs the release build script (scripts/build-android-apk.sh) end to end - version
       # injection, signing through env: password references, apksigner/aapt2 verification -
       # with a throwaway key generated here, because release-android only runs after a merge.
@@ -133,6 +136,7 @@ jobs:
             dc.services.visualstudio.com:443
             github.com:443
             release-assets.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/checkout-studylife
       - run: bash scripts/check-native-parity.sh
@@ -191,7 +195,10 @@ jobs:
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "10.0.x"
-      - run: dotnet test tests/StudyLife.App.Core.Tests/StudyLife.App.Core.Tests.csproj -c Release
+      # Locked mode: the restore fails instead of resolving anything that packages.lock.json does
+      # not list with its content hash (the test project's lock file, see its csproj).
+      - run: dotnet restore tests/StudyLife.App.Core.Tests/StudyLife.App.Core.Tests.csproj --locked-mode
+      - run: dotnet test tests/StudyLife.App.Core.Tests/StudyLife.App.Core.Tests.csproj -c Release --no-restore
 
   # Privacy gate: the privacy manifests, the required reason APIs the code uses and the purpose
   # strings (scripts/privacy/policy.toml is the one place for the rules). Pure file checks with
@@ -387,6 +394,11 @@ jobs:
         with:
           # audit, not block: harden-runner >= 2.20 enforces the block on Windows runners too,
           # and the agent's DNS setup failed there on 2026-09-23 ("Could not resolve host: github.com").
+          # The list below is the Linux jobs' list and is not known to be complete for Windows:
+          # there, NuGet's package signature checks go through the Windows certificate stack, which
+          # also fetches revocation lists and root certificate updates from Microsoft and CA hosts
+          # that no blocking job has ever observed. Switch to block only after a run's insights page
+          # (link in the Harden Runner step) shows every endpoint the job reaches.
           egress-policy: audit
           allowed-endpoints: >
             *.githubapp.com:443
@@ -427,7 +439,8 @@ jobs:
             -e '/<TargetFrameworks>net10\.0-android;net10\.0-ios;net10\.0-maccatalyst<\/TargetFrameworks>/d' \
             -e 's|<TargetFrameworks (Condition="[^"]*")>\$\(TargetFrameworks\);net10\.0-windows10\.0\.19041\.0</TargetFrameworks>|<TargetFramework \1>net10.0-windows10.0.19041.0</TargetFramework>|' \
             src/StudyLife.App/StudyLife.App.csproj
-      - run: dotnet workload install maui-windows
+      # Same workload set as test-android (see the comment there).
+      - run: dotnet workload install maui-windows --version 10.0.401
       # WindowsPackageType=None -> plain unpackaged folder, no MSIX signing needed.
       # No -p:SelfContained/-p:RuntimeIdentifier overrides: forcing those triggered NuGet
       # to resolve a nonexistent Microsoft.NETCore.App.Runtime.Mono.win-x64 10.0.10
@@ -485,7 +498,8 @@ jobs:
         with:
           dotnet-version: "10.0.x"
       - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-android</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
-      - run: dotnet workload install maui-android
+      # Same workload set as test-android (see the comment there).
+      - run: dotnet workload install maui-android --version 10.0.401
       - run: dotnet format src/StudyLife.App/StudyLife.App.csproj --verify-no-changes
       # The plain libraries need no workload; the one cross-platform edit above does not touch them.
       - run: dotnet format src/StudyLife.App.Core/StudyLife.App.Core.csproj --verify-no-changes
@@ -542,6 +556,7 @@ jobs:
             results-receiver.actions.githubusercontent.com:443
             run-actions-*.actions.githubusercontent.com:443
             token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
             uploads.github.com:443
       - name: Release keystore configured?
         env:
@@ -564,7 +579,8 @@ jobs:
           dotnet-version: "10.0.x"
       # Same single-target patch as test-android (see the comment there).
       - run: sed -i -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-android</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
-      - run: dotnet workload install maui-android
+      # Same workload set as test-android (see the comment there).
+      - run: dotnet workload install maui-android --version 10.0.401
       # versionName = the release version, versionCode = major * 10000 + minor * 100 + patch
       # (scripts/build-android-apk.sh documents the limits). The script decodes the keystore
       # into RUNNER_TEMP, deletes it on exit, and fails on a debug certificate or a version
@@ -617,6 +633,7 @@ jobs:
             results-receiver.actions.githubusercontent.com:443
             run-actions-*.actions.githubusercontent.com:443
             token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
             uploads.github.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/checkout-studylife
