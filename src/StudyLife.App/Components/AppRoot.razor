@@ -77,6 +77,9 @@ else if (_needsServerUrl)
             @* The privacy policy has to be reachable before anything is entered (App Store guideline 5.1.1(i)). *@
             <p class="ss-desc" style="margin-top:1rem; font-size:0.8rem;">
                 <a href="@PrivacyPolicyLink.For(_language)" target="_blank" rel="noopener noreferrer">@About.PrivacyPolicy</a>
+                <span aria-hidden="true"> · </span>
+                @* Plain anchor until the pinned client has LegalLinkAnchors (operator override included). *@
+                <a href="@ImprintLink.Url" target="_blank" rel="noopener noreferrer">@ImprintLink.Label(_language)</a>
             </p>
         </div>
     </div>
