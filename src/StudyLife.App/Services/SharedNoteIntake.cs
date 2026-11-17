@@ -1,3 +1,5 @@
+using StudyLife.App.Core;
+
 namespace StudyLife.App.Services;
 
 /// <summary>
@@ -9,29 +11,22 @@ namespace StudyLife.App.Services;
 /// </summary>
 public static class SharedNoteIntake
 {
-    private static readonly object Lock = new();
-    private static readonly List<string> Pending = new();
+    // Bounded (IntakeLimits): the sender is another app and is not trusted.
+    private static readonly SharedTextQueue Pending = new();
 
     /// <summary>Fires after SetPending - AppRoot then consumes it (warm start). On a cold
     /// start nobody is subscribed yet; AppRoot calls TakeAll itself after boot.</summary>
     public static event Action? PendingChanged;
 
-    public static void SetPending(string text)
+    /// <summary>Queues the shared text (with the sender's subject as first line), cut to the note limit;
+    /// dropped when nothing usable was shared or too many shares are still waiting.</summary>
+    public static void SetPending(string? text, string? subject = null)
     {
-        if (string.IsNullOrWhiteSpace(text)) return;
-        lock (Lock) Pending.Add(text.Trim());
-        PendingChanged?.Invoke();
+        if (Pending.TryAdd(text, subject))
+            PendingChanged?.Invoke();
     }
 
-    public static List<string> TakeAll()
-    {
-        lock (Lock)
-        {
-            var result = new List<string>(Pending);
-            Pending.Clear();
-            return result;
-        }
-    }
+    public static List<string> TakeAll() => [.. Pending.TakeAll()];
 
 #if IOS
     private const string InboxFileName = "shared-note-inbox.json";
@@ -47,6 +42,12 @@ public static class SharedNoteIntake
             if (container?.Path is not string dir) return;
             var path = Path.Combine(dir, InboxFileName);
             if (!File.Exists(path)) return;
+            // An inbox larger than a full queue can hold was not written by our share extension: drop it unread.
+            if (!IntakeLimits.FitsSharedInbox(new FileInfo(path).Length))
+            {
+                File.Delete(path);
+                return;
+            }
             var json = File.ReadAllText(path);
             File.Delete(path);
             using var doc = System.Text.Json.JsonDocument.Parse(json);

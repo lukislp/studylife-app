@@ -47,7 +47,9 @@ public static class AndroidTimerNotification
             builder.SetSmallIcon(iconId != 0 ? iconId : global::Android.Resource.Drawable.IcDialogInfo);
             builder.SetOngoing(true);
             builder.SetOnlyAlertOnce(true);
-            builder.SetVisibility(NotificationCompat.VisibilityPublic);
+            // Private: on a secure lock screen the system shows only that the app has a notification;
+            // the timer's title and round stay hidden until unlock (or the user allows details there).
+            builder.SetVisibility(NotificationCompat.VisibilityPrivate);
             builder.SetCategory(NotificationCompat.CategoryProgress);
             if (contentIntent != null) builder.SetContentIntent(contentIntent);
 

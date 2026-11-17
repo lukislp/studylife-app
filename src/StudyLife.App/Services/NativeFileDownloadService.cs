@@ -21,7 +21,12 @@ namespace StudyLife.App.Services;
 /// the iPad popover to a zero rectangle in the corner of whatever it finds as the current view
 /// controller, and its task only completes when the sheet is dismissed; if UIKit refuses the
 /// presentation, that task never completes and the tap does nothing, with no error.
-/// Here a refused presentation throws, so the client shows its error text.
+/// Here the call waits until the sheet closes and maps its result with ShareSheetResult: saved or
+/// shared and cancelled (closing the sheet, cancelling "Save to Files") return normally; only an
+/// activity error, or a sheet that never appeared, throws, so the client shows its error text only
+/// for a real failure. (The first version compared PresentedViewController with the sheet right
+/// after presenting it; on the iPad that check failed although the sheet was on screen, so every
+/// successful save ended with the error text - TestFlight 1.12.19.)
 /// Android: the cache file is shared with MAUI's Share (save/share targets).
 /// Windows: the system "Save as" dialog writes the file where the user chooses.
 /// </summary>
@@ -48,7 +53,10 @@ public sealed class NativeFileDownloadService : IFileDownloadService
     }
 
 #if IOS || MACCATALYST
-    private static Task OfferAsync(string path, string fileName)
+    // How long a sheet may take to appear before the download counts as not offered.
+    private static readonly TimeSpan PresentationTimeout = TimeSpan.FromSeconds(10);
+
+    private static async Task OfferAsync(string path, string fileName)
     {
         var webView = NativeBridge.CurrentWebView
             ?? throw new InvalidOperationException("No WebView to present the share sheet from.");
@@ -57,7 +65,15 @@ public sealed class NativeFileDownloadService : IFileDownloadService
         while (presenter.PresentedViewController is { IsBeingDismissed: false } top)
             presenter = top;
 
-        var sheet = new UIActivityViewController([NSUrl.FromFilename(path)], null);
+        var presented = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var closed = new TaskCompletionSource<(ShareSheetOutcome Outcome, string? Error)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var sheet = new UIActivityViewController([NSUrl.FromFilename(path)], null)
+        {
+            // Called once when the sheet closes: after an activity finished, failed or was
+            // cancelled, or when the user dismissed the sheet itself.
+            CompletionWithItemsHandler = (_, completed, _, error) =>
+                closed.TrySetResult((ShareSheetResult.From(completed, error is not null), error?.LocalizedDescription)),
+        };
         if (sheet.PopoverPresentationController is { } popover)
         {
             // iPad and Mac: a popover needs an anchor; the middle of the page, without an arrow.
@@ -66,12 +82,17 @@ public sealed class NativeFileDownloadService : IFileDownloadService
             popover.SourceRect = new CGRect(bounds.GetMidX(), bounds.GetMidY(), 0, 0);
             popover.PermittedArrowDirections = 0;
         }
-        presenter.PresentViewController(sheet, true, null);
-        // UIKit sets this at once when it accepts the presentation and only logs a warning when it
-        // refuses one - which would otherwise be a tap that does nothing.
-        if (!ReferenceEquals(presenter.PresentedViewController, sheet))
+        presenter.PresentViewController(sheet, true, presented.SetResult);
+
+        // UIKit calls the presentation's completion once the sheet is on screen; a presentation it
+        // refuses only logs a warning and calls nothing, which must not leave the tap without effect.
+        var first = await Task.WhenAny(presented.Task, closed.Task, Task.Delay(PresentationTimeout));
+        if (first != presented.Task && first != closed.Task && sheet.PresentingViewController is null)
             throw new InvalidOperationException($"The share sheet for {fileName} was not presented.");
-        return Task.CompletedTask;
+
+        var (outcome, error) = await closed.Task;
+        if (outcome == ShareSheetOutcome.Failed)
+            throw new IOException($"Saving {fileName} failed: {error}");
     }
 #elif ANDROID
     private static Task OfferAsync(string path, string fileName) =>
