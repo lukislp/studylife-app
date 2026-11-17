@@ -59,6 +59,14 @@
         });
     };
 
+    // Hardware arrow keys (iPad): a page that wants the bare Left/Right keys declares it with
+    // data-page-arrow-keys on <html> (the calendar does). The app claims the keys natively only
+    // while it is set (StudyLife.App.Core.HardwareArrowKeys), so every change is reported.
+    const reportArrowIntent = () =>
+        invokeNative('NativeSetPageArrowKeys', document.documentElement.getAttribute('data-page-arrow-keys'));
+    new MutationObserver(reportArrowIntent)
+        .observe(document.documentElement, { attributes: true, attributeFilter: ['data-page-arrow-keys'] });
+
     // Completion feedback: WebAudio stays, navigator.vibrate doesn't exist in the WebView
     // -> additionally native vibration/haptics.
     const playCompletionSoundWeb = playCompletionSound;
@@ -84,4 +92,14 @@ function showDiagnosticsBanner(text) {
         document.body.appendChild(el);
     }
     el.textContent += (el.textContent ? '\n---\n' : 'Developer diagnostics (tap to close):\n') + text;
+}
+
+// A claimed hardware arrow key (AppDelegate key command -> NativeBridge.ForwardArrowKey), handed
+// to the page as the keydown/keyup it never received. Dispatched on the focused element so the
+// page's own listeners see it exactly as a real key press.
+function nativeHorizontalArrowKey(key) {
+    var target = document.activeElement || document.body;
+    var init = { key: key, code: key, bubbles: true, cancelable: true, composed: true };
+    target.dispatchEvent(new KeyboardEvent('keydown', init));
+    target.dispatchEvent(new KeyboardEvent('keyup', init));
 }
