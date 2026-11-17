@@ -1,8 +1,17 @@
 name: Check out the pinned StudyLife release
 description: >
   Checks out lukislp/studylife at the release named in studylife.version (repository root) into
-  ./studylife, the sibling the app's project reference expects. The repository itself must be
-  checked out first.
+  ./studylife, the sibling the app's project reference expects, and verifies that the tag still
+  names the commit the release was built from. The repository itself must be checked out first.
+
+# studylife.version stays a bare tag (v3.34.5): Renovate's regex manager raises it and lktec-bot
+# arms that pull request from the version change in its body, so the file format is part of that
+# automation. A tag can be moved, though, so the pin alone does not say which commit is built.
+# The commit comes from the release's signed build provenance instead: studylife's release
+# workflow attests server.zip with SLSA provenance (Sigstore, GitHub attestations), and the
+# attestation names the source commit. A tag that was moved after the release no longer matches
+# it, and the job stops before anything is built. Needs api.github.com,
+# release-assets.githubusercontent.com and tuf-repo-cdn.sigstore.dev in the job's egress list.
 
 runs:
   using: composite
@@ -23,3 +32,26 @@ runs:
         ref: ${{ steps.pin.outputs.ref }}
         path: studylife
         persist-credentials: false
+    - name: Verify the pin against the release's signed provenance
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REF: ${{ steps.pin.outputs.ref }}
+      run: |
+        set -euo pipefail
+        work="$(mktemp -d)"
+        trap 'rm -rf "$work"' EXIT
+        gh release download "$REF" --repo lukislp/studylife --pattern server.zip --dir "$work"
+        # Signed by studylife's own release workflow on main; anything else fails the verification.
+        attested="$(gh attestation verify "$work/server.zip" \
+          --repo lukislp/studylife \
+          --signer-workflow lukislp/studylife/.github/workflows/ci-cd.yml \
+          --source-ref refs/heads/main \
+          --format json \
+          --jq '[.[].verificationResult.statement.predicate.buildDefinition.resolvedDependencies[].digest.gitCommit] | unique | join(" ")')"
+        checked_out="$(git -C studylife rev-parse HEAD)"
+        if [ "$attested" != "$checked_out" ]; then
+          echo "::error file=studylife.version::$REF is commit $checked_out, but the release's signed provenance names '$attested'. The tag was moved after the release; do not build from it."
+          exit 1
+        fi
+        echo "studylife $REF = $checked_out (matches the release's signed build provenance)"

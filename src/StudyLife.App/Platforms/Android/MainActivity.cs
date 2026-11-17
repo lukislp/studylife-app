@@ -16,7 +16,8 @@ namespace StudyLife.App;
           Exported = true,
           ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
 [MetaData("android.app.shortcuts", Resource = "@xml/shortcuts")]
-// Share-to-StudyLife: shared text/links end up as a note (SharedNoteIntake → AppRoot).
+// Share-to-StudyLife: shared text/links end up as a note once the user confirmed it
+// (SharedTextConfirmation → SharedNoteIntake → AppRoot).
 [IntentFilter(new[] { Intent.ActionSend },
               Categories = new[] { Intent.CategoryDefault },
               DataMimeType = "text/plain")]
@@ -26,7 +27,8 @@ public class MainActivity : MauiAppCompatActivity
     {
         base.OnCreate(savedInstanceState);
         DispatchShortcut(Intent);
-        DispatchSharedText(Intent);
+        // A re-created activity (savedInstanceState set) carries the same intent again: ask only once.
+        if (savedInstanceState is null) DispatchSharedText(Intent);
     }
 
     protected override void OnNewIntent(Intent? intent)
@@ -36,15 +38,15 @@ public class MainActivity : MauiAppCompatActivity
         DispatchSharedText(intent);
     }
 
-    /// <summary>ACTION_SEND (text/plain) from the share menu: put the text into the intake -
-    /// AppRoot turns it into a note and navigates to /notes.</summary>
-    private static void DispatchSharedText(Intent? intent)
+    /// <summary>ACTION_SEND (text/plain) from the share menu: once the user confirmed it
+    /// (SharedTextConfirmation), the text goes into the intake - AppRoot turns it into a note and
+    /// navigates to /notes.</summary>
+    private void DispatchSharedText(Intent? intent)
     {
         if (intent?.Action != Intent.ActionSend || intent.Type != "text/plain") return;
-        var text = intent.GetStringExtra(Intent.ExtraText);
-        var subject = intent.GetStringExtra(Intent.ExtraSubject);
-        if (string.IsNullOrWhiteSpace(text)) return;
-        SharedNoteIntake.SetPending(string.IsNullOrWhiteSpace(subject) ? text : $"{subject}\n{text}");
+        SharedTextConfirmation.Ask(this,
+            intent.GetStringExtra(Intent.ExtraText),
+            intent.GetStringExtra(Intent.ExtraSubject));
     }
 
     /// <summary>Quick action intents carry the Blazor route as a studylife://shortcut/... data URI.

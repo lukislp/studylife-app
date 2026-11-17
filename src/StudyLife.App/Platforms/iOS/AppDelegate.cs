@@ -1,4 +1,5 @@
 using Foundation;
+using StudyLife.App.Core;
 using StudyLife.App.Services;
 using StudyLife.Shared;
 using UIKit;
@@ -85,6 +86,8 @@ public class AppDelegate : MauiUIApplicationDelegate
                 var scoped = url.StartAccessingSecurityScopedResource();
                 try
                 {
+                    // Same limit as the calendar page's own upload: a larger file is never read into memory.
+                    if (!IntakeLimits.FitsIcs(new System.IO.FileInfo(path).Length)) return true;
                     var bytes = System.IO.File.ReadAllBytes(path);
                     NativeIcsIntake.SetPending(System.IO.Path.GetFileName(path), bytes);
                 }
