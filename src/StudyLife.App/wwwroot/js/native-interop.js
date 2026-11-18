@@ -320,22 +320,26 @@ function initGlobalSearchHotkey(dotnetRef) {
 
 function isNarrowViewport() { return window.matchMedia('(max-width: 768px)').matches; }
 
-function scrollElementToCurrentTime(scrollContainerId) {
+// 1:1 copy from StudyLife.Client/wwwroot/js/interop.js (studylife #579 replaced
+// scrollElementToCurrentTime with it): scrolls the calendar so the given minute of the day (the
+// grid is 1px per minute) sits at viewportFraction of the visible height. The target minute is
+// decided in C# (CalendarInitialScroll); a no-op if the grid isn't rendered.
+function scrollElementToMinute(scrollContainerId, minute, viewportFraction) {
     var container = document.getElementById(scrollContainerId);
     if (!container) return;
-    var nowLine = container.querySelector('.cal-now-line');
-    if (!nowLine) return;
+    var body = container.querySelector('.day-body');
+    if (!body) return;
 
     var containerRect = container.getBoundingClientRect();
-    var lineRect = nowLine.getBoundingClientRect();
-    var lineOffsetInContent = (lineRect.top - containerRect.top) + container.scrollTop;
+    var bodyRect = body.getBoundingClientRect();
+    var offsetInContent = (bodyRect.top - containerRect.top) + container.scrollTop + minute;
 
-    var target = lineOffsetInContent - container.clientHeight * 0.3;
+    var target = offsetInContent - container.clientHeight * viewportFraction;
     var maxScroll = container.scrollHeight - container.clientHeight;
     container.scrollTop = Math.max(0, Math.min(target, maxScroll));
 }
 
-// Same geometry as scrollElementToCurrentTime above, generalized to an arbitrary selector
+// Same geometry as scrollElementToMinute above, generalized to an arbitrary selector
 // instead of hardcoding .cal-now-line - used by the planner's calendar preview
 // (PlannerCalendarPreview.razor) to open scrolled to the first proposed session instead
 // of midnight. 1:1 copy from StudyLife.Client/wwwroot/js/interop.js (see the comment
