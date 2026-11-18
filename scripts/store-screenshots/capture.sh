@@ -4,8 +4,8 @@
 # Expects a StudyAtrium server in demo mode at SERVER_URL whose TLS certificate chains to CA_CERT, and a
 # simulator build of the app made with -p:StoreScreenshots=true at APP_PATH. For every device below it
 # creates a fresh simulator, trusts CA_CERT there, sets a clean status bar, installs the app and launches it
-# once per screen with the store screenshot arguments (German UI). The app writes a status file into its
-# data container once the page is signed in, on the right route and done loading
+# once per screen with the store screenshot arguments (German system and app language). The app writes a
+# status file into its data container once the page is signed in, on the right route and done loading
 # (StoreScreenshotSession); only then is the screen captured.
 #
 # Output: OUT_DIR/<device>/<nn>-<screen>.png, plus OUT_DIR/logs/ with the app's console output.
@@ -100,6 +100,13 @@ for entry in "${DEVICES[@]}"; do
 
   log "$folder: $device_name"
   udid="$(xcrun simctl create "store-$folder" "$type_id" "$RUNTIME")"
+  xcrun simctl boot "$udid"
+  xcrun simctl bootstatus "$udid" -b >/dev/null
+  # German for the whole simulator, not only the app (LANGUAGE_ARGS): the status bar belongs to the system
+  # and formats its date with the system locale. The setting takes effect after a restart of the simulator.
+  xcrun simctl spawn "$udid" defaults write -g AppleLanguages -array de
+  xcrun simctl spawn "$udid" defaults write -g AppleLocale -string de_DE
+  xcrun simctl shutdown "$udid"
   xcrun simctl boot "$udid"
   xcrun simctl bootstatus "$udid" -b >/dev/null
   # The server's certificate is issued by the throwaway CA of this run; trusting it here keeps the app's

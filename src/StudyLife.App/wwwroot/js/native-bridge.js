@@ -110,3 +110,15 @@ function nativeHorizontalArrowKey(key) {
 function storeScreenshotBusyCount() {
     return document.querySelectorAll('.sl-skeleton, .is-loading, [aria-busy="true"]').length;
 }
+
+// Store screenshot mode only: hides the "DEMO" marker the shared client puts next to the brand name in the
+// sidebar when the server runs in demo mode (MainLayout.razor, a span without a class after .brand-name), so
+// the store images show the app as a normal user sees it. Inline style property, not a <style> element: the
+// page's CSP allows style attributes only. Returns how many it hid; never called in any other build.
+function storeScreenshotHideDemoBadge() {
+    var hidden = 0;
+    document.querySelectorAll('.sidebar .brand > span:not(.brand-icon):not(.brand-name)').forEach(function (el) {
+        if (el.style.display !== 'none') { el.style.display = 'none'; hidden++; }
+    });
+    return hidden;
+}

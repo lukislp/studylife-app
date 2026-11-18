@@ -575,7 +575,9 @@ The images are run artifacts (kept 14 days) and are never committed:
 | `store-screenshots-iphone-6.9` | iPhone 17 Pro Max (16 Pro Max if the Xcode has no 17) | 1320 x 2868, iPhone 6.9" |
 | `store-screenshots-ipad-13` | iPad Pro 13-inch (M5, else M4) | 2064 x 2752, iPad 13" |
 
-Each holds one PNG per screen, German UI, clean status bar (9:41, full battery, full signal):
+Each holds one PNG per screen, German UI and German system locale (the iPad status bar date
+too), clean status bar (9:41, full battery, full signal), and without the "DEMO" marker the
+demo server makes the client show in the sidebar:
 `01-dashboard`, `02-calendar` (the day view on the iPhone and the week view on the iPad, as the
 app chooses by width), `03-focus` (focus timer), `04-notes` and `05-statistics`
 (Auswertung). `store-screenshots-logs` has the app's console output per screen and the server
@@ -601,7 +603,8 @@ How it works:
   (`Services/StoreScreenshotSession.cs`); no other build contains it, and even this build only
   acts on it in the iOS Simulator. The capture script launches the app once per screen with
   `--store-screenshots <server> --route <route>` and `-AppleLanguages (de)`. The app takes the
-  server from the arguments, lets the demo login sign it in, opens the route and writes a status
+  server from the arguments, lets the demo login sign it in, opens the route, hides the sidebar's
+  "DEMO" marker (an inline style on that one element; the server's demo mode is unchanged) and writes a status
   file into its data container once the page is ready; the script waits for that file and then
   captures the screen with `simctl io screenshot`. The decisions (which arguments are accepted:
   https to any host or plain http to this machine only, plain in-app routes only; when the page

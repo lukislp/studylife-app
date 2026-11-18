@@ -49,6 +49,7 @@ public static class StoreScreenshotSession
         {
             while (!ct.IsCancellationRequested)
             {
+                await HideDemoMarkerAsync(js);
                 var path = new Uri(nav.Uri).AbsolutePath;
                 var look = new StoreScreenshotObservation(signedIn(), path, await IsPageBusyAsync(js), clock.Elapsed);
                 switch (readiness.Next(look))
@@ -67,6 +68,15 @@ public static class StoreScreenshotSession
             }
         }
         catch (OperationCanceledException) { /* AppRoot disposed: the next instance takes over */ }
+    }
+
+    /// <summary>The server runs in demo mode, so the shared client marks the sidebar "DEMO"; a store user never
+    /// sees that marker, so the screenshots do not either. Done on every look because the marker appears only once
+    /// the client has asked the server, and a re-render may bring it back.</summary>
+    private static async Task HideDemoMarkerAsync(IJSRuntime js)
+    {
+        try { await js.InvokeAsync<int>("storeScreenshotHideDemoBadge"); }
+        catch { /* page not up yet */ }
     }
 
     private static async Task<bool> IsPageBusyAsync(IJSRuntime js)
