@@ -167,6 +167,10 @@ public static class NativeBridge
     [JSInvokable("NativeRequestNotificationPermission")]
     public static async Task<string> RequestNotificationPermissionAsync()
     {
+        // A store screenshot run never shows the system prompt (it would cover every screenshot); the
+        // question stays open, as if the user had not answered yet. No-op in every other build.
+        if (StoreScreenshotSession.Plan is not null)
+            return "default";
 #if IOS || MACCATALYST
         var center = UNUserNotificationCenter.Current;
         var settings = await center.GetNotificationSettingsAsync();

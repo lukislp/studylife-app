@@ -103,3 +103,54 @@ function nativeHorizontalArrowKey(key) {
     target.dispatchEvent(new KeyboardEvent('keydown', init));
     target.dispatchEvent(new KeyboardEvent('keyup', init));
 }
+
+// Store screenshot mode (StoreScreenshotSession, simulator builds made for it only): how many loading
+// placeholders the page still shows - the shared client's skeletons (.sl-skeleton), dashboard cards that
+// are still loading (.is-loading) and anything marked aria-busy. Read-only; never called in any other build.
+function storeScreenshotBusyCount() {
+    return document.querySelectorAll('.sl-skeleton, .is-loading, [aria-busy="true"]').length;
+}
+
+// Store screenshot mode only: hides the "DEMO" marker the shared client puts next to the brand name in the
+// sidebar when the server runs in demo mode (MainLayout.razor, a span without a class after .brand-name), so
+// the store images show the app as a normal user sees it. The marker appears whenever the client has heard
+// back from the server, possibly after the page counts as ready, so the first call also installs an observer
+// that hides it each time it is rendered. Inline style property, not a <style> element: the page's CSP allows
+// style attributes only. Never called in any other build.
+function storeScreenshotHideDemoBadge() {
+    var hide = function () {
+        document.querySelectorAll('.sidebar .brand > span:not(.brand-icon):not(.brand-name)').forEach(function (el) {
+            if (el.style.display !== 'none') el.style.display = 'none';
+        });
+    };
+    hide();
+    if (!window.__storeScreenshotBadgeObserver) {
+        window.__storeScreenshotBadgeObserver = new MutationObserver(hide);
+        window.__storeScreenshotBadgeObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+    }
+    return true;
+}
+
+// Store screenshot mode only: the sidebar clock (SidebarClock.razor, .sidebar .time-display) shows the given
+// time - the simulator's status bar override - instead of the real time of the run, so both clocks in a
+// screenshot agree. The clock's own text node is changed, not replaced, so Blazor keeps its node; when its
+// minute timer writes the real time back, the observer sets the pinned time again. The date line is today's
+// date already and stays untouched. Never called in any other build.
+function storeScreenshotPinClock(text) {
+    var pin = function () {
+        document.querySelectorAll('.sidebar .time-display').forEach(function (el) {
+            var node = el.firstChild;
+            if (node && node.nodeType === Node.TEXT_NODE) {
+                if (node.nodeValue !== text) node.nodeValue = text;
+            } else if (el.textContent !== text) {
+                el.textContent = text;
+            }
+        });
+    };
+    pin();
+    if (!window.__storeScreenshotClockObserver) {
+        window.__storeScreenshotClockObserver = new MutationObserver(pin);
+        window.__storeScreenshotClockObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+    }
+    return true;
+}

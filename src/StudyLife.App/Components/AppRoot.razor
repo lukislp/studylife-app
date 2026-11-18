@@ -240,7 +240,12 @@ else if (_needsServerUrl)
         Timer.OnTick += HandleTimerTickForStandNudge;
         if (_ready && DeepLinks.ConsumePending() is { } pending)
             HandleDeepLink(pending);
+        // Store screenshot run only (a no-op in every other build, see StoreScreenshotSession).
+        if (StoreScreenshotSession.Plan is not null)
+            _ = InvokeAsync(() => StoreScreenshotSession.RunAsync(() => TokenStore.Token is not null, Nav, JS, _screenshotRun.Token));
     }
+
+    private readonly CancellationTokenSource _screenshotRun = new();
 
     private void HandleOpenFocusRequested() => DeepLinks.Dispatch("/focus");
 
@@ -288,6 +293,8 @@ else if (_needsServerUrl)
         NativeNotificationTexts.Provider = null;
         BackgroundRefresh.SetHandler(null);
         _liveActivity?.Dispose();
+        _screenshotRun.Cancel();
+        _screenshotRun.Dispose();
     }
 
     private void HandleSessionCompleteForWidget()

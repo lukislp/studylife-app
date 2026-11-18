@@ -557,6 +557,70 @@ ones, regenerate all six profiles (a profile is bound to its certificate), and r
 replace them. The Developer ID certificate lives longer and needs no profile (see "Rotating
 the Developer ID certificate" above). The API key stays valid until it is revoked.
 
+## App Store screenshots
+
+The workflow `.github/workflows/store-screenshots.yml` takes the App Store screenshots of the
+iOS app on a GitHub macOS runner. It runs on demand only and needs no secret:
+
+```bash
+gh workflow run store-screenshots.yml --ref main            # dark appearance (default)
+gh workflow run store-screenshots.yml --ref main -f appearance=light
+gh run download <run id> --pattern 'store-screenshots-*'    # or the run page, "Artifacts"
+```
+
+The images are run artifacts (kept 14 days) and are never committed:
+
+| Artifact | Simulator | Size (App Store Connect display size) |
+| --- | --- | --- |
+| `store-screenshots-iphone-6.9` | iPhone 17 Pro Max (16 Pro Max if the Xcode has no 17) | 1320 x 2868, iPhone 6.9" |
+| `store-screenshots-ipad-13` | iPad Pro 13-inch (M5, else M4) | 2064 x 2752, iPad 13" |
+
+Each holds one PNG per screen, German UI and German system locale (the iPad status bar date
+too), clean status bar (09:41, full battery, full signal) with the iPad sidebar clock showing the
+same 09:41, and without the "DEMO" marker the demo server makes the client show in the sidebar:
+`01-dashboard`, `02-calendar` (the day view on the iPhone and the week view on the iPad, as the
+app chooses by width), `03-focus` (focus timer), `04-notes` and `05-statistics`
+(Auswertung). `store-screenshots-logs` has the app's console output per screen and the server
+log. A screen that did not report ready within two minutes is started once more (the very first
+start can end on the sign-in page, see `capture.sh`); if it still does not settle, it is captured
+anyway with a warning in the run summary. A size that does not match the display size is a warning
+too.
+
+How it works:
+
+- **Only demo data.** The job builds the server of the pinned release (`studylife.version`, the
+  same tag the app bundles, verified against the release's signed provenance) and starts it on
+  the runner in demo mode (`DEMO_MODE` plus its confirmation, see `DemoModeGuard` in the studylife
+  repository) with a new SQLite database: the demo dataset is seeded relative to the day of the
+  run, and the demo login signs the app in as the demo student. No account, password or real
+  data is involved. The release's `server.zip` is not used because it is built for linux-x64
+  (its SQLite library does not load on macOS, and containers do not run on the macOS runner).
+  `scripts/store-screenshots/demo-server.sh` does this part.
+- **Normal transport security.** The server speaks https with a certificate from a throwaway CA
+  made in the job (valid seven days); `scripts/store-screenshots/capture.sh` trusts that CA
+  inside each simulator (`simctl keychain add-root-cert`). The app's App Transport Security
+  settings are not touched, in this build or any other.
+- **Screenshot mode, simulator builds only.** The app is built for the simulator with
+  `-p:StoreScreenshots=true`, which compiles in the screenshot mode
+  (`Services/StoreScreenshotSession.cs`); no other build contains it, and even this build only
+  acts on it in the iOS Simulator. The capture script launches the app once per screen with
+  `--store-screenshots <server> --route <route> --clock 09:41` and `-AppleLanguages (de)`. The app takes the
+  server from the arguments, lets the demo login sign it in, opens the route, hides the sidebar's
+  "DEMO" marker (an inline style on that one element; the server's demo mode is unchanged), pins
+  the sidebar clock to the `--clock` time (the status bar's) and writes a status
+  file into its data container once the page is ready; the script waits for that file and then
+  captures the screen with `simctl io screenshot`. The decisions (which arguments are accepted:
+  https to any host or plain http to this machine only, plain in-app routes only, a 24-hour
+  `HH:mm` clock only; when the page counts as ready: signed in, on the route and no loading
+  placeholder for three looks half a second apart) are `StoreScreenshotLaunch` and `StoreScreenshotReadiness` in
+  `StudyLife.App.Core`, with unit tests.
+
+Limits: the simulator build is the plain .NET app, without the native shell
+(`scripts/apple/release-ios.sh`). The home screen widgets, the Live Activity on the lock screen
+and in the Dynamic Island, the lock screen itself, the share extension and the Apple Watch app
+are not in it and have to be captured by hand on a device. Another language or more screens
+are a change to `LANGUAGE_ARGS` and `SCREENS` in `scripts/store-screenshots/capture.sh`.
+
 ## Architecture notes
 
 - `src/StudyLife.App.Core` — plain net10.0 library with the decisions that need no device

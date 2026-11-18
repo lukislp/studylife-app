@@ -143,6 +143,15 @@
         <DefineConstants>$(DefineConstants);DEVELOPER_DIAGNOSTICS</DefineConstants>
     </PropertyGroup>
 
+    <!-- Store screenshot mode (Services/StoreScreenshotSession.cs, README "App Store screenshots"):
+         only a build made with -p:StoreScreenshots=true compiles the code that reads the
+         screenshot launch arguments, and that code still only acts in the iOS Simulator. Set by
+         .github/workflows/store-screenshots.yml for its simulator build; never for CI, TestFlight or
+         store builds. -->
+    <PropertyGroup Condition="'$(StoreScreenshots)' == 'true'">
+        <DefineConstants>$(DefineConstants);STORE_SCREENSHOTS</DefineConstants>
+    </PropertyGroup>
+
     <!-- Visibility in the build log of whether the Live Activity was really compiled in -
          otherwise lib-linked-but-define-missing would be a silent half-state (ForceLoad pulls
          the symbols into the binary even without the define). -->
