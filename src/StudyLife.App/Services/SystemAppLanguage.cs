@@ -14,7 +14,7 @@ namespace StudyLife.App.Services;
 /// no picker inside the app). This reads that setting and opens it; which supported language it maps to is
 /// decided by the shared rule (StudyLife.Client.Services.UiLanguage.FromSystem), not here.
 /// <list type="bullet">
-/// <item>iOS, iPadOS, Mac Catalyst: the bundle's preferred localizations (Settings, StudyLife, Language;
+/// <item>iOS, iPadOS, Mac Catalyst: the bundle's preferred localizations (Settings, StudyAtrium, Language;
 /// the list of languages comes from CFBundleLocalizations in Info.plist).</item>
 /// <item>Android 13+: the per-app language (LocaleManager, declared in res/xml/locales_config.xml), else
 /// the system languages.</item>

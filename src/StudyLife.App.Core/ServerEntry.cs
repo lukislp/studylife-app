@@ -23,7 +23,7 @@ public readonly record struct ServerEntryResult(ServerEntryOutcome Outcome, Uri?
 }
 
 /// <summary>The validation of the first-start address field, in one place: parse the text, then ask the
-/// server whether it is a StudyLife server. With <c>useAnyway</c> (the user already saw the warning and
+/// server whether it is a StudyAtrium server. With <c>useAnyway</c> (the user already saw the warning and
 /// confirmed) the network check is skipped.</summary>
 public sealed class ServerEntry(IServerChecker checker)
 {

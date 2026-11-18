@@ -6,9 +6,9 @@ namespace StudyLife.App.Core;
 
 public enum ServerCheckResult
 {
-    /// <summary>Answers like a StudyLife server.</summary>
+    /// <summary>Answers like a StudyAtrium server.</summary>
     StudyLife,
-    /// <summary>Answers, but is something else (or a StudyLife version too old to tell).</summary>
+    /// <summary>Answers, but is something else (or a StudyAtrium version too old to tell).</summary>
     NotStudyLife,
     /// <summary>No usable answer: no connection, timeout, or a gateway error.</summary>
     Unreachable,
@@ -16,7 +16,7 @@ public enum ServerCheckResult
     UntrustedCertificate,
 }
 
-/// <summary>The answer of <see cref="IServerChecker"/>: the verdict and, from a StudyLife server that pinned
+/// <summary>The answer of <see cref="IServerChecker"/>: the verdict and, from a StudyAtrium server that pinned
 /// its passkey domain, that domain and its public origin (api/instance, null otherwise).</summary>
 public sealed record ServerCheck(ServerCheckResult Result, string? PasskeyRpId = null, Uri? PasskeyOrigin = null)
 {
@@ -29,7 +29,7 @@ public interface IServerChecker
 }
 
 /// <summary>
-/// Asks <c>GET api/instance</c>. Every current StudyLife server answers it anonymously with
+/// Asks <c>GET api/instance</c>. Every current StudyAtrium server answers it anonymously with
 /// <c>{"id": "...", "version": "..."}</c> (InstanceController in the studylife repo; the id is the
 /// installation id Home Assistant discovery uses). A random id plus a version string is a cheap and
 /// specific signal: a login page or a router's admin page does not produce it. Servers older than that
@@ -40,7 +40,7 @@ public interface IServerChecker
 /// The answer must come from the server now, never from a cache: the server sends
 /// <c>Cache-Control: private, max-age=60</c> for api/instance, and Apple's NSUrlSession keeps such a response in
 /// the app's shared URL cache (on disk, across launches) and serves it without the network for a minute. The
-/// check then said "StudyLife server" with Wi-Fi off, so the sign-in bar never showed "cannot be reached". Every
+/// check then said "StudyAtrium server" with Wi-Fi off, so the sign-in bar never showed "cannot be reached". Every
 /// request therefore says <c>Cache-Control: no-cache, no-store</c> (and <c>Pragma: no-cache</c> for HTTP/1.0
 /// proxies); on Apple platforms the app also hands in a handler with the local cache switched off
 /// (<c>NSUrlSessionHandler.DisableCaching</c>), because the request header alone does not bind the platform cache.
