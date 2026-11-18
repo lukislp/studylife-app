@@ -77,7 +77,9 @@ public static class MauiProgram
         // but from the first-run dialog (ServerUrlStore/Preferences).
         builder.Services.AddI18nText(options => options.PersistenceLevel = PersistanceLevel.SessionAndLocal);
 
-        builder.Services.AddSingleton<ServerUrlStore>();
+        // A store screenshot run (simulator builds made for it only, see StoreScreenshotSession) sets the
+        // server from its launch arguments; every other start reads the saved address as before.
+        builder.Services.AddSingleton(_ => StoreScreenshotSession.ApplyServer(new ServerUrlStore()));
         // The certificate check of the first start and the sign-in bar: a TLS trust failure is told apart from
         // "unreachable" (ConnectionFailure), with the Apple-specific part supplied by the app; the answer never
         // comes from a platform cache (ServerCheckHandler).

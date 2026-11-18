@@ -103,3 +103,10 @@ function nativeHorizontalArrowKey(key) {
     target.dispatchEvent(new KeyboardEvent('keydown', init));
     target.dispatchEvent(new KeyboardEvent('keyup', init));
 }
+
+// Store screenshot mode (StoreScreenshotSession, simulator builds made for it only): how many loading
+// placeholders the page still shows - the shared client's skeletons (.sl-skeleton), dashboard cards that
+// are still loading (.is-loading) and anything marked aria-busy. Read-only; never called in any other build.
+function storeScreenshotBusyCount() {
+    return document.querySelectorAll('.sl-skeleton, .is-loading, [aria-busy="true"]').length;
+}

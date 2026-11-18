@@ -1,0 +1,129 @@
+name: Store screenshots
+
+# App Store screenshots of the iOS app (README "App Store screenshots"): the pinned StudyAtrium server runs
+# on the runner in demo mode, a simulator build of the app signs in as the demo student and is launched once
+# per screen on an iPhone 6.9" and an iPad 13" simulator. Manual only; needs no secret. The images are a run
+# artifact and are never committed.
+on:
+  workflow_dispatch:
+    inputs:
+      appearance:
+        description: "Simulator appearance (the app follows it)"
+        type: choice
+        options: [dark, light]
+        default: dark
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: store-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: block
+          # The test-ios list (checkout, verified pin, NuGet, workloads, artifact upload). The demo server
+          # and the simulators talk over localhost only.
+          allowed-endpoints: >
+            *.githubapp.com:443
+            *.blob.core.windows.net:443
+            aka.ms:443
+            api.github.com:443
+            api.nuget.org:443
+            builds.dotnet.microsoft.com:443
+            crl3.digicert.com:80
+            dc.services.visualstudio.com:443
+            fulcio.sigstore.dev:443
+            github.com:22
+            github.com:443
+            rekor.sigstore.dev:443
+            release-assets.githubusercontent.com:443
+            results-receiver.actions.githubusercontent.com:443
+            run-actions-*.actions.githubusercontent.com:443
+            timestamp.sigstore.dev:443
+            token.actions.githubusercontent.com:443
+            tuf-repo-cdn.sigstore.dev:443
+            uploads.github.com:443
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The server and the app's bundled client both come from this checkout: the release named in
+      # studylife.version, verified against the release's signed build provenance.
+      - uses: ./.github/actions/checkout-studylife
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: "10.0.x"
+      # Same single-target patch and workload pin as test-ios (see the comments in ci-cd.yml).
+      - run: sed -i '' -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-ios</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
+      - run: dotnet workload install maui-ios --version 10.0.401
+      # Built from the verified tag instead of the release's server.zip: that archive is published for
+      # linux-x64 and carries the Linux SQLite library, which does not load on the macOS runner (containers
+      # cannot run there either). OpenAPI generation is switched off; it would only rewrite the checkout's spec.
+      - name: Build the pinned server
+        run: |
+          dotnet build studylife/src/StudyLife.Server/StudyLife.Server.csproj -c Release \
+            -p:OpenApiGenerateDocuments=false -p:OpenApiGenerateDocumentsOnBuild=false
+      - name: Start the server in demo mode
+        id: server
+        env:
+          SERVER_DLL: ${{ github.workspace }}/studylife/src/StudyLife.Server/bin/Release/net10.0/StudyLife.Server.dll
+          WORK_DIR: ${{ runner.temp }}/demo-server
+        run: |
+          url="$(bash scripts/store-screenshots/demo-server.sh)"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      # A Release build for the simulator (no signing); -p:StoreScreenshots=true compiles the screenshot mode
+      # in (StoreScreenshotSession), which no other build has.
+      - name: Build the app for the iOS Simulator
+        run: |
+          dotnet build src/StudyLife.App/StudyLife.App.csproj -c Release \
+            -p:RuntimeIdentifier=iossimulator-arm64 -p:StoreScreenshots=true
+          app="$(find src/StudyLife.App/bin/Release -type d -name 'StudyLife.App.app' -path '*iossimulator-arm64*' | head -n 1)"
+          [ -n "$app" ] || { echo "::error::no simulator .app bundle found"; exit 1; }
+          echo "APP_PATH=$GITHUB_WORKSPACE/$app" >> "$GITHUB_ENV"
+      - name: Capture the screenshots
+        env:
+          SERVER_URL: ${{ steps.server.outputs.url }}
+          CA_CERT: ${{ runner.temp }}/demo-server/ca.pem
+          OUT_DIR: ${{ runner.temp }}/store-screenshots
+          APPEARANCE: ${{ inputs.appearance }}
+        run: bash scripts/store-screenshots/capture.sh
+      - name: Upload the iPhone 6.9" screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: store-screenshots-iphone-6.9
+          path: ${{ runner.temp }}/store-screenshots/iphone-6.9/*.png
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload the iPad 13" screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: store-screenshots-ipad-13
+          path: ${{ runner.temp }}/store-screenshots/ipad-13/*.png
+          if-no-files-found: warn
+          retention-days: 14
+      # App and server console output, for a run that did not produce what it should.
+      - name: Upload the logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: store-screenshots-logs
+          path: |
+            ${{ runner.temp }}/store-screenshots/logs/
+            ${{ runner.temp }}/demo-server/server.log
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Stop the server
+        if: always()
+        run: |
+          pid_file="$RUNNER_TEMP/demo-server/server.pid"
+          [ -f "$pid_file" ] && kill "$(cat "$pid_file")" 2>/dev/null || true
