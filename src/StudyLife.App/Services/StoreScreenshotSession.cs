@@ -50,6 +50,8 @@ public static class StoreScreenshotSession
             while (!ct.IsCancellationRequested)
             {
                 await HideDemoMarkerAsync(js);
+                if (plan.Clock is { } clock)
+                    await PinClockAsync(js, clock);
                 var path = new Uri(nav.Uri).AbsolutePath;
                 var look = new StoreScreenshotObservation(signedIn(), path, await IsPageBusyAsync(js), clock.Elapsed);
                 switch (readiness.Next(look))
@@ -76,6 +78,15 @@ public static class StoreScreenshotSession
     private static async Task HideDemoMarkerAsync(IJSRuntime js)
     {
         try { await js.InvokeAsync<bool>("storeScreenshotHideDemoBadge"); }
+        catch { /* page not up yet */ }
+    }
+
+    /// <summary>The sidebar clock shows the run's real time; the status bar shows the override. The clock is pinned
+    /// to the plan's time (validated by StoreScreenshotLaunch) so both agree; the script keeps it there when the
+    /// client's own timer writes the real time back.</summary>
+    private static async Task PinClockAsync(IJSRuntime js, string clock)
+    {
+        try { await js.InvokeAsync<bool>("storeScreenshotPinClock", clock); }
         catch { /* page not up yet */ }
     }
 

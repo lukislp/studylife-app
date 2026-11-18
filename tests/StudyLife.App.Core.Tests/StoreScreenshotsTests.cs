@@ -86,6 +86,33 @@ public class StoreScreenshotLaunchTests
         Assert.Equal(StoreScreenshotLaunchProblem.InvalidRoute,
             Decide(true, "--store-screenshots", "https://localhost:5443", "--route").Problem);
 
+    [Fact]
+    public void WithoutAClock_TheClockIsLeftAlone() =>
+        Assert.Null(Decide(true, "--store-screenshots", "https://localhost:5443").Plan!.Clock);
+
+    [Theory]
+    [InlineData("09:41")]
+    [InlineData("00:00")]
+    [InlineData("23:59")]
+    public void A24HourClock_IsPartOfThePlan(string clock) =>
+        Assert.Equal(clock, Decide(true, "--store-screenshots", "https://localhost:5443", "--route", "/", "--clock", clock).Plan!.Clock);
+
+    [Theory]
+    [InlineData("9:41")]
+    [InlineData("24:00")]
+    [InlineData("09:60")]
+    [InlineData("09-41")]
+    [InlineData("+9:41")]
+    [InlineData("<b>1</b>")]
+    public void OtherClocks_AreRefused(string clock) =>
+        Assert.Equal(StoreScreenshotLaunchProblem.InvalidClock,
+            Decide(true, "--store-screenshots", "https://localhost:5443", "--clock", clock).Problem);
+
+    [Fact]
+    public void AClockFlagWithoutValue_IsRefused() =>
+        Assert.Equal(StoreScreenshotLaunchProblem.InvalidClock,
+            Decide(true, "--store-screenshots", "https://localhost:5443", "--clock").Problem);
+
     [Theory]
     [InlineData("/")]
     [InlineData("/auswertung")]

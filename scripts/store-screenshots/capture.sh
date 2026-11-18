@@ -18,6 +18,8 @@ BUNDLE_ID="app.studylife.mobile"
 STATUS_FILE="store-screenshot-status.txt" # StoreScreenshotSession.StatusFileName
 STATUS_WAIT_SECONDS=180                   # above the app's own 120 s readiness timeout
 LANGUAGE_ARGS=(-AppleLanguages "(de)" -AppleLocale "de_DE")
+# The time in the status bar override and in the app's own sidebar clock (--clock), so both agree.
+STATUS_TIME="09:41"
 
 # name and route; the route is what the app's router knows (StudyLife.Client/Pages).
 SCREENS=(
@@ -113,7 +115,7 @@ for entry in "${DEVICES[@]}"; do
   # transport security untouched (https, normal certificate validation).
   xcrun simctl keychain "$udid" add-root-cert "$CA_CERT"
   xcrun simctl ui "$udid" appearance "$APPEARANCE"
-  xcrun simctl status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+  xcrun simctl status_bar "$udid" override --time "$STATUS_TIME" --dataNetwork wifi --wifiMode active --wifiBars 3 \
     --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
   xcrun simctl install "$udid" "$APP_PATH"
 
@@ -126,7 +128,7 @@ for entry in "${DEVICES[@]}"; do
       clear_status "$udid"
       xcrun simctl launch --terminate-running-process \
         --stdout="$OUT_DIR/logs/$folder-$shot-$attempt.log" --stderr="$OUT_DIR/logs/$folder-$shot-$attempt.log" \
-        "$udid" "$BUNDLE_ID" "${LANGUAGE_ARGS[@]}" --store-screenshots "$SERVER_URL" --route "$route" >/dev/null
+        "$udid" "$BUNDLE_ID" "${LANGUAGE_ARGS[@]}" --store-screenshots "$SERVER_URL" --route "$route" --clock "$STATUS_TIME" >/dev/null
       status="$(wait_for_status "$udid")"
       case "$status" in
         ready*) break ;;

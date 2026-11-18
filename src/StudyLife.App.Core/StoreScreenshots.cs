@@ -1,8 +1,10 @@
 namespace StudyLife.App.Core;
 
 /// <summary>What a store screenshot run asks the app to do: sign in on this server (with the demo
-/// account its demo mode provides) and show this route.</summary>
-public sealed record StoreScreenshotPlan(Uri Server, string Route);
+/// account its demo mode provides) and show this route. <paramref name="Clock"/> is the time the in-app clock
+/// shows instead of the real one ("09:41"), the same as the simulator's status bar override; null leaves the
+/// clock alone.</summary>
+public sealed record StoreScreenshotPlan(Uri Server, string Route, string? Clock = null);
 
 /// <summary>Why the launch arguments did not produce a plan.</summary>
 public enum StoreScreenshotLaunchProblem
@@ -18,13 +20,15 @@ public enum StoreScreenshotLaunchProblem
     InvalidServer,
     /// <summary>A route that is not a plain in-app path such as <c>/calendar</c>.</summary>
     InvalidRoute,
+    /// <summary>A clock that is not a 24-hour time such as <c>09:41</c>.</summary>
+    InvalidClock,
 }
 
 public readonly record struct StoreScreenshotLaunchResult(StoreScreenshotPlan? Plan, StoreScreenshotLaunchProblem Problem);
 
 /// <summary>
 /// Reads the launch arguments of the store screenshot workflow
-/// (<c>--store-screenshots &lt;server&gt; [--route /calendar]</c>). The platform says whether this build may
+/// (<c>--store-screenshots &lt;server&gt; [--route /calendar] [--clock 09:41]</c>). The platform says whether this build may
 /// act on them at all (<paramref name="allowedInThisBuild"/> of <see cref="Decide"/>): only a simulator build
 /// compiled for screenshots does, so a store build ignores the arguments whatever they say. Pure: no device,
 /// no network.
@@ -33,6 +37,7 @@ public static class StoreScreenshotLaunch
 {
     public const string ServerArgument = "--store-screenshots";
     public const string RouteArgument = "--route";
+    public const string ClockArgument = "--clock";
 
     /// <summary>Longest route accepted; the app's routes are short single words.</summary>
     private const int MaxRouteLength = 64;
@@ -61,8 +66,23 @@ public static class StoreScreenshotLaunch
             route = routeText;
         }
 
-        return new(new StoreScreenshotPlan(server, route), StoreScreenshotLaunchProblem.None);
+        string? clock = null;
+        var clockAt = IndexOf(arguments, ClockArgument);
+        if (clockAt >= 0)
+        {
+            clock = ValueAfter(arguments, clockAt);
+            if (clock is null || !IsClock(clock))
+                return new(null, StoreScreenshotLaunchProblem.InvalidClock);
+        }
+
+        return new(new StoreScreenshotPlan(server, route, clock), StoreScreenshotLaunchProblem.None);
     }
+
+    /// <summary>"HH:mm", 00:00 to 23:59: the text goes straight into the page, so nothing else is accepted.</summary>
+    private static bool IsClock(string text) =>
+        text.Length == 5 && text[2] == ':'
+        && int.TryParse(text.AsSpan(0, 2), System.Globalization.NumberStyles.None, null, out var hours) && hours < 24
+        && int.TryParse(text.AsSpan(3, 2), System.Globalization.NumberStyles.None, null, out var minutes) && minutes < 60;
 
     /// <summary>The scheme has to be written out: https to any host, plain http only to this machine
     /// (the simulator's loopback), so the mode can never send a session over plain http across a network.</summary>

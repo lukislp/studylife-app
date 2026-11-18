@@ -130,3 +130,27 @@ function storeScreenshotHideDemoBadge() {
     }
     return true;
 }
+
+// Store screenshot mode only: the sidebar clock (SidebarClock.razor, .sidebar .time-display) shows the given
+// time - the simulator's status bar override - instead of the real time of the run, so both clocks in a
+// screenshot agree. The clock's own text node is changed, not replaced, so Blazor keeps its node; when its
+// minute timer writes the real time back, the observer sets the pinned time again. The date line is today's
+// date already and stays untouched. Never called in any other build.
+function storeScreenshotPinClock(text) {
+    var pin = function () {
+        document.querySelectorAll('.sidebar .time-display').forEach(function (el) {
+            var node = el.firstChild;
+            if (node && node.nodeType === Node.TEXT_NODE) {
+                if (node.nodeValue !== text) node.nodeValue = text;
+            } else if (el.textContent !== text) {
+                el.textContent = text;
+            }
+        });
+    };
+    pin();
+    if (!window.__storeScreenshotClockObserver) {
+        window.__storeScreenshotClockObserver = new MutationObserver(pin);
+        window.__storeScreenshotClockObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+    }
+    return true;
+}
