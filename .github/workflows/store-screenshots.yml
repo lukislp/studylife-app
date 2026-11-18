@@ -12,6 +12,9 @@ on:
         type: choice
         options: [dark, light]
         default: dark
+  # TEMPORARY: lets the branch run the workflow before it exists on main; removed before review.
+  push:
+    branches: [feat/store-screenshots]
 
 permissions:
   actions: read
@@ -93,7 +96,7 @@ jobs:
           SERVER_URL: ${{ steps.server.outputs.url }}
           CA_CERT: ${{ runner.temp }}/demo-server/ca.pem
           OUT_DIR: ${{ runner.temp }}/store-screenshots
-          APPEARANCE: ${{ inputs.appearance }}
+          APPEARANCE: ${{ inputs.appearance || 'dark' }}
         run: bash scripts/store-screenshots/capture.sh
       - name: Upload the iPhone 6.9" screenshots
         if: always()
