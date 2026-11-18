@@ -58,6 +58,21 @@ public class SharedTextTests
     }
 
     [Fact]
+    public void TheIosShareExtension_MirrorsTheLimitsAndThePreviewLength()
+    {
+        // The extension is Swift and cannot reference this assembly: its copies of the numbers are checked here.
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "native", "ios-share", "ShareViewController.swift")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+        var swift = File.ReadAllText(Path.Combine(dir!.FullName, "native", "ios-share", "ShareViewController.swift"));
+
+        Assert.Contains($"maxTextLength = {IntakeLimits.MaxSharedTextChars:0_000}", swift);
+        Assert.Contains($"maxPendingEntries = {IntakeLimits.MaxPendingSharedTexts}", swift);
+        Assert.Contains($"previewLength = {SharedText.PreviewChars}", swift);
+    }
+
+    [Fact]
     public void ThePreview_IsShortAndMarkedWhenItGoesOn()
     {
         Assert.Equal("short", SharedText.Preview("short"));

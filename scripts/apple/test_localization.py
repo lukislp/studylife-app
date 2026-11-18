@@ -27,6 +27,10 @@ TARGETS = {
         WIDGETS,
         [INTENT_FILE] + sorted((NATIVE / "ios-liveactivity" / "Widget").glob("*.swift")),
     ),
+    "share extension": (
+        NATIVE / "ios-share" / "Localizable.xcstrings",
+        sorted((NATIVE / "ios-share").glob("*.swift")),
+    ),
     "watch app": (
         NATIVE / "watchos-app" / "Localizable.xcstrings",
         sorted((NATIVE / "watchos-app").glob("*.swift")),

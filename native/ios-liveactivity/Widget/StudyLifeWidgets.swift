@@ -32,6 +32,7 @@ struct UpcomingSessionLiveActivity: Widget {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Next session").font(.caption).foregroundStyle(fgMuted)
                         Text(context.attributes.title).font(.headline).foregroundStyle(fg).lineLimit(1)
+                            .privacySensitive()
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
@@ -67,6 +68,7 @@ private struct UpcomingSessionLockScreenView: View {
                     Text("Next session").font(.caption).foregroundStyle(fgMuted)
                 }
                 Text(title).font(.headline).foregroundStyle(fg).lineLimit(2)
+                    .privacySensitive() // course name: redacted while the device is locked
             }
             Spacer()
             if isStale {
@@ -96,6 +98,7 @@ struct StudyLifeTimerLiveActivity: Widget {
                             .font(.caption)
                             .foregroundStyle(fgMuted)
                             .lineLimit(1)
+                            .privacySensitive()
                         Text(phaseLabel(context.state))
                             .font(.headline)
                             .foregroundStyle(fg)
@@ -173,6 +176,7 @@ private struct LockScreenView: View {
                         .font(.caption)
                         .foregroundStyle(fgMuted)
                         .lineLimit(1)
+                        .privacySensitive() // course name: redacted while the device is locked
                 }
                 Text(isStale ? String(localized: "Phase over — open app") : phaseLabel(state))
                     .font(.headline)

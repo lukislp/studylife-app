@@ -102,6 +102,8 @@ targets:
     # (native/ios-share/ShareViewController.swift), the app turns them into notes.
     sources:
       - path: ../ios-share/ShareViewController.swift
+      # English keys, German translations (see scripts/apple/test_localization.py)
+      - path: ../ios-share/Localizable.xcstrings
     info:
       path: ShareShell/Info.plist
       properties:
