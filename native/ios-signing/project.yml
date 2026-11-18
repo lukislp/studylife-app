@@ -45,7 +45,7 @@ targets:
         com.apple.developer.associated-domains:
           - webcredentials:studylife.example.com
         aps-environment: development
-        # Mindful Minutes logging (HealthBridge.swift) - write-only.
+        # HealthKit (HealthBridge.swift): writes Mindful Minutes, reads HRV, sleep, steps and VO2max.
         com.apple.developer.healthkit: true
     dependencies:
       - target: StudyLifeWidgetsShell

@@ -11,8 +11,10 @@ Sources: https://developer.apple.com/documentation/bundleresources/privacy-manif
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- The developer collects nothing and tracks nothing: the app only talks to the server the
-         user enters (and, for the Marketplace browser, to the public GitHub API). -->
+    <!-- The app itself tracks nothing and has no third-party SDK: it only talks to the server the
+         user enters (and, for the Marketplace browser, to the public GitHub API). What that server
+         stores is the operator's responsibility; where the operator is the publisher, the privacy
+         policy covers it. The App Privacy label is decided separately from this manifest. -->
     <key>NSPrivacyTracking</key>
     <false/>
     <key>NSPrivacyTrackingDomains</key>
