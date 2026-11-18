@@ -581,8 +581,10 @@ demo server makes the client show in the sidebar:
 `01-dashboard`, `02-calendar` (the day view on the iPhone and the week view on the iPad, as the
 app chooses by width), `03-focus` (focus timer), `04-notes` and `05-statistics`
 (Auswertung). `store-screenshots-logs` has the app's console output per screen and the server
-log. A screen that did not finish loading within two minutes is still captured, with a warning in
-the run summary; a size that does not match the display size is a warning too.
+log. A screen that did not report ready within two minutes is started once more (the very first
+start can end on the sign-in page, see `capture.sh`); if it still does not settle, it is captured
+anyway with a warning in the run summary. A size that does not match the display size is a warning
+too.
 
 How it works:
 

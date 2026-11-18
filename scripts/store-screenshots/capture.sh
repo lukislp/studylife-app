@@ -120,16 +120,24 @@ for entry in "${DEVICES[@]}"; do
   mkdir -p "$OUT_DIR/$folder"
   for screen in "${SCREENS[@]}"; do
     read -r shot route <<<"$screen"
-    clear_status "$udid"
-    xcrun simctl launch --terminate-running-process \
-      --stdout="$OUT_DIR/logs/$folder-$shot.log" --stderr="$OUT_DIR/logs/$folder-$shot.log" \
-      "$udid" "$BUNDLE_ID" "${LANGUAGE_ARGS[@]}" --store-screenshots "$SERVER_URL" --route "$route" >/dev/null
-    status="$(wait_for_status "$udid")"
+    # A second start when the first did not report ready: on the very first start the shared client can lose
+    # the fresh demo session to a 401 of a request it sent before signing in, and stay on the sign-in page.
+    for attempt in 1 2; do
+      clear_status "$udid"
+      xcrun simctl launch --terminate-running-process \
+        --stdout="$OUT_DIR/logs/$folder-$shot-$attempt.log" --stderr="$OUT_DIR/logs/$folder-$shot-$attempt.log" \
+        "$udid" "$BUNDLE_ID" "${LANGUAGE_ARGS[@]}" --store-screenshots "$SERVER_URL" --route "$route" >/dev/null
+      status="$(wait_for_status "$udid")"
+      case "$status" in
+        ready*) break ;;
+      esac
+      if [ "$attempt" = 1 ]; then log "$folder/$shot: $status, starting the app again"; fi
+    done
     case "$status" in
       ready*) ;;
       timeout*) echo "::warning::$folder/$shot: the page did not settle within the app's timeout ($status); captured anyway, check it" ;;
       *)
-        echo "::error::$folder/$shot: the app never reported a status (see logs/$folder-$shot.log)"
+        echo "::error::$folder/$shot: the app never reported a status (see logs/$folder-$shot-*.log)"
         failures=$((failures + 1))
         ;;
     esac
