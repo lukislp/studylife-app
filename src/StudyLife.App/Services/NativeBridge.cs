@@ -135,8 +135,8 @@ public static class NativeBridge
     }
 
     /// <summary>The bare Left/Right hardware arrow keys, claimed for the page only while it asks
-    /// (see StudyLife.App.Core.HardwareArrowKeys). Only iOS registers the key commands
-    /// (AppDelegate.KeyCommands); elsewhere the state is recorded and never used.</summary>
+    /// (see StudyLife.App.Core.HardwareArrowKeys). Only iOS acts on it (StudyAtriumApplication.SendEvent);
+    /// elsewhere the state is recorded and never used.</summary>
     internal static StudyLife.App.Core.HardwareArrowKeys ArrowKeys { get; } = new();
 
     /// <summary>js/native-bridge.js reports data-page-arrow-keys on &lt;html&gt; whenever it changes.</summary>
@@ -144,7 +144,7 @@ public static class NativeBridge
     public static void SetPageArrowKeys(string? intent) => ArrowKeys.PageDeclared(intent);
 
 #if IOS || MACCATALYST
-    /// <summary>Hands a claimed arrow key to the page as a keydown (AppDelegate's key command action).</summary>
+    /// <summary>Hands a claimed arrow key to the page as a keydown (StudyAtriumApplication.SendEvent).</summary>
     internal static void ForwardArrowKey(StudyLife.App.Core.ArrowKey key)
     {
         if (ArrowKeys.ScriptFor(key) is not { } script || CurrentWebView is not { } webView) return;

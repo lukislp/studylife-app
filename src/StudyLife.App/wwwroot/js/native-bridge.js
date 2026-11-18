@@ -94,7 +94,7 @@ function showDiagnosticsBanner(text) {
     el.textContent += (el.textContent ? '\n---\n' : 'Developer diagnostics (tap to close):\n') + text;
 }
 
-// A claimed hardware arrow key (AppDelegate key command -> NativeBridge.ForwardArrowKey), handed
+// A claimed hardware arrow key (StudyAtriumApplication.SendEvent -> NativeBridge.ForwardArrowKey), handed
 // to the page as the keydown/keyup it never received. Dispatched on the focused element so the
 // page's own listeners see it exactly as a real key press.
 function nativeHorizontalArrowKey(key) {

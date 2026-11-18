@@ -69,6 +69,14 @@ services and packaging.
   `dotnet format src/StudyLife.App/StudyLife.App.csproj --verify-no-changes` against the Android
   target framework, which stands in for all of them because `dotnet format` cannot be scoped to
   one framework. Run `dotnet format` before pushing.
+- **Licence grant for app-store distribution.** This repository is the app that is distributed
+  through app stores, including Apple's App Store, under store terms that the AGPL alone does not
+  permit. A contribution is therefore accepted only with a licence grant in addition to
+  AGPL-3.0: you grant the maintainer a non-exclusive, worldwide, royalty-free, perpetual licence
+  to distribute your contribution as part of the app through app stores, including Apple's App
+  Store, under their terms. Submitting a pull request grants it; you also confirm that you wrote
+  the change or otherwise have the right to grant this licence. If you do not want to grant it,
+  say so in the pull request; the change is then not merged.
 - **Do not commit the CI target-framework edit.** Each job rewrites `TargetFrameworks` to a single
   `TargetFramework` with `sed` before building. That is a CI-only step; the csproj in the
   repository keeps the full multi-target list.
