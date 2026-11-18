@@ -3,7 +3,7 @@ namespace StudyLife.App.Core;
 /// <summary>What the bar next to the sign-in screen says about the configured server.</summary>
 public enum SignInServerNotice
 {
-    /// <summary>Nothing to say (a StudyLife server whose passkeys work at this address, or not checked yet).</summary>
+    /// <summary>Nothing to say (a StudyAtrium server whose passkeys work at this address, or not checked yet).</summary>
     None,
     /// <summary>The device has no network at all (Wi-Fi, LAN and mobile data are off): said at once, from the
     /// platform's reachability, without asking the server (that question cannot succeed).</summary>
@@ -81,10 +81,10 @@ public enum ServerRecheck
 {
     /// <summary>Keep asking on a backoff: the answer can change by itself (the network comes back).</summary>
     Poll,
-    /// <summary>Do not poll: the answer will not fix itself (wrong certificate, not a StudyLife server); ask
+    /// <summary>Do not poll: the answer will not fix itself (wrong certificate, not a StudyAtrium server); ask
     /// again only when connectivity changes or the app resumes.</summary>
     OnEventsOnly,
-    /// <summary>A StudyLife server answered: nothing to wait for (connectivity or resume still re-check).</summary>
+    /// <summary>A StudyAtrium server answered: nothing to wait for (connectivity or resume still re-check).</summary>
     Settled,
     /// <summary>Not asked: the device has no network. No polling either; the next connectivity report (the network
     /// is back) or the resume asks at once.</summary>

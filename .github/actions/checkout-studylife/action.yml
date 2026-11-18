@@ -1,4 +1,4 @@
-name: Check out the pinned StudyLife release
+name: Check out the pinned StudyAtrium release
 description: >
   Checks out lukislp/studylife at the release named in studylife.version (repository root) into
   ./studylife, the sibling the app's project reference expects, and verifies that the tag still

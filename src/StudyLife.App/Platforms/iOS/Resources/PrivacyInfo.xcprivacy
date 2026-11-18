@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-Privacy manifest of the StudyLife app (iOS, and the same file for Mac Catalyst - same .NET runtime).
+Privacy manifest of the StudyAtrium app (iOS, and the same file for Mac Catalyst - same .NET runtime).
 scripts/privacy/check.py (CI job test-privacy) keeps it consistent with the sources; the rules and
 the evidence for every entry are in scripts/privacy/policy.toml and the README ("Privacy").
 

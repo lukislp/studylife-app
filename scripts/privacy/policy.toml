@@ -1,4 +1,4 @@
-# Privacy policy of the StudyLife app bundles - the single source of truth for
+# Privacy policy of the StudyAtrium app bundles - the single source of truth for
 # scripts/privacy/check.py. Three things live here and nowhere else:
 #   [categories.*]   Apple's required reason API categories, their approved reason codes and the
 #                    API names that put a source file into a category (the one table the script

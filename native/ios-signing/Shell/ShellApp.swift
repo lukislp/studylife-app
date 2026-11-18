@@ -5,6 +5,6 @@ import SwiftUI
 @main
 struct ShellApp: App {
     var body: some Scene {
-        WindowGroup { Text("StudyLife Provisioning Shell") }
+        WindowGroup { Text("StudyAtrium Provisioning Shell") }
     }
 }

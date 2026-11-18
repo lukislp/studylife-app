@@ -44,7 +44,7 @@ public class AppDelegate : MauiUIApplicationDelegate
         return base.ContinueUserActivity(application, userActivity, completionHandler);
     }
 
-    // Shared/opened .ics files ("Open with StudyLife", CFBundleDocumentTypes):
+    // Shared/opened .ics files ("Open with StudyAtrium", CFBundleDocumentTypes):
     // read the content, put it in the intake, navigate to the calendar page - which picks up
     // the file and starts the existing import review flow. Other URLs are passed through to MAUI.
     public override bool OpenUrl(UIApplication application, NSUrl url, NSDictionary options)
