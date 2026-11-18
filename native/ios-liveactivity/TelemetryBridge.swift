@@ -51,6 +51,23 @@ private final class TelemetrySubscriber: NSObject, MXMetricManagerSubscriber {
 // Kept alive for the process lifetime - MXMetricManager.add(_:) does not retain the subscriber.
 private let subscriber = TelemetrySubscriber()
 
+// Consent to native telemetry, mirrored from the C# side (NativeTelemetryConsent). Persisted here
+// because MetricKit delivers into this subscriber even when the .NET side is not up yet: without a
+// stored "granted" nothing is ever written to the queue file. Default: not granted.
+private let consentKey = "slla.telemetry.consent"
+
+private func consentGranted() -> Bool {
+    UserDefaults.standard.bool(forKey: consentKey)
+}
+
+@_cdecl("slla_telemetry_set_consent")
+public func slla_telemetry_set_consent(_ granted: Int32) {
+    UserDefaults.standard.set(granted != 0, forKey: consentKey)
+    if granted == 0 {
+        telemetryQueue.sync { try? FileManager.default.removeItem(at: queueFileURL) }
+    }
+}
+
 @_cdecl("slla_telemetry_start")
 public func slla_telemetry_start() {
     MXMetricManager.shared.add(subscriber)
@@ -62,6 +79,11 @@ public func slla_telemetry_start() {
 @_cdecl("slla_telemetry_drain")
 public func slla_telemetry_drain(_ handler: (@convention(c) (UnsafePointer<UInt8>?, Int32) -> Void)?) {
     telemetryQueue.sync {
+        guard consentGranted() else {
+            try? FileManager.default.removeItem(at: queueFileURL)
+            handler?(nil, 0)
+            return
+        }
         guard let data = try? Data(contentsOf: queueFileURL), !data.isEmpty else {
             handler?(nil, 0)
             return
@@ -75,6 +97,7 @@ public func slla_telemetry_drain(_ handler: (@convention(c) (UnsafePointer<UInt8
 }
 
 private func appendEvents(_ newEvents: [[String: Any]]) {
+    guard consentGranted() else { return }
     telemetryQueue.sync {
         var existing: [[String: Any]] = []
         if let data = try? Data(contentsOf: queueFileURL),

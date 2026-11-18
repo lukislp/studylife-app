@@ -656,6 +656,19 @@ that queue on its own flush cycle and is the only thing that ever calls `POST /a
 gated on the same `UserSettings.TelemetryConsent` toggle as the browser client's own telemetry
 (off/undecided ⇒ nothing native leaves the device either).
 
+**Nothing is stored without consent:** the queue is also gated on the device. The client tells
+the app the decision through `INativeTelemetry.ApplyConsentAsync(granted)` (at start once the
+decision is known - undecided counts as `false` - on every change, and with `false` at sign-out).
+`NativeTelemetryConsent` (`StudyLife.App.Core`) keeps that flag in Preferences (default `false`), so
+the static `NativeTelemetry.Enqueue`, which crash handlers call before the client is up, writes
+nothing unless the last decision was `true`. Withdrawing consent deletes `native-telemetry-queue.json`;
+the iOS MetricKit queue (`slla-telemetry-metrickit-queue.json`, written by `TelemetryBridge.swift`)
+is gated by the same decision, mirrored into the Swift side with `slla_telemetry_set_consent`
+(MetricKit reports that arrive before the decision is known are dropped, not queued). Sign-out,
+account deletion and a server change go through `NativeLocalCopies.WipeAsync`, which also deletes both
+queues and resets the flag to `false`. `ApplyConsentAsync` is a plain public method on
+`NativeTelemetry` so the app builds with client releases that do not declare it yet.
+
 ### Developer diagnostics
 
 Nothing diagnostic is ever shown to a user of a release build. `Services/DeveloperDiagnostics.cs`

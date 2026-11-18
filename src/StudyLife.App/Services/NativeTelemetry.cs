@@ -1,4 +1,4 @@
-using System.Text.Json;
+using StudyLife.App.Core;
 using StudyLife.Client.Services;
 using StudyLife.Shared;
 
@@ -12,8 +12,10 @@ namespace StudyLife.App.Services;
 /// WebView/consent even exist (a cold-start crash handler, or a health query fired before
 /// TelemetryService.InitializeAsync ever runs) survive an app relaunch. TelemetryService
 /// (studylife repo) calls DrainAsync() once per flush and merges the result into its own
-/// batch - this class never talks to the network itself, and it never checks consent either:
-/// TelemetryService already enforces that on both the recording buffer and the actual HTTP send.
+/// batch - this class never talks to the network itself. Consent is enforced twice: by
+/// TelemetryService on its recording buffer and the HTTP send, and here on disk - nothing is
+/// persisted unless the last ApplyConsentAsync said granted (default: not granted), and
+/// withdrawing it deletes the queue files.
 ///
 /// Events are recorded via the static <see cref="Enqueue"/> entry point (same "static handoff"
 /// pattern as ApnsTokenStore/NativeBridge/HealthBridge) rather than only through the
@@ -40,74 +42,45 @@ public sealed class NativeTelemetry : INativeTelemetry
         return events.Count > 0 ? events : null;
     }
 
-    /// <summary>Records one native event into the persisted queue. Safe to call from any
+    /// <summary>Records one native event into the persisted queue (a no-op without consent). Safe to call from any
     /// thread, including a crash handler about to terminate the process
     /// (Platforms/Android/MainApplication.cs) - the write to disk happens synchronously, before
     /// this call returns.</summary>
     public static void Enqueue(TelemetryEventDto ev) => Store.Enqueue(ev);
 
-    /// <summary>Thread-safe queue, write-through to a JSON file in FileSystem.AppDataDirectory
-    /// on every Enqueue so a crash handler's write is durable before the process actually dies.
-    /// Capped at 200 events (oldest dropped first) - this is a fallback buffer for
-    /// pre-consent/offline periods, not meant to grow unbounded.</summary>
-    private static class Store
+
+    /// <summary>Applies the user's consent (the client's INativeTelemetry.ApplyConsentAsync; a public
+    /// method rather than an interface implementation so the app also builds against client releases
+    /// that do not have the method yet - once the interface has it, this is the implementation).
+    /// Without consent nothing is written; withdrawing it deletes the queued events, MetricKit's
+    /// included.</summary>
+    public Task ApplyConsentAsync(bool granted) => Consent.ApplyAsync(granted);
+
+    /// <summary>Withdraws consent and deletes every queued native event (sign-out, account deletion,
+    /// server change - see NativeLocalCopies).</summary>
+    public static Task RevokeAsync() => Consent.RevokeAsync();
+
+    private const int MaxQueuedEvents = 200;
+
+    private static readonly NativeTelemetryConsent Consent =
+        new(new PreferencesConsentFlag(), new MetricKitConsent());
+
+    // Capped at 200 events (oldest dropped first): a buffer for offline periods, not meant to grow.
+    private static readonly ConsentGatedQueue<TelemetryEventDto> Store = new(
+        Consent,
+        () => Path.Combine(Microsoft.Maui.Storage.FileSystem.AppDataDirectory, "native-telemetry-queue.json"),
+        MaxQueuedEvents);
+
+    private sealed class PreferencesConsentFlag : ITelemetryConsentFlag
     {
-        private const int MaxQueuedEvents = 200;
-        private const string FileName = "native-telemetry-queue.json";
-        private static readonly object Lock = new();
-        private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-        private static List<TelemetryEventDto>? _cache;
+        private const string Key = "studylife-native-telemetry-consent";
+        public bool Read() => Preferences.Default.Get(Key, false);
+        public void Write(bool granted) => Preferences.Default.Set(Key, granted);
+    }
 
-        public static void Enqueue(TelemetryEventDto ev)
-        {
-            lock (Lock)
-            {
-                var list = LoadLocked();
-                list.Add(ev);
-                if (list.Count > MaxQueuedEvents)
-                    list.RemoveRange(0, list.Count - MaxQueuedEvents); // drop oldest first
-                SaveLocked(list);
-            }
-        }
-
-        public static List<TelemetryEventDto> Drain()
-        {
-            lock (Lock)
-            {
-                var list = LoadLocked();
-                if (list.Count == 0) return new List<TelemetryEventDto>();
-                var copy = new List<TelemetryEventDto>(list);
-                SaveLocked(new List<TelemetryEventDto>());
-                return copy;
-            }
-        }
-
-        private static List<TelemetryEventDto> LoadLocked()
-        {
-            if (_cache != null) return _cache;
-            try
-            {
-                var path = FilePath();
-                if (File.Exists(path))
-                {
-                    var json = File.ReadAllText(path);
-                    _cache = JsonSerializer.Deserialize<List<TelemetryEventDto>>(json, JsonOptions) ?? new();
-                    return _cache;
-                }
-            }
-            catch { /* corrupt/unreadable file - start fresh rather than lose all future events */ }
-            _cache = new List<TelemetryEventDto>();
-            return _cache;
-        }
-
-        private static void SaveLocked(List<TelemetryEventDto> list)
-        {
-            _cache = list;
-            try { File.WriteAllText(FilePath(), JsonSerializer.Serialize(list, JsonOptions)); }
-            catch { /* best-effort persistence - the in-memory cache still has this session's events */ }
-        }
-
-        private static string FilePath() =>
-            Path.Combine(Microsoft.Maui.Storage.FileSystem.AppDataDirectory, FileName);
+    /// <summary>The iOS MetricKit queue lives on the Swift side and is gated there too.</summary>
+    private sealed class MetricKitConsent : INativeQueueConsent
+    {
+        public void Apply(bool granted) => TelemetryBridge.SetConsent(granted);
     }
 }

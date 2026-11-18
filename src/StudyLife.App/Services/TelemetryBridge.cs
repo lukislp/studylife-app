@@ -29,6 +29,17 @@ public static class TelemetryBridge
 #endif
     }
 
+    /// <summary>Tells the Swift side whether MetricKit events may be queued at all; false also deletes
+    /// the queue file it holds (the Swift side persists the flag, so it gates writes even when this
+    /// process is not running).</summary>
+    public static void SetConsent(bool granted)
+    {
+#if LIVE_ACTIVITY && IOS
+        try { slla_telemetry_set_consent(granted ? 1 : 0); }
+        catch { /* bridge unavailable - nothing is collected there either */ }
+#endif
+    }
+
 #if LIVE_ACTIVITY && IOS
     private static TaskCompletionSource<string>? _drainCompletion;
 #endif
@@ -71,6 +82,9 @@ public static class TelemetryBridge
 
     [DllImport("__Internal")]
     private static extern void slla_telemetry_start();
+
+    [DllImport("__Internal")]
+    private static extern void slla_telemetry_set_consent(int granted);
 
     [DllImport("__Internal")]
     private static extern unsafe void slla_telemetry_drain(delegate* unmanaged<byte*, int, void> handler);
