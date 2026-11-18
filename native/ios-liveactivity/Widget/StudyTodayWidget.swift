@@ -276,6 +276,7 @@ private struct StudyTodayView: View {
                     } else if let title = snapshot.currentTitle, let ends = snapshot.currentEndsAt {
                         // Planned study time is running right now (without a focus timer).
                         Text("▶ \(title)").font(.caption2.weight(.semibold)).lineLimit(1)
+                            .privacySensitive() // course/session name: redacted on the lock screen
                         Text("Lernzeit bis \(clockLabel(ends))").font(.caption2)
                         Text("\(formatMinutes(snapshot.todayMinutes)) studied today")
                             .font(.caption2)
@@ -329,9 +330,11 @@ private struct StudyTodayView: View {
                         // Planned study time is running RIGHT NOW - takes precedence over "next session".
                         statRow(icon: "play.circle.fill", tint: wAccent,
                                 value: String(localized: "until \(clockLabel(ends))"), label: title)
+                                .privacySensitive()
                     } else if let title = snapshot.nextTitle {
                         statRow(icon: "arrow.right.circle", tint: wFg,
                                 value: nextTimeLabel(snapshot), label: title)
+                                .privacySensitive()
                     }
                 }
                 Spacer(minLength: 0)
@@ -389,6 +392,7 @@ private struct StudyTodayView: View {
                         Image(systemName: "play.circle.fill").font(.caption).foregroundStyle(wAccent)
                         Text("\(title) · bis \(clockLabel(ends))")
                             .font(.caption).foregroundStyle(wFg).lineLimit(1)
+                            .privacySensitive()
                     }
                 } else {
                     HStack(spacing: 4) {
@@ -614,6 +618,7 @@ private struct CourseProgressView: View {
         HStack(spacing: 8) {
             Circle().fill(courseColor(course.color)).frame(width: 8, height: 8)
             Text(course.name).font(.caption2).foregroundStyle(wFg).lineLimit(1)
+                .privacySensitive()
             Spacer(minLength: 4)
             GeometryReader { geo in
                 RoundedRectangle(cornerRadius: 2)

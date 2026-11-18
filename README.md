@@ -600,6 +600,9 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
   bounded (`IntakeLimits` in `StudyLife.App.Core`, mirrored in the share extension): one shared
   text is cut after 20,000 characters, at most 20 wait for the app, and an opened `.ics` file
   larger than the calendar page's own 5 MB upload limit is ignored.
+  On iOS the share extension (`native/ios-share`) asks the same question itself: an alert with the
+  beginning of the text ("Save as note?", Save / Cancel, English keys with German translations in its
+  own `Localizable.xcstrings`); only Save writes the inbox file.
 - `Services/HealthBridge.cs` — facade over the Swift Apple HealthKit bridge
   (`native/ios-liveactivity/HealthBridge.swift`); backs the studylife repo's
   `INativeHealthData` (HRV, sleep onset, step count, cardio fitness/VO2max) - read-only, one
