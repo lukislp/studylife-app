@@ -72,8 +72,9 @@
     <key>NSSupportsLiveActivities</key>
     <true/>
     <!-- HealthBridge.swift: writes Mindful Minutes for completed focus rounds, reads Heart
-         Rate Variability for the Dashboard's readiness-score tile (INativeHealthData,
-         studylife repo) - both requested in one authorization prompt at app startup. -->
+         Rate Variability, sleep, step count and VO2max for the Dashboard's readiness and sleep
+         tiles (INativeHealthData, studylife repo) - all requested in one authorization prompt at
+         app startup. -->
     <key>NSHealthUpdateUsageDescription</key>
     <string>StudyAtrium protokolliert abgeschlossene Fokus-Sessions als Achtsamkeitsminuten in Health.</string>
     <key>NSHealthShareUsageDescription</key>
