@@ -50,8 +50,8 @@ public static class StoreScreenshotSession
             while (!ct.IsCancellationRequested)
             {
                 await HideDemoMarkerAsync(js);
-                if (plan.Clock is { } clock)
-                    await PinClockAsync(js, clock);
+                if (plan.Clock is { } pinnedTime)
+                    await PinClockAsync(js, pinnedTime);
                 var path = new Uri(nav.Uri).AbsolutePath;
                 var look = new StoreScreenshotObservation(signedIn(), path, await IsPageBusyAsync(js), clock.Elapsed);
                 switch (readiness.Next(look))
