@@ -71,11 +71,11 @@ public static class StoreScreenshotSession
     }
 
     /// <summary>The server runs in demo mode, so the shared client marks the sidebar "DEMO"; a store user never
-    /// sees that marker, so the screenshots do not either. Done on every look because the marker appears only once
-    /// the client has asked the server, and a re-render may bring it back.</summary>
+    /// sees that marker, so the screenshots do not either. The script keeps hiding it from then on (the marker can
+    /// appear after the page counts as ready); calling it on every look also covers a reload of the page.</summary>
     private static async Task HideDemoMarkerAsync(IJSRuntime js)
     {
-        try { await js.InvokeAsync<int>("storeScreenshotHideDemoBadge"); }
+        try { await js.InvokeAsync<bool>("storeScreenshotHideDemoBadge"); }
         catch { /* page not up yet */ }
     }
 

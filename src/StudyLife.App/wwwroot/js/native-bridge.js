@@ -113,12 +113,20 @@ function storeScreenshotBusyCount() {
 
 // Store screenshot mode only: hides the "DEMO" marker the shared client puts next to the brand name in the
 // sidebar when the server runs in demo mode (MainLayout.razor, a span without a class after .brand-name), so
-// the store images show the app as a normal user sees it. Inline style property, not a <style> element: the
-// page's CSP allows style attributes only. Returns how many it hid; never called in any other build.
+// the store images show the app as a normal user sees it. The marker appears whenever the client has heard
+// back from the server, possibly after the page counts as ready, so the first call also installs an observer
+// that hides it each time it is rendered. Inline style property, not a <style> element: the page's CSP allows
+// style attributes only. Never called in any other build.
 function storeScreenshotHideDemoBadge() {
-    var hidden = 0;
-    document.querySelectorAll('.sidebar .brand > span:not(.brand-icon):not(.brand-name)').forEach(function (el) {
-        if (el.style.display !== 'none') { el.style.display = 'none'; hidden++; }
-    });
-    return hidden;
+    var hide = function () {
+        document.querySelectorAll('.sidebar .brand > span:not(.brand-icon):not(.brand-name)').forEach(function (el) {
+            if (el.style.display !== 'none') el.style.display = 'none';
+        });
+    };
+    hide();
+    if (!window.__storeScreenshotBadgeObserver) {
+        window.__storeScreenshotBadgeObserver = new MutationObserver(hide);
+        window.__storeScreenshotBadgeObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+    }
+    return true;
 }
