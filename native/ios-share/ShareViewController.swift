@@ -1,7 +1,7 @@
 import UIKit
 import UniformTypeIdentifiers
 
-// "StudyLife" share extension (share sheet): accepts shared text and/or URLs, asks the user to
+// "StudyAtrium" share extension (share sheet): accepts shared text and/or URLs, asks the user to
 // confirm them, and only then appends them as a JSON array to the App Group inbox
 // (SharedNoteIntake.DrainIosInbox reads it on the next app launch/foreground transition and turns
 // it into notes). Same rule as on Android (Platforms/Android/SharedTextConfirmation.cs): nothing

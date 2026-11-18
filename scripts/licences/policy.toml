@@ -1,4 +1,4 @@
-# Licence policy of the StudyLife app bundle - the single source of truth for scripts/licences/check.py.
+# Licence policy of the StudyAtrium app bundle - the single source of truth for scripts/licences/check.py.
 # The script reads the resolved NuGet graph from the build system (dotnet restore ->
 # obj/project.assets.json) and each package's licence from its .nuspec; nothing about individual
 # packages is hard-coded in the script. THIRD-PARTY-NOTICES.md is generated from this file plus
