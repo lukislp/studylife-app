@@ -874,11 +874,11 @@ build scripts (`scripts/apple/release-ios.sh`, `release-maccatalyst.sh`, run by 
 ### Privacy policy
 
 The app publisher's privacy policy is published on `legal.lktec.org`:
-[German](https://legal.lktec.org/studylife/) and [English](https://legal.lktec.org/en/studylife/).
+[German](https://legal.lktec.org/studyatrium/) and [English](https://legal.lktec.org/en/studyatrium/).
 It says that the operator of a StudyAtrium server is responsible for that server.
 
-- **App Store Connect "Privacy Policy URL"** (guideline 5.1.1(i)): `https://legal.lktec.org/en/studylife/`
-  (`https://legal.lktec.org/studylife/` for a German-language listing).
+- **App Store Connect "Privacy Policy URL"** (guideline 5.1.1(i)): `https://legal.lktec.org/en/studyatrium/`
+  (`https://legal.lktec.org/studyatrium/` for a German-language listing; the old `/studylife/` paths forward).
 - **In the app** the link belongs in the About section of Setup, which is part of the shared UI in the
   `studylife` repository (`SetupAboutCard`), not in this repository; German UI links the German page,
   every other language the English one.
