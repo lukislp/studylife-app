@@ -81,7 +81,7 @@ private final class LiveActivityController {
                         content: content,
                         pushType: .token)
                     setLastError("")
-                    observePushTokenUpdates()
+                    self.observePushTokenUpdates()
                 } catch {
                     setLastError("request: \(error)")
                 }
