@@ -98,7 +98,20 @@ struct StudyLifeWatchApp: App {
         WatchSessionDelegate.shared.activate()
         // Best-effort, same "ignore the result" pattern as the rest of the bridge - a denied/
         // undetermined permission just means postLocalNotification silently does nothing.
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        // Not in a store screenshot run (the store-screenshots workflow launches the simulator build with
+        // --store-screenshots): the permission sheet would cover the screen being captured, and the
+        // simulator offers no way to answer it beforehand. Simulator only, so no device build can skip it.
+        if !Self.isStoreScreenshotRun {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        }
+    }
+
+    private static var isStoreScreenshotRun: Bool {
+        #if targetEnvironment(simulator)
+        return ProcessInfo.processInfo.arguments.contains("--store-screenshots")
+        #else
+        return false
+        #endif
     }
 
     var body: some Scene {

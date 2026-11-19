@@ -202,6 +202,9 @@ for entry in "${DEVICES[@]}"; do
   mkdir -p "$OUT_DIR/$folder"
   for screen in "${SCREENS[@]}"; do
     read -r shot route <<<"$screen"
+    # The phone stacks the note under the list, so an open note ends behind the floating menu button there;
+    # the list alone reads better. The iPad shows list and note side by side.
+    if [[ "$folder" == iphone-* && "$shot" == 04-notes ]]; then route="/notes"; fi
     # A second start when the first did not report ready: on the very first start the shared client can lose
     # the fresh demo session to a 401 of a request it sent before signing in, and stay on the sign-in page.
     for attempt in 1 2; do
@@ -263,8 +266,10 @@ capture_watch() {
   xcrun simctl bootstatus "$udid" -b >/dev/null
   set_system_language "$udid"
   boot_clean "$udid"
-  xcrun simctl status_bar "$udid" override --time "$STATUS_TIME" \
-    || echo "::warning::this watchOS simulator takes no status bar override; the Watch shows the real time"
+  # watchOS simulators refuse status bar overrides (simctl: NSPOSIXErrorDomain 45, "not supported"), so the
+  # Watch shows the real time of the run; tried anyway in case a later Xcode supports it.
+  xcrun simctl status_bar "$udid" override --time "$STATUS_TIME" >/dev/null 2>&1 \
+    || log "$folder: no status bar override on watchOS, the Watch shows the real time"
   xcrun simctl install "$udid" "$WATCH_APP_PATH"
   if [ -n "$watch_snapshot" ]; then
     group="$(xcrun simctl get_app_container "$udid" "$WATCH_BUNDLE_ID" "$APP_GROUP" 2>/dev/null || true)"
@@ -275,8 +280,9 @@ capture_watch() {
     fi
   fi
   xcrun simctl launch --terminate-running-process \
-    --stdout="$OUT_DIR/logs/$folder.log" --stderr="$OUT_DIR/logs/$folder.log" "$udid" "$WATCH_BUNDLE_ID" >/dev/null
-  # No readiness signal from a SwiftUI app: it reads the snapshot file on launch and draws once.
+    --stdout="$OUT_DIR/logs/$folder.log" --stderr="$OUT_DIR/logs/$folder.log" "$udid" "$WATCH_BUNDLE_ID" --store-screenshots >/dev/null
+  # No readiness signal from a SwiftUI app: it reads the snapshot file on launch and draws once. The argument
+  # keeps the notification permission sheet away (StudyLifeWatchApp.swift, simulator builds only).
   sleep 8
   mkdir -p "$OUT_DIR/$folder"
   file="$OUT_DIR/$folder/01-today.png"

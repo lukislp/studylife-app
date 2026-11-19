@@ -560,42 +560,54 @@ the Developer ID certificate" above). The API key stays valid until it is revoke
 ## App Store screenshots
 
 The workflow `.github/workflows/store-screenshots.yml` takes the App Store screenshots of the
-iOS app on a GitHub macOS runner. It runs on demand only and needs no secret:
+iOS app and its Apple Watch app on GitHub macOS runners, one job per language. It runs on demand
+only and needs no secret:
 
 ```bash
-gh workflow run store-screenshots.yml --ref main            # dark appearance (default)
-gh workflow run store-screenshots.yml --ref main -f appearance=light
-gh run download <run id> --pattern 'store-screenshots-*'    # or the run page, "Artifacts"
+gh workflow run store-screenshots.yml --ref main                  # German and English, dark (default)
+gh workflow run store-screenshots.yml --ref main -f languages=en -f appearance=light
+gh run download <run id> --pattern 'store-screenshots-*'          # or the run page, "Artifacts"
 ```
 
-The images are run artifacts (kept 14 days) and are never committed:
+The images are run artifacts (kept 14 days) and are never committed. `<lang>` is `de` or `en`:
 
 | Artifact | Simulator | Size (App Store Connect display size) |
 | --- | --- | --- |
-| `store-screenshots-iphone-6.9` | iPhone 17 Pro Max (16 Pro Max if the Xcode has no 17) | 1320 x 2868, iPhone 6.9" |
-| `store-screenshots-ipad-13` | iPad Pro 13-inch (M5, else M4) | 2064 x 2752, iPad 13" |
+| `store-screenshots-<lang>-iphone-6.9` | iPhone 17 Pro Max (16 Pro Max if the Xcode has no 17) | 1320 x 2868, iPhone 6.9" |
+| `store-screenshots-<lang>-ipad-13` | iPad Pro 13-inch (M5, else M4) | 2064 x 2752, iPad 13" |
+| `store-screenshots-<lang>-watch-46mm` | Apple Watch Series 11 (46mm, else Series 10) | 416 x 496, Apple Watch |
 
-Each holds one PNG per screen, German UI and German system locale (the iPad status bar date
-too), clean status bar (09:41, full battery, full signal) with the iPad sidebar clock showing the
-same 09:41, and without the "DEMO" marker the demo server makes the client show in the sidebar:
-`01-dashboard`, `02-calendar` (the day view on the iPhone and the week view on the iPad, as the
-app chooses by width), `03-focus` (focus timer), `04-notes` and `05-statistics`
-(Auswertung). `store-screenshots-logs` has the app's console output per screen and the server
-log. A screen that did not report ready within two minutes is started once more (the very first
-start can end on the sign-in page, see `capture.sh`); if it still does not settle, it is captured
-anyway with a warning in the run summary. A size that does not match the display size is a warning
-too.
+The phone and tablet artifacts hold one PNG per screen: `01-dashboard`, `02-calendar` (the day
+view on the iPhone and the week view on the iPad, as the app chooses by width), `03-focus` (focus
+timer), `04-notes` (on the iPad with the demo note "Merkzettel Eigenwerte" / "Eigenvalues cheat
+sheet" open next to the list; the iPhone shows the list, because it stacks the note below it) and
+`05-statistics`. The Watch artifact holds `01-today`, the Watch app's main screen. Every image
+is in the job's language (UI, system locale including the iPad status bar date, and the demo
+data), has a clean status bar (09:41, full battery, full signal; not on the Watch, see below) and
+shows the app at that same 09:41: the calendar's now line, the countdowns, "done"/"upcoming" and the iPad sidebar clock all
+read the pinned time. The "DEMO" marker the demo server makes the client show in the sidebar is
+hidden. `store-screenshots-<lang>-logs` has the app's console output per screen, the snapshot
+handed to the Watch and the server log. A screen that did not report ready within two minutes is
+started once more (the very first start can end on the sign-in page, see `capture.sh`); if it
+still does not settle, it is captured anyway with a warning in the run summary. A size that does
+not match the display size is a warning too.
 
 How it works:
 
 - **Only demo data.** The job builds the server of the pinned release (`studylife.version`, the
   same tag the app bundles, verified against the release's signed provenance) and starts it on
   the runner in demo mode (`DEMO_MODE` plus its confirmation, see `DemoModeGuard` in the studylife
-  repository) with a new SQLite database: the demo dataset is seeded relative to the day of the
-  run, and the demo login signs the app in as the demo student. No account, password or real
-  data is involved. The release's `server.zip` is not used because it is built for linux-x64
-  (its SQLite library does not load on macOS, and containers do not run on the macOS runner).
-  `scripts/store-screenshots/demo-server.sh` does this part.
+  repository) with a new SQLite database. `Demo__Language` picks German or English demo data and
+  `Demo__Clock=09:41` seeds the dataset for 09:41 of the run's day (studylife docs/ARCHITECTURE.md,
+  "Demo dataset options"), so today has a session done in the morning and one planned for the
+  afternoon whenever the run happens. The demo login signs the app in as the demo student. No
+  account, password or real data is involved. The release's `server.zip` is not used because it
+  is built for linux-x64 (its SQLite library does not load on macOS, and containers do not run on
+  the macOS runner). `scripts/store-screenshots/demo-server.sh` does this part.
+- **Preview of unreleased studylife changes.** `-f studylife_ref=<branch or commit>` builds the
+  server and the bundled client from that ref instead of the pin, without the provenance check
+  (the run summary warns). For trying client changes before their release only; the images to
+  upload come from a run against the pin.
 - **Normal transport security.** The server speaks https with a certificate from a throwaway CA
   made in the job (valid seven days); `scripts/store-screenshots/capture.sh` trusts that CA
   inside each simulator (`simctl keychain add-root-cert`). The app's App Transport Security
@@ -604,22 +616,41 @@ How it works:
   `-p:StoreScreenshots=true`, which compiles in the screenshot mode
   (`Services/StoreScreenshotSession.cs`); no other build contains it, and even this build only
   acts on it in the iOS Simulator. The capture script launches the app once per screen with
-  `--store-screenshots <server> --route <route> --clock 09:41` and `-AppleLanguages (de)`. The app takes the
-  server from the arguments, lets the demo login sign it in, opens the route, hides the sidebar's
-  "DEMO" marker (an inline style on that one element; the server's demo mode is unchanged), pins
-  the sidebar clock to the `--clock` time (the status bar's) and writes a status
-  file into its data container once the page is ready; the script waits for that file and then
-  captures the screen with `simctl io screenshot`. The decisions (which arguments are accepted:
-  https to any host or plain http to this machine only, plain in-app routes only, a 24-hour
-  `HH:mm` clock only; when the page counts as ready: signed in, on the route and no loading
-  placeholder for three looks half a second apart) are `StoreScreenshotLaunch` and `StoreScreenshotReadiness` in
-  `StudyLife.App.Core`, with unit tests.
+  `--store-screenshots <server> --route <route> --clock 09:41` and the job's `-AppleLanguages` /
+  `-AppleLocale`. The app takes the server from the arguments, registers a `TimeProvider` pinned
+  to the `--clock` time on today's date (`PinnedTimeProvider`; the shared client reads every "now"
+  from it), lets the demo login sign it in, opens the route, hides the sidebar's "DEMO" marker (an
+  inline style on that one element; the server's demo mode is unchanged), writes the widget/Watch
+  snapshot of that moment and then a status file into its data container once the page is ready;
+  the script waits for that file and captures the screen with `simctl io screenshot`. The
+  decisions (which arguments are accepted: https to any host or plain http to this machine only,
+  plain in-app routes with at most a simple `name=value` query such as `/notes?note=3`, a 24-hour
+  `HH:mm` clock only; when the page counts as ready: signed in, on the route's path and no loading
+  placeholder for three looks half a second apart; the pinned clock) are `StoreScreenshotLaunch`,
+  `StoreScreenshotReadiness` and `PinnedTimeProvider` in `StudyLife.App.Core`, with unit tests. The
+  notes route carries the id of the demo note, which the script asks the demo server for (the ids
+  change with every reseed).
+- **iPad without the window handle.** iPadOS 26 starts new simulators in "Windowed Apps"
+  multitasking, which draws a resize handle (a small grey arc) into the bottom right corner of the
+  app. The script switches the iPad simulators to "Full Screen Apps" (two SpringBoard defaults)
+  before their restart.
+- **Apple Watch.** `scripts/store-screenshots/build-watch.sh` builds the Watch app target of the
+  XcodeGen project (`native/ios-signing/project.yml`) for the watchOS Simulator, signed ad hoc (no
+  team, no profile). The Watch app has no server connection of its own; on a device it shows the
+  snapshot the phone sends it. The phone app writes that snapshot during the dashboard screenshot
+  (`HomeWidgetSnapshot.BuildAsync`, the same bytes `WatchBridge` sends to a paired Watch), and the
+  script copies it into the Watch simulator's App Group container before launching the Watch app.
+  watchOS simulators refuse status bar overrides (`simctl status_bar`: "not supported"), so the
+  Watch's clock and its "next session" use the real time of the run: a run in the morning (UTC)
+  shows the afternoon session as next. The Watch app is launched with `--store-screenshots`,
+  which (in simulator builds only) skips its notification permission request; the simulator has no
+  way to answer that sheet beforehand, and it would cover the screen.
 
-Limits: the simulator build is the plain .NET app, without the native shell
+Limits: the iOS simulator build is the plain .NET app, without the native shell
 (`scripts/apple/release-ios.sh`). The home screen widgets, the Live Activity on the lock screen
-and in the Dynamic Island, the lock screen itself, the share extension and the Apple Watch app
-are not in it and have to be captured by hand on a device. Another language or more screens
-are a change to `LANGUAGE_ARGS` and `SCREENS` in `scripts/store-screenshots/capture.sh`.
+and in the Dynamic Island, the lock screen itself and the share extension are not in it and have
+to be captured by hand on a device. More screens are a change to `SCREENS`, another language to
+the `case` in `scripts/store-screenshots/capture.sh` and the workflow's `languages` input.
 
 ## Architecture notes
 
