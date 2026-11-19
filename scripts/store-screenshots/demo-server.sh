@@ -40,12 +40,18 @@ CN = StudyAtrium store screenshots throwaway CA
 basicConstraints = critical, CA:TRUE
 keyUsage = critical, keyCertSign, cRLSign
 subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always
 EOF
+# Python 3.13+ verifies with VERIFY_X509_STRICT, which rejects a leaf without an Authority Key
+# Identifier ("Missing Authority Key Identifier") - capture.sh's demo note lookup then failed and the
+# notes screenshot fell back to the list. Both key identifiers keep the chain RFC 5280 conformant.
 cat > leaf.ext <<'EOF'
 basicConstraints = CA:FALSE
 keyUsage = critical, digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth
 subjectAltName = DNS:localhost, IP:127.0.0.1, IP:::1
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always
 EOF
 
 openssl req -x509 -new -nodes -newkey rsa:2048 -sha256 -days 7 -config ca.cnf -keyout ca.key -out ca.pem 2>/dev/null
