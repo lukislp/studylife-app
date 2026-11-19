@@ -677,7 +677,7 @@ the `case` in `scripts/store-screenshots/capture.sh` and the workflow's `languag
   the browser client.
 - `Services/TimerLiveActivity.cs` — facade over the Swift bridge (`native/ios-liveactivity`);
   `TimerLiveActivityCoordinator` additionally registers the ActivityKit push token with the
-  server (`PUT /api/timerstate/liveactivity-token`) so the worker can push phase transitions
+  server (`PUT /api/timerstate/liveactivity-token`, removed again with `DELETE` when the activity ends and before sign-out) so the worker can push phase transitions
   via APNs while the app is terminated (paid signing only, see above).
 - `Services/HomeWidgetSnapshot.cs` — writes a JSON snapshot to the shared App Group
   container for the home screen widget (`native/ios-liveactivity/Widget/StudyTodayWidget.swift`);
@@ -921,8 +921,11 @@ extension's inbox file, so it never reaches the next account), the system's URL 
 notifications already delivered (iOS and Mac Catalyst). The
 Spotlight entries live in the app's own index under complete file protection (readable only while
 the device is unlocked). Right before a manual sign-out the app also tells the server to stop
-sending pushes to this device (`BeforeSignOutHandler`: the "logged out" hook comes too late for
-that, the session is gone by then). This
+sending pushes to this device and deletes the Live Activity push token it registered
+(`DELETE /api/timerstate/liveactivity-token`; `BeforeSignOutHandler`: the "logged out" hook comes
+too late for that, the session is gone by then). Both calls are best effort with a five second
+limit, an older server without the token endpoint (404/405) is tolerated silently. The token is
+also deleted as soon as the Live Activity ends (timer stopped or finished). This
 holds for a manual sign-out, for a session the server declared invalid (expired or revoked), and
 for the sign-out that account deletion and the server switch end in: the shared client has a single
 "logged out" hook for all of them and `AppRoot` composes the wipe behind it (`SignOutLocalCopies`).
