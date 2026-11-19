@@ -73,7 +73,14 @@ public class StoreScreenshotLaunchTests
     [InlineData("calendar")]
     [InlineData("//evil.example.com")]
     [InlineData("/../setup")]
-    [InlineData("/notes?id=1")]
+    [InlineData("/notes?")]
+    [InlineData("/notes?note")]
+    [InlineData("/notes?note=")]
+    [InlineData("/notes?note=1&")]
+    [InlineData("/notes?note=<b>")]
+    [InlineData("/notes?note=1=2")]
+    [InlineData("/notes?next=//evil.example.com")]
+    [InlineData("/notes?note=1#top")]
     [InlineData("/Calendar")]
     [InlineData("https://example.com/")]
     [InlineData("/a b")]
@@ -119,12 +126,82 @@ public class StoreScreenshotLaunchTests
     [InlineData("/connect/focus-guard_2")]
     public void PlainRoutes_AreAccepted(string route) =>
         Assert.Equal(route, Decide(true, "--store-screenshots", "https://localhost:5443", "--route", route).Plan!.Route);
+
+    [Theory]
+    [InlineData("/notes?note=3")]
+    [InlineData("/notes?note=3&view=detail")]
+    public void ASimpleQuery_StaysPartOfTheRoute(string route) =>
+        Assert.Equal(route, Decide(true, "--store-screenshots", "https://localhost:5443", "--route", route).Plan!.Route);
+}
+
+public class StoreScreenshotClockTests
+{
+    private static readonly TimeZoneInfo Berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+
+    /// <summary>A real clock at a fixed instant in a given zone.</summary>
+    private sealed class RealClock(DateTimeOffset utcNow, TimeZoneInfo zone) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
+        public override TimeZoneInfo LocalTimeZone => zone;
+    }
+
+    private static StoreScreenshotPlan Plan(string? clock) => new(new Uri("https://localhost:5443/"), "/", clock);
+
+    [Fact]
+    public void WithoutAClock_ThePlanKeepsTheRealClock()
+    {
+        var real = new RealClock(DateTimeOffset.UtcNow, Berlin);
+
+        Assert.Same(real, Plan(null).CreateClock(real));
+    }
+
+    [Fact]
+    public void ThePinnedClock_ReadsThePlannedTimeOnTheRealDate()
+    {
+        // 23:30 UTC on 18 November is already 19 November in Berlin: the date is the local one.
+        var real = new RealClock(new DateTimeOffset(2026, 11, 18, 23, 30, 0, TimeSpan.Zero), Berlin);
+
+        var now = Plan("09:41").CreateClock(real).GetLocalNow();
+
+        Assert.Equal(new DateTime(2026, 11, 19, 9, 41, 0), now.DateTime);
+        Assert.Equal(TimeSpan.FromHours(1), now.Offset);
+    }
+
+    [Fact]
+    public void ThePinnedClock_StandsStill()
+    {
+        var real = new RealClock(new DateTimeOffset(2026, 11, 19, 15, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
+        var clock = Plan("09:41").CreateClock(real);
+
+        Assert.Equal(clock.GetUtcNow(), clock.GetUtcNow());
+        Assert.Equal(new DateTimeOffset(2026, 11, 19, 9, 41, 0, TimeSpan.Zero), clock.GetUtcNow());
+    }
+
+    [Fact]
+    public void ATimeInTheSpringForwardGap_IsTakenOneHourLater()
+    {
+        // 29 March 2026: Berlin jumps from 02:00 to 03:00, so 02:30 does not exist that day.
+        var real = new RealClock(new DateTimeOffset(2026, 3, 29, 10, 0, 0, TimeSpan.Zero), Berlin);
+
+        var now = new PinnedTimeProvider(new TimeOnly(2, 30), real).GetLocalNow();
+
+        Assert.Equal(new DateTime(2026, 3, 29, 3, 30, 0), now.DateTime);
+    }
 }
 
 public class StoreScreenshotReadinessTests
 {
     private static StoreScreenshotObservation Look(bool signedIn, string path, bool busy = false, int seconds = 1) =>
         new(signedIn, path, busy, TimeSpan.FromSeconds(seconds));
+
+    [Fact]
+    public void ARouteWithAQuery_IsReachedByItsPath()
+    {
+        var readiness = new StoreScreenshotReadiness("/notes?note=3", quietLooksNeeded: 1);
+
+        Assert.Equal(StoreScreenshotStep.Navigate, readiness.Next(Look(true, "/")));
+        Assert.Equal(StoreScreenshotStep.Capture, readiness.Next(Look(true, "/notes")));
+    }
 
     [Fact]
     public void SignedOut_Waits()
