@@ -28,9 +28,23 @@ public static class SharedNoteIntake
 
     public static List<string> TakeAll() => [.. Pending.TakeAll()];
 
+    /// <summary>Throws away everything shared but not yet turned into a note: the queue and, on iOS, the share
+    /// extension's inbox file. Called when the account signs out or is deleted, so text shared while one
+    /// account was signed in is never attached to the next one. Best effort.</summary>
+    public static void Discard()
+    {
+        Pending.Clear();
 #if IOS
-    private const string InboxFileName = "shared-note-inbox.json";
+        try
+        {
+            var container = Foundation.NSFileManager.DefaultManager.GetContainerUrl(HomeWidgetSnapshot.AppGroupId);
+            if (container?.Path is string dir) SharedInboxFile.Delete(dir);
+        }
+        catch { /* best effort: the inbox is drained and bounded on the next start anyway */ }
+#endif
+    }
 
+#if IOS
     /// <summary>Drains the app group inbox filled by the share extension (a JSON array
     /// of strings) into the pending list. Called on boot and on every
     /// foreground transition (AppDelegate.WillEnterForeground).</summary>
