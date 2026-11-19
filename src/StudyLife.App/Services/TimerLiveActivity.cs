@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using StudyLife.App.Core;
 using StudyLife.Client.Services;
 
 namespace StudyLife.App.Services;
@@ -207,6 +208,7 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
     private (bool IsBreak, int Round, bool IsPaused)? _lastState;
     private DateTimeOffset _lastEndsAt;
     private bool _selfCheckDone;
+    private int _tokenRegistered;
 
     public TimerLiveActivityCoordinator(TimerService timer, HttpClient? http = null)
     {
@@ -242,8 +244,28 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
         if (_http == null) return;
         _ = Task.Run(async () =>
         {
-            try { await _http.PutAsJsonAsync("api/timerstate/liveactivity-token", new { Token = token }); }
+            try
+            {
+                await _http.PutAsJsonAsync(LiveActivityToken.Path, new { Token = token });
+                Volatile.Write(ref _tokenRegistered, 1);
+            }
             catch { /* offline - next token refresh or app restart tries again */ }
+        });
+    }
+
+    /// <summary>Deletes the registered token on the server (DELETE api/timerstate/liveactivity-token) once
+    /// the activity is over, so the server does not keep a token for a finished card. Best effort and
+    /// silent towards the user: failures are only logged, an older server without the endpoint (404/405)
+    /// is not even logged. Only runs if a token was registered in this process (idle ticks call it too).</summary>
+    private void DeleteRegisteredToken()
+    {
+        if (_http == null || Interlocked.Exchange(ref _tokenRegistered, 0) == 0) return;
+        _ = Task.Run(async () =>
+        {
+            using var timeout = new CancellationTokenSource(BeforeSignOutHandler.Timeout);
+            var outcome = await LiveActivityToken.DeleteAsync(_http, timeout.Token);
+            if (outcome == LiveActivityTokenDeletion.Failed)
+                System.Diagnostics.Debug.WriteLine("LiveActivity: deleting the push token on the server failed (ignored)");
         });
     }
 
@@ -274,6 +296,7 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
             if (isIdle)
             {
                 TimerLiveActivity.End();
+                DeleteRegisteredToken();
                 _lastState = null;
                 return;
             }
@@ -327,6 +350,7 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
 #else
         if (!TimerLiveActivity.IsSupported) return;
         TimerLiveActivity.End();
+        DeleteRegisteredToken();
         _lastState = null;
 #endif
     }

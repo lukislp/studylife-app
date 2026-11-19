@@ -119,11 +119,15 @@ public static class MauiProgram
             // round trip, avoiding a DI construction cycle (see SessionHandler's doc comment).
             // BeforeSignOutHandler sits inside the session handler, so the push unregistration it sends right
             // before a sign-out carries the same session header (the logged-out hook would be too late).
+            // A second one deletes the Live Activity push token the same way (older servers answer 404/405, tolerated).
             var handler = new SessionHandler(sp.GetRequiredService<SessionTokenStore>(), baseUri, sp)
             {
                 InnerHandler = new BeforeSignOutHandler(baseUri, NativePush.CreateSignOutUnregistration)
                 {
-                    InnerHandler = new HttpClientHandler()
+                    InnerHandler = new BeforeSignOutHandler(baseUri, LiveActivityToken.CreateSignOutDeletion)
+                    {
+                        InnerHandler = new HttpClientHandler()
+                    }
                 }
             };
             return new HttpClient(handler) { BaseAddress = baseUri };
