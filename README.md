@@ -604,10 +604,6 @@ How it works:
   account, password or real data is involved. The release's `server.zip` is not used because it
   is built for linux-x64 (its SQLite library does not load on macOS, and containers do not run on
   the macOS runner). `scripts/store-screenshots/demo-server.sh` does this part.
-- **Preview of unreleased studylife changes.** `-f studylife_ref=<branch or commit>` builds the
-  server and the bundled client from that ref instead of the pin, without the provenance check
-  (the run summary warns). For trying client changes before their release only; the images to
-  upload come from a run against the pin.
 - **Normal transport security.** The server speaks https with a certificate from a throwaway CA
   made in the job (valid seven days); `scripts/store-screenshots/capture.sh` trusts that CA
   inside each simulator (`simctl keychain add-root-cert`). The app's App Transport Security

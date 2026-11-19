@@ -19,12 +19,6 @@ on:
         type: choice
         options: [dark, light]
         default: dark
-      studylife_ref:
-        description: >-
-          Preview only: a studylife branch or commit to build the server and client from instead of the
-          release pinned in studylife.version (not verified against release provenance). Empty = the pin.
-        type: string
-        default: ""
 
 permissions:
   actions: read
@@ -74,22 +68,8 @@ jobs:
         with:
           persist-credentials: false
       # The server and the app's bundled client both come from this checkout: the release named in
-      # studylife.version, verified against the release's signed build provenance...
-      - if: inputs.studylife_ref == ''
-        uses: ./.github/actions/checkout-studylife
-      # ...or, to preview client/server changes before they are released, the given ref without that
-      # verification. The images of such a run are a preview, never the ones to upload.
-      - if: inputs.studylife_ref != ''
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: lukislp/studylife
-          ref: ${{ inputs.studylife_ref }}
-          path: studylife
-          persist-credentials: false
-      - if: inputs.studylife_ref != ''
-        env:
-          STUDYLIFE_REF: ${{ inputs.studylife_ref }}
-        run: echo "::warning::preview run against studylife $STUDYLIFE_REF ($(git -C studylife rev-parse --short HEAD)), not the pinned release"
+      # studylife.version, verified against the release's signed build provenance.
+      - uses: ./.github/actions/checkout-studylife
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: "10.0.x"
