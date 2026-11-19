@@ -1,10 +1,48 @@
 namespace StudyLife.App.Core;
 
 /// <summary>What a store screenshot run asks the app to do: sign in on this server (with the demo
-/// account its demo mode provides) and show this route. <paramref name="Clock"/> is the time the in-app clock
-/// shows instead of the real one ("09:41"), the same as the simulator's status bar override; null leaves the
-/// clock alone.</summary>
-public sealed record StoreScreenshotPlan(Uri Server, string Route, string? Clock = null);
+/// account its demo mode provides) and show this route (a path, optionally with a simple query such as
+/// <c>/notes?note=3</c>). <paramref name="Clock"/> is the time the app's clock reads instead of the real one
+/// ("09:41"), the same as the simulator's status bar override; null leaves the clock alone.</summary>
+public sealed record StoreScreenshotPlan(Uri Server, string Route, string? Clock = null)
+{
+    /// <summary>The app's clock for this run: <see cref="Clock"/> pinned on today's date (see
+    /// <see cref="PinnedTimeProvider"/>), or <paramref name="system"/> when the plan has no clock.</summary>
+    public TimeProvider CreateClock(TimeProvider system) =>
+        Clock is { } text ? new PinnedTimeProvider(TimeOnly.ParseExact(text, "HH:mm", System.Globalization.CultureInfo.InvariantCulture), system) : system;
+}
+
+/// <summary>
+/// A clock that always reads the same local time of day on the real clock's current date: the store screenshot
+/// mode registers it as the app's <see cref="TimeProvider"/>, so every "now" of the shared client (calendar now
+/// line, countdowns, sidebar clock, which sessions are done) agrees with the 09:41 of the simulator's status
+/// bar. The time zone is the real clock's, so local wall time is exactly <c>Time</c>. Timers built on this clock
+/// are the real clock's: the pinned value only answers "what time is it".
+/// </summary>
+public sealed class PinnedTimeProvider(TimeOnly time, TimeProvider real) : TimeProvider
+{
+    public TimeOnly Time { get; } = time;
+
+    public override TimeZoneInfo LocalTimeZone => real.LocalTimeZone;
+
+    public override DateTimeOffset GetUtcNow()
+    {
+        var zone = real.LocalTimeZone;
+        var localDate = TimeZoneInfo.ConvertTime(real.GetUtcNow(), zone).Date;
+        var local = DateTime.SpecifyKind(localDate.Add(Time.ToTimeSpan()), DateTimeKind.Unspecified);
+        // A pinned time inside a daylight saving gap does not exist locally; it is taken one hour later.
+        if (zone.IsInvalidTime(local))
+            local = local.AddHours(1);
+        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(local, zone), TimeSpan.Zero);
+    }
+
+    public override long GetTimestamp() => real.GetTimestamp();
+
+    public override long TimestampFrequency => real.TimestampFrequency;
+
+    public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
+        real.CreateTimer(callback, state, dueTime, period);
+}
 
 /// <summary>Why the launch arguments did not produce a plan.</summary>
 public enum StoreScreenshotLaunchProblem
@@ -96,12 +134,25 @@ public static class StoreScreenshotLaunch
     }
 
     /// <summary>A path inside the app: starts with one slash, lower-case letters, digits, '-', '_' and
-    /// single slashes only. Rules out other hosts ("//host"), schemes, queries and "..".</summary>
+    /// single slashes only. Rules out other hosts ("//host"), schemes and "..". It may end in a simple query of
+    /// <c>name=value</c> pairs made of the same characters (<c>/notes?note=3</c>, a link the page itself
+    /// understands); nothing else can be smuggled in.</summary>
     private static bool IsPlainRoute(string route)
     {
         if (route.Length is 0 or > MaxRouteLength || route[0] != '/' || route.Contains("//", StringComparison.Ordinal))
             return false;
-        return route.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-' or '_' or '/');
+        var parts = route.Split('?', 2);
+        if (!parts[0].All(c => IsRouteChar(c) || c == '/'))
+            return false;
+        return parts.Length == 1 || parts[1].Split('&').All(IsQueryPair);
+    }
+
+    private static bool IsRouteChar(char c) => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-' or '_';
+
+    private static bool IsQueryPair(string pair)
+    {
+        var nameValue = pair.Split('=');
+        return nameValue.Length == 2 && nameValue.All(p => p.Length > 0 && p.All(IsRouteChar));
     }
 
     private static int IndexOf(IReadOnlyList<string> arguments, string name)
@@ -204,10 +255,11 @@ public sealed class StoreScreenshotReadiness
         return StoreScreenshotStep.Capture;
     }
 
-    /// <summary>"/calendar/" and "/calendar" are the same page; the root stays "/".</summary>
+    /// <summary>"/calendar/" and "/calendar" are the same page, so are "/notes?note=3" and "/notes" (the query
+    /// is for the page, the address check only compares paths); the root stays "/".</summary>
     private static string Normalise(string path)
     {
-        var trimmed = (path ?? "").Trim().TrimEnd('/');
+        var trimmed = (path ?? "").Split('?', 2)[0].Trim().TrimEnd('/');
         return trimmed.Length == 0 ? "/" : trimmed;
     }
 }

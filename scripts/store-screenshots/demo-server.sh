@@ -11,12 +11,20 @@
 # the runner). The capture script trusts that CA inside each simulator, so the app connects with its normal
 # transport security - nothing about App Transport Security is relaxed for the screenshots.
 #
-# Environment: SERVER_DLL (built StudyLife.Server.dll), WORK_DIR (empty folder), PORT (default 5443).
+# The dataset's language and time of day come from the server's demo options (studylife docs/ARCHITECTURE.md
+# "Demo dataset options"): Demo__Language picks German or English data, Demo__Clock seeds it for the time the
+# screenshots show (the status bar and the app's clock), so "done this morning" and "later today" are right
+# whenever the run happens.
+#
+# Environment: SERVER_DLL (built StudyLife.Server.dll), WORK_DIR (empty folder), PORT (default 5443),
+# LANGUAGE (de|en, default de), DEMO_CLOCK (HH:mm, default 09:41).
 # Writes WORK_DIR/ca.pem (for the simulators) and WORK_DIR/server.log; prints the server address.
 set -euo pipefail
 
 : "${SERVER_DLL:?path to StudyLife.Server.dll}" "${WORK_DIR:?work folder}"
 PORT="${PORT:-5443}"
+LANGUAGE="${LANGUAGE:-de}"
+DEMO_CLOCK="${DEMO_CLOCK:-09:41}"
 URL="https://localhost:$PORT"
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
@@ -54,6 +62,8 @@ Kestrel__Certificates__Default__Path="$WORK_DIR/leaf.pfx" \
 Kestrel__Certificates__Default__Password=store-screenshots \
 DEMO_MODE=true \
 DEMO_MODE_CONFIRM_DATA_LOSS=yes-delete-all-data \
+Demo__Language="$LANGUAGE" \
+Demo__Clock="$DEMO_CLOCK" \
   nohup dotnet "$SERVER_DLL" > server.log 2>&1 &
 echo $! > server.pid
 

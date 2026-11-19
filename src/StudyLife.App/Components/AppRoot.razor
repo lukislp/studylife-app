@@ -16,6 +16,7 @@
 @inject DeepLinkService DeepLinks
 @inject TimerService Timer
 @inject AppStateService State
+@inject TimeProvider Clock
 @inject HttpClient Http
 @inject Toolbelt.Blazor.I18nText.I18nText I18nText
 
@@ -242,7 +243,7 @@ else if (_needsServerUrl)
             HandleDeepLink(pending);
         // Store screenshot run only (a no-op in every other build, see StoreScreenshotSession).
         if (StoreScreenshotSession.Plan is not null)
-            _ = InvokeAsync(() => StoreScreenshotSession.RunAsync(() => TokenStore.Token is not null, Nav, JS, _screenshotRun.Token));
+            _ = InvokeAsync(() => StoreScreenshotSession.RunAsync(() => TokenStore.Token is not null, Nav, JS, State, _screenshotRun.Token));
     }
 
     private readonly CancellationTokenSource _screenshotRun = new();
@@ -299,7 +300,7 @@ else if (_needsServerUrl)
 
     private void HandleSessionCompleteForWidget()
     {
-        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, justCompleted: true));
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, justCompleted: true, clock: Clock));
     }
 
     /// <summary>Logs the focus round(s) that just ended with the intervals the timer really ran: the
@@ -320,7 +321,7 @@ else if (_needsServerUrl)
         var current = (isRunning, isBreak, round);
         if (current == _lastWidgetTimerState) return;
         _lastWidgetTimerState = current;
-        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer));
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, clock: Clock));
     }
 
     // 45min: long enough to matter (Ultradian/Deep Dive/Marathon qualify, Pomodoro/Sprint/
@@ -346,7 +347,7 @@ else if (_needsServerUrl)
         _lastStandNudgeSlot = slot;
         _ = NativeBridge.ShowNotificationAsync(N.StandTitle,
             string.Format(N.StandBody, slot * StandNudgeIntervalMinutes));
-        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, standNudge: true));
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, standNudge: true, clock: Clock));
     }
 
     private void HandleDeepLink(string route) => _ = InvokeAsync(() => Nav.NavigateTo(route));
@@ -392,7 +393,7 @@ else if (_needsServerUrl)
         // Both calls are no-ops on other platforms.
         BackgroundRefresh.SetHandler(RefreshInBackgroundAsync);
         _ = Task.Run(() => SpotlightIndexer.ReindexAsync(Http));
-        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer));
+        _ = Task.Run(() => HomeWidgetSnapshot.UpdateAsync(State, Timer, clock: Clock));
 #if IOS
         SharedNoteIntake.DrainIosInbox(); // cold start: collect anything left behind by the share extension
 #endif
@@ -407,7 +408,7 @@ else if (_needsServerUrl)
         await State.FetchSettingsFromServerAsync();
         await State.GetSessionsAsync();
         await SpotlightIndexer.ReindexAsync(Http);
-        await HomeWidgetSnapshot.UpdateAsync(State, Timer);
+        await HomeWidgetSnapshot.UpdateAsync(State, Timer, clock: Clock);
     }
 
     private void OnUrlInput(ChangeEventArgs e)

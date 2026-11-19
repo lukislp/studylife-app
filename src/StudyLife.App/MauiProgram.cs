@@ -85,6 +85,9 @@ public static class MauiProgram
         // comes from a platform cache (ServerCheckHandler).
         builder.Services.AddSingleton<IServerChecker>(_ =>
             new ServerChecker(ServerCheckHandler.Create(), failures: new ConnectionFailure(PlatformTlsFailure.IsTrustFailure)));
+        // The UI's one clock (StudyLife.Client ClockExtensions): the system clock, or in a store screenshot run the
+        // plan's time pinned on today's date, so the shared client's "now" agrees with the status bar override.
+        builder.Services.AddSingleton<TimeProvider>(StoreScreenshotSession.Clock);
         builder.Services.AddSingleton<ServerEntry>();
         builder.Services.AddSingleton<DeepLinkService>();
         builder.Services.AddScoped<INativeAppAuth, NativeAppAuth>();

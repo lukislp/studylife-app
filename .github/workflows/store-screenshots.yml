@@ -1,12 +1,19 @@
 name: Store screenshots
 
-# App Store screenshots of the iOS app (README "App Store screenshots"): the pinned StudyAtrium server runs
-# on the runner in demo mode, a simulator build of the app signs in as the demo student and is launched once
-# per screen on an iPhone 6.9" and an iPad 13" simulator. Manual only; needs no secret. The images are a run
-# artifact and are never committed.
+# App Store screenshots of the iOS app and its Apple Watch app (README "App Store screenshots"): the pinned
+# StudyAtrium server runs on the runner in demo mode (German or English demo data, seeded for 09:41), a
+# simulator build of the app signs in as the demo student and is launched once per screen on an iPhone 6.9"
+# and an iPad 13" simulator with its clock pinned to the status bar's 09:41; the Watch app is captured on a
+# 46mm Watch simulator with the snapshot the phone app computed. One job per language. Manual only; needs no
+# secret. The images are run artifacts and are never committed.
 on:
   workflow_dispatch:
     inputs:
+      languages:
+        description: "Screenshot languages (system, app and demo data)"
+        type: choice
+        options: [both, de, en]
+        default: both
       appearance:
         description: "Simulator appearance (the app follows it)"
         type: choice
@@ -23,15 +30,20 @@ concurrency:
 
 jobs:
   screenshots:
+    name: screenshots (${{ matrix.language }})
     runs-on: macos-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON(inputs.languages == 'de' && '["de"]' || inputs.languages == 'en' && '["en"]' || '["de","en"]') }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: block
-          # The test-ios list (checkout, verified pin, NuGet, workloads, artifact upload). The demo server
-          # and the simulators talk over localhost only.
+          # The test-ios list (checkout, verified pin, NuGet, workloads, XcodeGen release, artifact upload).
+          # The demo server and the simulators talk over localhost only.
           allowed-endpoints: >
             *.githubapp.com:443
             *.blob.core.windows.net:443
@@ -64,7 +76,8 @@ jobs:
       # Same single-target patch and workload pin as test-ios (see the comments in ci-cd.yml).
       - run: sed -i '' -E 's|<TargetFrameworks>[^<]*</TargetFrameworks>|<TargetFramework>net10.0-ios</TargetFramework>|' src/StudyLife.App/StudyLife.App.csproj
       - run: dotnet workload install maui-ios --version 10.0.401
-      # Built from the verified tag instead of the release's server.zip: that archive is published for
+      - run: bash scripts/apple/install-xcodegen.sh
+      # Built from the checked-out tag instead of the release's server.zip: that archive is published for
       # linux-x64 and carries the Linux SQLite library, which does not load on the macOS runner (containers
       # cannot run there either). OpenAPI generation is switched off; it would only rewrite the checkout's spec.
       - name: Build the pinned server
@@ -76,6 +89,8 @@ jobs:
         env:
           SERVER_DLL: ${{ github.workspace }}/studylife/src/StudyLife.Server/bin/Release/net10.0/StudyLife.Server.dll
           WORK_DIR: ${{ runner.temp }}/demo-server
+          LANGUAGE: ${{ matrix.language }}
+          DEMO_CLOCK: "09:41"
         run: |
           url="$(bash scripts/store-screenshots/demo-server.sh)"
           echo "url=$url" >> "$GITHUB_OUTPUT"
@@ -88,18 +103,21 @@ jobs:
           app="$(find src/StudyLife.App/bin/Release -type d -name 'StudyLife.App.app' -path '*iossimulator-arm64*' | head -n 1)"
           [ -n "$app" ] || { echo "::error::no simulator .app bundle found"; exit 1; }
           echo "APP_PATH=$GITHUB_WORKSPACE/$app" >> "$GITHUB_ENV"
+      - name: Build the Watch app for the watchOS Simulator
+        run: echo "WATCH_APP_PATH=$(bash scripts/store-screenshots/build-watch.sh)" >> "$GITHUB_ENV"
       - name: Capture the screenshots
         env:
           SERVER_URL: ${{ steps.server.outputs.url }}
           CA_CERT: ${{ runner.temp }}/demo-server/ca.pem
           OUT_DIR: ${{ runner.temp }}/store-screenshots
+          LANGUAGE: ${{ matrix.language }}
           APPEARANCE: ${{ inputs.appearance || 'dark' }}
         run: bash scripts/store-screenshots/capture.sh
       - name: Upload the iPhone 6.9" screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: store-screenshots-iphone-6.9
+          name: store-screenshots-${{ matrix.language }}-iphone-6.9
           path: ${{ runner.temp }}/store-screenshots/iphone-6.9/*.png
           if-no-files-found: warn
           retention-days: 14
@@ -107,16 +125,24 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: store-screenshots-ipad-13
+          name: store-screenshots-${{ matrix.language }}-ipad-13
           path: ${{ runner.temp }}/store-screenshots/ipad-13/*.png
           if-no-files-found: warn
           retention-days: 14
-      # App and server console output, for a run that did not produce what it should.
+      - name: Upload the Apple Watch screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: store-screenshots-${{ matrix.language }}-watch-46mm
+          path: ${{ runner.temp }}/store-screenshots/watch-46mm/*.png
+          if-no-files-found: warn
+          retention-days: 14
+      # App and server console output and the Watch snapshot, for a run that did not produce what it should.
       - name: Upload the logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: store-screenshots-logs
+          name: store-screenshots-${{ matrix.language }}-logs
           path: |
             ${{ runner.temp }}/store-screenshots/logs/
             ${{ runner.temp }}/demo-server/server.log
