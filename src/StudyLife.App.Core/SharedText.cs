@@ -48,6 +48,12 @@ public sealed class SharedTextQueue
         }
     }
 
+    /// <summary>Drops every waiting text without handing it on (sign-out: it must not become a note of the next account).</summary>
+    public void Clear()
+    {
+        lock (_lock) _pending.Clear();
+    }
+
     public IReadOnlyList<string> TakeAll()
     {
         lock (_lock)
@@ -56,5 +62,22 @@ public sealed class SharedTextQueue
             _pending.Clear();
             return result;
         }
+    }
+}
+
+/// <summary>The iOS share extension's inbox file in the app group container.</summary>
+public static class SharedInboxFile
+{
+    public const string FileName = "shared-note-inbox.json";
+
+    /// <summary>Deletes the inbox file in <paramref name="containerDirectory"/>; true when there was one.
+    /// Texts shared before a sign-out belong to the account that was signed in and are discarded with it.</summary>
+    public static bool Delete(string containerDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(containerDirectory);
+        var path = Path.Combine(containerDirectory, FileName);
+        if (!File.Exists(path)) return false;
+        File.Delete(path);
+        return true;
     }
 }

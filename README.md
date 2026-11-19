@@ -863,10 +863,13 @@ the app talks to the server the user types in on first launch and to nothing the
 operates (no analytics SDK, no advertising identifier, no tracking; the telemetry events and the
 push token go to that server, and telemetry only after the user's consent). That is the
 reading of Apple's definition ("collect" means data leaves the device to the developer or third
-parties), which is the developer's to confirm in App Store Connect. Two caveats the code makes
-visible: a demo or review instance operated by the developer is a server that does collect (account,
-notes, ...) and would change the answer, and the Marketplace browser calls the public GitHub API
-(`api.github.com`) from the device, which exposes the device's IP address to GitHub.
+parties), which is the developer's to confirm in App Store Connect. The servers the developer
+operates himself do not change that answer: the public demo is read-only, signs every visitor into one
+shared demo account and stores nothing that identifies a visitor, and the review instance is used only
+by the reviewer account that Apple's App Review signs in with and is not offered to anyone else (the
+published privacy policy, section 7.1, gives the reasoning). One caveat the code makes visible: the
+Marketplace browser calls the public GitHub API (`api.github.com`) from the device, which exposes the
+device's IP address to GitHub.
 
 ### App Review sign-in
 
@@ -875,8 +878,9 @@ which needs a server from the password sign-in release with `PasswordSignIn__Ena
 (the default). Create a dedicated review account on the server the reviewers are pointed to:
 Register → "Username and password" (or, as the owner, Setup → Password → "Reset a password" for an
 existing test account, then sign in and choose the final password). Enter the server address,
-username and password in App Store Connect. The caveat above applies: a review server operated by
-the developer is a server that collects data.
+username and password in App Store Connect. A review server operated by the developer holds only
+the reviewer account's data and is described in the privacy policy (section 7.1); it does not change the
+App Privacy answer above.
 
 ### What stays on the device after sign-out
 
@@ -884,7 +888,10 @@ Nothing of the account's content. Every sign-out removes the copies the app keep
 view (`NativeLocalCopies.WipeAsync`, the one function account deletion and the server switch use
 as well): the home screen widget snapshot (iOS App Group container, Android app data) and a
 widget refresh, the copy on a paired Apple Watch (replaced by an empty snapshot), the "next
-session starts soon" Live Activity, and the Spotlight index entries (notes and courses). The
+session starts soon" Live Activity, and the Spotlight index entries (notes and courses), the files in the cache's `exports` folder (data export,
+recovery codes), text shared into the app that was not yet turned into a note (the queue and the share
+extension's inbox file, so it never reaches the next account), the system's URL response cache and the
+notifications already delivered (iOS and Mac Catalyst). The
 Spotlight entries live in the app's own index under complete file protection (readable only while
 the device is unlocked). Right before a manual sign-out the app also tells the server to stop
 sending pushes to this device (`BeforeSignOutHandler`: the "logged out" hook comes too late for

@@ -40,7 +40,7 @@ public static class SharedNoteIntake
         {
             var container = Foundation.NSFileManager.DefaultManager.GetContainerUrl(HomeWidgetSnapshot.AppGroupId);
             if (container?.Path is not string dir) return;
-            var path = Path.Combine(dir, InboxFileName);
+            var path = Path.Combine(dir, SharedInboxFile.FileName);
             if (!File.Exists(path)) return;
             // An inbox larger than a full queue can hold was not written by our share extension: drop it unread.
             if (!IntakeLimits.FitsSharedInbox(new FileInfo(path).Length))

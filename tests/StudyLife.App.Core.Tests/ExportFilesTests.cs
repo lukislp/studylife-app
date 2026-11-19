@@ -62,4 +62,37 @@ public sealed class ExportFilesTests : IDisposable
 
         Assert.True(File.Exists(other));
     }
+
+    [Fact]
+    public void Clear_removes_the_export_and_the_recovery_codes()
+    {
+        var export = ExportFiles.Write(_cache, "studyatrium-export-20261116.json", [1]);
+        var folder = Path.GetDirectoryName(export)!;
+        File.WriteAllBytes(Path.Combine(folder, "studyatrium-recovery-codes.txt"), "AAAA-1111"u8.ToArray());
+
+        ExportFiles.Clear(_cache);
+
+        Assert.False(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public void Clear_leaves_the_rest_of_the_cache_alone()
+    {
+        Directory.CreateDirectory(_cache);
+        var other = Path.Combine(_cache, "keep.bin");
+        File.WriteAllBytes(other, [9]);
+        ExportFiles.Write(_cache, "a.txt", [1]);
+
+        ExportFiles.Clear(_cache);
+
+        Assert.True(File.Exists(other));
+    }
+
+    [Fact]
+    public void Clear_without_an_exports_folder_does_nothing()
+    {
+        ExportFiles.Clear(_cache);
+
+        Assert.False(Directory.Exists(_cache));
+    }
 }

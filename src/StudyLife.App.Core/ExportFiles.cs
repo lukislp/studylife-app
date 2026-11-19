@@ -10,6 +10,16 @@ public static class ExportFiles
 {
     public const string FolderName = "exports";
 
+    /// <summary>Removes the exports folder with everything in it (data export, recovery codes). Used on sign-out and
+    /// account deletion: a file the user downloaded for one account must not stay in the cache after it. No-op when
+    /// the folder does not exist.</summary>
+    public static void Clear(string cacheDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(cacheDirectory);
+        var folder = Path.GetFullPath(Path.Combine(cacheDirectory, FolderName));
+        if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
+    }
+
     /// <summary>Writes <paramref name="content"/> as <paramref name="fileName"/> into a fresh exports
     /// folder under <paramref name="cacheDirectory"/> and returns the full path. The client already
     /// reduced the name to one path segment (FileDownloadName.Sanitize); a name that would still leave
