@@ -23,8 +23,24 @@ private final class LiveActivityController {
     private var activity: Activity<TimerActivityAttributes>?
     private var activityTitle: String?
 
+    // update and end used to run in independent unordered Tasks: an end could overtake an update
+    // still waiting for its Activity.request, which then brought the card back right after the
+    // end. All operations run strictly one after another through this chain.
+    private let chainLock = NSLock()
+    private var chainTail: Task<Void, Never>?
+
+    private func enqueue(_ operation: @escaping @Sendable () async -> Void) {
+        chainLock.lock()
+        let previous = chainTail
+        chainTail = Task {
+            await previous?.value
+            await operation()
+        }
+        chainLock.unlock()
+    }
+
     func update(title: String, state: TimerActivityAttributes.ContentState) {
-        Task {
+        enqueue {
             // Fresh process while a card is still on the lock screen (iOS terminated the
             // suspended app, or the user swiped it away mid-session): take that card over
             // instead of requesting a second one next to it. Otherwise the old card keeps its
@@ -111,7 +127,7 @@ private final class LiveActivityController {
     }
 
     func endAll() {
-        Task {
+        enqueue {
             // Iterate over all activities of this type rather than just the own reference -
             // also cleans up leftovers from a previous app launch.
             for activity in Activity<TimerActivityAttributes>.activities {

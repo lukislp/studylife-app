@@ -167,6 +167,10 @@ public sealed class WatchTimerCoordinator : IDisposable
                 break;
             case 2:
                 _timer.Stop();
+                // Stop() raises no OnTick, so neither the Live Activity nor the focus page would
+                // notice it. Reset() puts the timer into the idle state and raises that tick
+                // (it does not push to the server again: nothing is running anymore).
+                _timer.Reset();
                 break;
             case 3:
                 _ = LoadModeAndStartAsync(modeId);
