@@ -5,7 +5,7 @@ namespace StudyLife.App.Services;
 /// <summary>
 /// The copies this app keeps outside the web view because they belong to the device, not to a session:
 /// the home screen widget snapshot (with the Watch snapshot and the Live Activity that hang off it), the
-/// Spotlight index, the queued native telemetry and the consent to it (the next sign-in asks the client to
+/// Spotlight index, the Health opt-in (the next account connects Apple Health again), the queued native telemetry and the consent to it (the next sign-in asks the client to
 /// apply the user's decision again), the files handed to the share sheet (data export, recovery codes in
 /// the cache), text shared into the app but not yet turned into a note, the HTTP response cache and the
 /// notifications already delivered (they carry course names and topics). The one place that removes them,
@@ -19,6 +19,7 @@ public static class NativeLocalCopies
         await RunAsync(HomeWidgetSnapshot.ClearAsync);
         await RunAsync(SpotlightIndexer.ClearAsync);
         await RunAsync(NativeTelemetry.RevokeAsync);
+        await RunAsync(() => Run(HealthConnection.Clear));
         await RunAsync(() => Run(() => ExportFiles.Clear(Microsoft.Maui.Storage.FileSystem.CacheDirectory)));
         await RunAsync(() => Run(SharedNoteIntake.Discard));
         await RunAsync(() => Run(PlatformCaches.Clear));
