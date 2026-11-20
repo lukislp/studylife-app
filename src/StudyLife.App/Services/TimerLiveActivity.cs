@@ -205,8 +205,7 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
 {
     private readonly TimerService _timer;
     private readonly HttpClient? _http;
-    private (bool IsBreak, int Round, bool IsPaused)? _lastState;
-    private DateTimeOffset _lastEndsAt;
+    private LiveActivityShown? _shown;
     private bool _selfCheckDone;
     private int _tokenRegistered;
 
@@ -216,6 +215,9 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
         _http = http;
         _timer.OnTick += HandleTick;
         _timer.OnSessionComplete += HandleComplete;
+        // LoadMode (mode switch, also the automatic one when the focus page opens) stops a running
+        // timer WITHOUT firing OnTick - without this the card of the stopped timer stays forever.
+        _timer.OnModeChanged += HandleModeChanged;
         TimerLiveActivity.RegisterToggleHandler();
         TimerLiveActivity.ToggleRequested += HandleToggleRequested;
 
@@ -232,6 +234,7 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
     {
         _timer.OnTick -= HandleTick;
         _timer.OnSessionComplete -= HandleComplete;
+        _timer.OnModeChanged -= HandleModeChanged;
         TimerLiveActivity.ToggleRequested -= HandleToggleRequested;
         TimerLiveActivity.PushTokenReceived -= HandlePushTokenReceived;
     }
@@ -290,35 +293,19 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
         var mode = _timer.CurrentMode;
         if (mode == null) return;
 
-        if (!isRunning)
+        var step = LiveActivityPlan.OnTick(isRunning, isBreak, round, secondsLeft, mode.FocusMinutes, _shown, DateTimeOffset.Now);
+        _shown = step.Shown;
+        switch (step.Action)
         {
-            var isIdle = !isBreak && round == 1 && secondsLeft == mode.FocusMinutes * 60;
-            if (isIdle)
-            {
-                TimerLiveActivity.End();
-                DeleteRegisteredToken();
-                _lastState = null;
+            case LiveActivityAction.End:
+                EndCard();
                 return;
-            }
-
-            // Paused: static remaining-time display, only updated on transition.
-            if (_lastState is not { IsPaused: true })
-            {
-                TimerLiveActivity.Update(mode.Name, DateTimeOffset.Now.AddSeconds(secondsLeft),
-                    isBreak, isPaused: true, secondsLeft, PhaseTotalSeconds(mode, isBreak), round, mode.Rounds);
-                _lastState = (isBreak, round, true);
-            }
-            return;
+            case LiveActivityAction.None:
+                return;
         }
 
-        var endsAt = DateTimeOffset.Now.AddSeconds(secondsLeft);
-        var state = (isBreak, round, false);
-        var drifted = Math.Abs((endsAt - _lastEndsAt).TotalSeconds) > 3;
-        if (_lastState == state && !drifted) return;
-
-        TimerLiveActivity.Update(mode.Name, endsAt, isBreak, isPaused: false, secondsLeft, PhaseTotalSeconds(mode, isBreak), round, mode.Rounds);
-        _lastState = state;
-        _lastEndsAt = endsAt;
+        TimerLiveActivity.Update(mode.Name, step.EndsAt, isBreak, step.IsPaused, secondsLeft, PhaseTotalSeconds(mode, isBreak), round, mode.Rounds);
+        if (step.IsPaused) return;
 
         // One-time self-check per app run - only reports REAL failures (activity fails to come
         // up although the platform said it is supported); the success case stays silent.
@@ -342,16 +329,22 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
     private static int PhaseTotalSeconds(StudyLife.Client.Models.TimerMode mode, bool isBreak)
         => (isBreak ? mode.BreakMinutes : mode.FocusMinutes) * 60;
 
-    private void HandleComplete()
+    private void HandleComplete() => EndCard();
+
+    private void HandleModeChanged(StudyLife.Client.Models.TimerMode _) => EndCard();
+
+    /// <summary>Ends the card (reset/idle, complete, mode switch, stop). Always called, even when
+    /// nothing was shown from this process: a card that survived an app restart is cleaned up too
+    /// (the Swift side ends every activity of the type). Deletes the server-side push token.</summary>
+    public void EndCard()
     {
+        _shown = null;
 #if ANDROID
         AndroidTimerNotification.End();
-        _lastState = null;
 #else
         if (!TimerLiveActivity.IsSupported) return;
         TimerLiveActivity.End();
         DeleteRegisteredToken();
-        _lastState = null;
 #endif
     }
 
@@ -362,32 +355,18 @@ public sealed class TimerLiveActivityCoordinator : IDisposable
         var mode = _timer.CurrentMode;
         if (mode == null) return;
 
-        if (!isRunning)
+        var step = LiveActivityPlan.OnTick(isRunning, isBreak, round, secondsLeft, mode.FocusMinutes, _shown, DateTimeOffset.Now);
+        _shown = step.Shown;
+        switch (step.Action)
         {
-            var isIdle = !isBreak && round == 1 && secondsLeft == mode.FocusMinutes * 60;
-            if (isIdle)
-            {
+            case LiveActivityAction.End:
                 AndroidTimerNotification.End();
-                _lastState = null;
                 return;
-            }
-            if (_lastState is not { IsPaused: true })
-            {
-                AndroidTimerNotification.Update(mode.Name, DateTimeOffset.Now.AddSeconds(secondsLeft),
-                    isBreak, isPaused: true, secondsLeft, round, mode.Rounds);
-                _lastState = (isBreak, round, true);
-            }
-            return;
+            case LiveActivityAction.None:
+                return;
         }
 
-        var endsAt = DateTimeOffset.Now.AddSeconds(secondsLeft);
-        var state = (isBreak, round, false);
-        var drifted = Math.Abs((endsAt - _lastEndsAt).TotalSeconds) > 3;
-        if (_lastState == state && !drifted) return;
-
-        AndroidTimerNotification.Update(mode.Name, endsAt, isBreak, isPaused: false, secondsLeft, round, mode.Rounds);
-        _lastState = state;
-        _lastEndsAt = endsAt;
+        AndroidTimerNotification.Update(mode.Name, step.EndsAt, isBreak, step.IsPaused, secondsLeft, round, mode.Rounds);
     }
 #endif
 }

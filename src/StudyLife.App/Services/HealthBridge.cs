@@ -81,6 +81,7 @@ public static class HealthBridge
     /// <summary>Logs a completed focus round as a Mindful Session.</summary>
     public static void LogMindfulSession(DateTime startUtc, DateTime endUtc)
     {
+        if (!HealthConnection.Gate.MayAccessHealth) return; // not connected: nothing is written to Health
 #if LIVE_ACTIVITY && IOS
         try
         {
@@ -103,6 +104,7 @@ public static class HealthBridge
     /// as "not enough data" either way, so no separate null case is needed here.</summary>
     public static Task<double[]> GetRecentHrvAsync(int days)
     {
+        if (!HealthConnection.Gate.MayAccessHealth) return Task.FromResult(Array.Empty<double>());
 #if LIVE_ACTIVITY && IOS
         _hrvCompletion = new TaskCompletionSource<double[]>(TaskCreationOptions.RunContinuationsAsynchronously);
         unsafe
@@ -138,6 +140,7 @@ public static class HealthBridge
     /// error, same "caller treats empty as not-enough-data" convention as GetRecentHrvAsync.</summary>
     public static Task<double[]> GetRecentSleepOnsetMinutesAsync(int nights)
     {
+        if (!HealthConnection.Gate.MayAccessHealth) return Task.FromResult(Array.Empty<double>());
 #if LIVE_ACTIVITY && IOS
         _sleepOnsetCompletion = new TaskCompletionSource<double[]>(TaskCreationOptions.RunContinuationsAsynchronously);
         unsafe
@@ -171,6 +174,7 @@ public static class HealthBridge
     /// arrays (not null) on denied/undetermined authorization or a query error.</summary>
     public static Task<(double[] Onsets, double[] Durations)> GetRecentSleepNightsAsync(int nights)
     {
+        if (!HealthConnection.Gate.MayAccessHealth) return Task.FromResult((Array.Empty<double>(), Array.Empty<double>()));
 #if LIVE_ACTIVITY && IOS
         _sleepNightsCompletion = new TaskCompletionSource<(double[], double[])>(TaskCreationOptions.RunContinuationsAsynchronously);
         unsafe
@@ -206,6 +210,7 @@ public static class HealthBridge
     /// genuine zero steps and skip the nudge in the former case.</summary>
     public static Task<int?> GetStepsSinceAsync(int minutesAgo)
     {
+        if (!HealthConnection.Gate.MayAccessHealth) return Task.FromResult<int?>(null);
 #if LIVE_ACTIVITY && IOS
         _stepsCompletion = new TaskCompletionSource<int?>(TaskCreationOptions.RunContinuationsAsynchronously);
         unsafe
@@ -228,7 +233,7 @@ public static class HealthBridge
     private static TaskCompletionSource<(double[] Dates, double[] Values)>? _cardioFitnessCompletion;
 #endif
 
-    /// <summary>Cardio Fitness (VO2max, ml/(kg·min)) history for the last <paramref name="days"/>
+    /// <summary>Cardio Fitness (VO2max, ml/(kgÂ·min)) history for the last <paramref name="days"/>
     /// days, oldest first, as two parallel arrays (Unix-seconds dates, values) - see
     /// INativeHealthData.GetCardioFitnessPointsAsync (studylife repo) for the exact contract,
     /// which zips these into CardioFitnessPoint record structs (NativeHealthData.cs). Both
@@ -239,6 +244,7 @@ public static class HealthBridge
     /// hit the AOT crash pattern that motivated CardioFitnessPoint.</summary>
     public static Task<(double[] Dates, double[] Values)> GetCardioFitnessHistoryAsync(int days)
     {
+        if (!HealthConnection.Gate.MayAccessHealth) return Task.FromResult((Array.Empty<double>(), Array.Empty<double>()));
 #if LIVE_ACTIVITY && IOS
         _cardioFitnessCompletion = new TaskCompletionSource<(double[], double[])>(TaskCreationOptions.RunContinuationsAsynchronously);
         unsafe
@@ -292,3 +298,4 @@ public static class HealthBridge
     private static extern unsafe void slla_health_get_cardio_fitness_history(int days, delegate* unmanaged<double*, double*, int, void> handler);
 #endif
 }
+
