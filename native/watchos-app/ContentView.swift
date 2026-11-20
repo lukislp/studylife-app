@@ -35,6 +35,14 @@ struct ContentView: View {
                 .padding(.horizontal, 4)
             }
         }
+        // Store screenshot run only: the simulator cannot pin the system clock, so the real one is hidden and the
+        // pinned time drawn in its place (see storeScreenshotClockText).
+        .toolbar(storeScreenshotClockText == nil ? .automatic : .hidden, for: .navigationBar)
+        .overlay(alignment: .topTrailing) {
+            if let clock = storeScreenshotClockText {
+                Text(clock).font(.system(size: 20, weight: .semibold).monospacedDigit()).padding(.trailing, 14).padding(.top, 2)
+            }
+        }
         // Triggered by a genuine session-complete signal (sessionCompletedAt), never by a
         // plain pause/stop - see StudyLifeWatchApp.swift's didReceiveApplicationContext.
         .sheet(isPresented: $session.showRatingPrompt) {
@@ -145,7 +153,8 @@ struct ContentView: View {
             Text("→ \(title)").font(.caption2).lineLimit(1)
         }
 
-        if let recent = snapshot.recentSessions, !recent.isEmpty {
+        // The store screenshot ends after the week row: below it the list would be cut off by the screen edge.
+        if !storeScreenshotRun, let recent = snapshot.recentSessions, !recent.isEmpty {
             Divider()
             Text("Recent").font(.caption2).foregroundStyle(.secondary)
             ForEach(recent) { entry in
@@ -159,8 +168,10 @@ struct ContentView: View {
 
         // "Auswertung": scrolled to directly, not behind a button - weekly plan, 7-day chart,
         // ECTS progress, top courses, all-time total.
-        Divider()
-        StatsSection(snapshot: snapshot)
+        if !storeScreenshotRun {
+            Divider()
+            StatsSection(snapshot: snapshot)
+        }
     }
 
     private func clockLabel(_ epoch: Double) -> String {

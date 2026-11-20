@@ -90,6 +90,30 @@ final class WatchSessionDelegate: NSObject, WCSessionDelegate, ObservableObject 
     }
 }
 
+/// True in the store screenshot run (the store-screenshots workflow launches the simulator build with
+/// --store-screenshots [--clock HH:mm]); never on a device.
+var storeScreenshotRun: Bool {
+    #if targetEnvironment(simulator)
+    return ProcessInfo.processInfo.arguments.contains("--store-screenshots")
+    #else
+    return false
+    #endif
+}
+
+/// The clock the screenshot run pins (--clock 09:41) as the system would write it (24 hour or 12 hour without
+/// AM/PM, following the Watch's region), or nil outside a screenshot run. watchOS simulators refuse
+/// `simctl status_bar override`, so the screenshot draws the time itself in place of the system clock.
+var storeScreenshotClockText: String? {
+    let arguments = ProcessInfo.processInfo.arguments
+    guard storeScreenshotRun, let at = arguments.firstIndex(of: "--clock"), at + 1 < arguments.count else { return nil }
+    let parts = arguments[at + 1].split(separator: ":").compactMap { Int($0) }
+    guard parts.count == 2, let date = Calendar.current.date(bySettingHour: parts[0], minute: parts[1], second: 0, of: .now) else { return nil }
+    let uses24Hour = !(DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: .current) ?? "").contains("a")
+    let formatter = DateFormatter()
+    formatter.dateFormat = uses24Hour ? "HH:mm" : "h:mm"
+    return formatter.string(from: date)
+}
+
 @main
 struct StudyLifeWatchApp: App {
     @StateObject private var session = WatchSessionDelegate.shared
@@ -101,17 +125,9 @@ struct StudyLifeWatchApp: App {
         // Not in a store screenshot run (the store-screenshots workflow launches the simulator build with
         // --store-screenshots): the permission sheet would cover the screen being captured, and the
         // simulator offers no way to answer it beforehand. Simulator only, so no device build can skip it.
-        if !Self.isStoreScreenshotRun {
+        if !storeScreenshotRun {
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
         }
-    }
-
-    private static var isStoreScreenshotRun: Bool {
-        #if targetEnvironment(simulator)
-        return ProcessInfo.processInfo.arguments.contains("--store-screenshots")
-        #else
-        return false
-        #endif
     }
 
     var body: some Scene {

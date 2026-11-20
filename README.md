@@ -636,10 +636,16 @@ How it works:
   (`HomeWidgetSnapshot.BuildAsync`, the same bytes `WatchBridge` sends to a paired Watch), and the
   script copies it into the Watch simulator's App Group container before launching the Watch app.
   watchOS simulators refuse status bar overrides (`simctl status_bar`: "not supported"), so the
-  Watch's clock and its "next session" use the real time of the run: a run in the morning (UTC)
-  shows the afternoon session as next. The Watch app is launched with `--store-screenshots`,
-  which (in simulator builds only) skips its notification permission request; the simulator has no
-  way to answer that sheet beforehand, and it would cover the screen.
+  Watch app is launched with `--clock 09:41` as well and, in simulator builds only, hides the
+  system clock and draws that time in its place; its "next session" still uses the real time of the
+  run: a run in the morning (UTC) shows the afternoon session as next. `--store-screenshots`
+  (also simulator builds only) skips the notification permission request, which would cover the
+  screen and cannot be answered beforehand, and ends the screen after the week row so that no
+  list line is cut by the screen edge.
+- **Calendar.** The day view opens scrolled towards the current time, which cuts the first session
+  (07:30) off at the top on the phone. The screenshot mode scrolls the grid back to 06:30
+  (`storeScreenshotRevealMorning` in `native-bridge.js`) on every look of the calendar route; a view that
+  already starts earlier (the iPad week view) is left alone.
 
 Limits: the iOS simulator build is the plain .NET app, without the native shell
 (`scripts/apple/release-ios.sh`). The home screen widgets, the Live Activity on the lock screen

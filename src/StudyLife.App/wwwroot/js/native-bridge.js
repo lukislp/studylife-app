@@ -130,3 +130,22 @@ function storeScreenshotHideDemoBadge() {
     }
     return true;
 }
+
+// Store screenshot mode only: the calendar's day view opens scrolled towards "now" and can cut the first
+// session of the day off at the top. When the grid is scrolled past `minute` (minutes since midnight; the grid
+// is 1px per minute), scroll it back so that minute is the first one shown; a view that already starts earlier
+// (the iPad's week view) is left alone. The scrolling container is the closest scrollable ancestor of
+// .day-body. Never called in any other build.
+function storeScreenshotRevealMorning(minute) {
+    var body = document.querySelector('.day-body');
+    if (!body) return false;
+    var container = body.parentElement;
+    while (container && container !== document.body) {
+        var overflow = getComputedStyle(container).overflowY;
+        if ((overflow === 'auto' || overflow === 'scroll') && container.scrollHeight > container.clientHeight) break;
+        container = container.parentElement;
+    }
+    if (!container || container === document.body) return false;
+    if (container.scrollTop > minute) container.scrollTop = minute;
+    return true;
+}

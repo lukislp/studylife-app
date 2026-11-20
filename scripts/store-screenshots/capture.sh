@@ -267,9 +267,10 @@ capture_watch() {
   set_system_language "$udid"
   boot_clean "$udid"
   # watchOS simulators refuse status bar overrides (simctl: NSPOSIXErrorDomain 45, "not supported"), so the
-  # Watch shows the real time of the run; tried anyway in case a later Xcode supports it.
+  # Watch app draws the pinned time itself (--clock below) in place of the system clock; the override is tried
+  # anyway in case a later Xcode supports it.
   xcrun simctl status_bar "$udid" override --time "$STATUS_TIME" >/dev/null 2>&1 \
-    || log "$folder: no status bar override on watchOS, the Watch shows the real time"
+    || log "$folder: no status bar override on watchOS, the Watch app draws the pinned clock itself"
   xcrun simctl install "$udid" "$WATCH_APP_PATH"
   if [ -n "$watch_snapshot" ]; then
     group="$(xcrun simctl get_app_container "$udid" "$WATCH_BUNDLE_ID" "$APP_GROUP" 2>/dev/null || true)"
@@ -280,7 +281,7 @@ capture_watch() {
     fi
   fi
   xcrun simctl launch --terminate-running-process \
-    --stdout="$OUT_DIR/logs/$folder.log" --stderr="$OUT_DIR/logs/$folder.log" "$udid" "$WATCH_BUNDLE_ID" --store-screenshots >/dev/null
+    --stdout="$OUT_DIR/logs/$folder.log" --stderr="$OUT_DIR/logs/$folder.log" "$udid" "$WATCH_BUNDLE_ID" --store-screenshots --clock "$STATUS_TIME" >/dev/null
   # No readiness signal from a SwiftUI app: it reads the snapshot file on launch and draws once. The argument
   # keeps the notification permission sheet away (StudyLifeWatchApp.swift, simulator builds only).
   sleep 8
