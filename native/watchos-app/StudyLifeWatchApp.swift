@@ -90,6 +90,16 @@ final class WatchSessionDelegate: NSObject, WCSessionDelegate, ObservableObject 
     }
 }
 
+/// True in the store screenshot run (the store-screenshots workflow launches the simulator build with
+/// --store-screenshots); never on a device.
+var storeScreenshotRun: Bool {
+    #if targetEnvironment(simulator)
+    return ProcessInfo.processInfo.arguments.contains("--store-screenshots")
+    #else
+    return false
+    #endif
+}
+
 @main
 struct StudyLifeWatchApp: App {
     @StateObject private var session = WatchSessionDelegate.shared
@@ -101,17 +111,9 @@ struct StudyLifeWatchApp: App {
         // Not in a store screenshot run (the store-screenshots workflow launches the simulator build with
         // --store-screenshots): the permission sheet would cover the screen being captured, and the
         // simulator offers no way to answer it beforehand. Simulator only, so no device build can skip it.
-        if !Self.isStoreScreenshotRun {
+        if !storeScreenshotRun {
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
         }
-    }
-
-    private static var isStoreScreenshotRun: Bool {
-        #if targetEnvironment(simulator)
-        return ProcessInfo.processInfo.arguments.contains("--store-screenshots")
-        #else
-        return false
-        #endif
     }
 
     var body: some Scene {

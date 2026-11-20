@@ -62,6 +62,8 @@ public static class StoreScreenshotSession
             {
                 await HideDemoMarkerAsync(js);
                 var path = new Uri(nav.Uri).AbsolutePath;
+                if (path.StartsWith("/calendar", StringComparison.OrdinalIgnoreCase))
+                    await RevealMorningAsync(js);
                 var look = new StoreScreenshotObservation(signedIn(), path, await IsPageBusyAsync(js), clock.Elapsed);
                 switch (readiness.Next(look))
                 {
@@ -88,6 +90,15 @@ public static class StoreScreenshotSession
     private static async Task HideDemoMarkerAsync(IJSRuntime js)
     {
         try { await js.InvokeAsync<bool>("storeScreenshotHideDemoBadge"); }
+        catch { /* page not up yet */ }
+    }
+
+    /// <summary>The calendar's day view opens scrolled towards the current time, which cuts the 07:30 session off
+    /// at the top; scrolls back to 06:30 (the shared client is not changed, so the capture does it). Called on every
+    /// look of the calendar route, so a later re-scroll of the page is undone before the capture.</summary>
+    private static async Task RevealMorningAsync(IJSRuntime js)
+    {
+        try { await js.InvokeAsync<bool>("storeScreenshotRevealMorning", 390); }
         catch { /* page not up yet */ }
     }
 

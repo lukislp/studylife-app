@@ -136,7 +136,10 @@ struct ContentView: View {
         }
         .padding(.vertical, 2)
 
-        if let title = snapshot.currentTitle, let ends = snapshot.currentEndsAt {
+        // The store screenshot ends after the week row: below it the lines would be cut off by the screen edge.
+        if storeScreenshotRun {
+            EmptyView()
+        } else if let title = snapshot.currentTitle, let ends = snapshot.currentEndsAt {
             Divider()
             Text("▶ \(title)").font(.caption2.weight(.semibold)).lineLimit(1)
             Text("until \(clockLabel(ends))").font(.caption2).foregroundStyle(.secondary)
@@ -145,7 +148,7 @@ struct ContentView: View {
             Text("→ \(title)").font(.caption2).lineLimit(1)
         }
 
-        if let recent = snapshot.recentSessions, !recent.isEmpty {
+        if !storeScreenshotRun, let recent = snapshot.recentSessions, !recent.isEmpty {
             Divider()
             Text("Recent").font(.caption2).foregroundStyle(.secondary)
             ForEach(recent) { entry in
@@ -159,8 +162,10 @@ struct ContentView: View {
 
         // "Auswertung": scrolled to directly, not behind a button - weekly plan, 7-day chart,
         // ECTS progress, top courses, all-time total.
-        Divider()
-        StatsSection(snapshot: snapshot)
+        if !storeScreenshotRun {
+            Divider()
+            StatsSection(snapshot: snapshot)
+        }
     }
 
     private func clockLabel(_ epoch: Double) -> String {
