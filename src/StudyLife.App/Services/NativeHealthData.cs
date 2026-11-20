@@ -13,20 +13,15 @@ namespace StudyLife.App.Services;
 /// IsAvailable delegates straight to HealthBridge.IsAvailable, which is already false outside
 /// iOS (LIVE_ACTIVITY &amp;&amp; IOS conditional compilation) - no extra platform check needed here.
 ///
-/// Every call below is wrapped with a health_query telemetry event (kind/durationMs/
-/// authorization/result - see the wire contract in the studylife repo's ARCHITECTURE.md).
-/// Privacy: NEVER put the actual sample/night count, or any health value, into the event -
-/// only the bucketed "result" category and the duration.
+/// Every call below first asks HealthConnection.Gate: until the user tapped "Connect Apple Health"
+/// nothing is queried and no telemetry event is recorded (the UI treats null as "no data").
+/// After that each query records a health_query event with kind, durationMs and result, where result
+/// is only "ok" or "error". Nothing derived from Health leaves the device: no values, no counts, no
+/// "was there data" signal and no authorization guess.
 /// </summary>
 public sealed class NativeHealthData : INativeHealthData
 {
-    // Matches the client's own minimums (Index.Health.razor.cs: ReadinessMinSamples /
-    // SleepConsistencyMinNights, both 14) - duplicated here rather than shared because that
-    // file lives in a different project (StudyLife.Client) and the exact number is the only
-    // thing this class needs, not a dependency on the page itself.
-    private const int HrvAndSleepMinimumEntries = 14;
-
-    private readonly HealthAccessCoordinator _access = new(new BridgeHealthPlatform());
+    private readonly HealthAccessCoordinator _access = new(new BridgeHealthPlatform(), HealthConnection.Flag);
 
     public bool IsAvailable => HealthBridge.IsAvailable;
 
@@ -52,11 +47,12 @@ public sealed class NativeHealthData : INativeHealthData
 
     public async Task<IReadOnlyList<double>?> GetRecentHrvAsync(int days)
     {
+        if (!HealthConnection.Gate.MayAccessHealth) return null;
         var sw = Stopwatch.StartNew();
         try
         {
             var samples = await HealthBridge.GetRecentHrvAsync(days);
-            RecordArrayResult("hrv", sw, samples.Length, HrvAndSleepMinimumEntries);
+            RecordOk("hrv", sw);
             return samples.Length > 0 ? samples : null;
         }
         catch
@@ -68,11 +64,12 @@ public sealed class NativeHealthData : INativeHealthData
 
     public async Task<IReadOnlyList<double>?> GetRecentSleepOnsetMinutesAsync(int nights)
     {
+        if (!HealthConnection.Gate.MayAccessHealth) return null;
         var sw = Stopwatch.StartNew();
         try
         {
             var samples = await HealthBridge.GetRecentSleepOnsetMinutesAsync(nights);
-            RecordArrayResult("sleep", sw, samples.Length, HrvAndSleepMinimumEntries);
+            RecordOk("sleep", sw);
             return samples.Length > 0 ? samples : null;
         }
         catch
@@ -85,11 +82,12 @@ public sealed class NativeHealthData : INativeHealthData
     // Plain for loop, no LINQ over the tuple - see the Mono AOT note on GetCardioFitnessPointsAsync.
     public async Task<IReadOnlyList<SleepNight>?> GetRecentSleepNightsAsync(int nights)
     {
+        if (!HealthConnection.Gate.MayAccessHealth) return null;
         var sw = Stopwatch.StartNew();
         try
         {
             var (onsets, durations) = await HealthBridge.GetRecentSleepNightsAsync(nights);
-            RecordArrayResult("sleep", sw, onsets.Length, HrvAndSleepMinimumEntries);
+            RecordOk("sleep", sw);
             if (onsets.Length == 0) return null;
 
             var result = new List<SleepNight>(onsets.Length);
@@ -106,16 +104,12 @@ public sealed class NativeHealthData : INativeHealthData
 
     public async Task<int?> GetStepsSinceAsync(int minutesAgo)
     {
+        if (!HealthConnection.Gate.MayAccessHealth) return null;
         var sw = Stopwatch.StartNew();
         try
         {
             var steps = await HealthBridge.GetStepsSinceAsync(minutesAgo);
-            sw.Stop();
-            // No dashboard minimum applies to steps (unlike HRV/sleep) - any returned value
-            // (including a genuine 0) counts as "sufficient".
-            RecordHealthQuery("steps", sw.ElapsedMilliseconds,
-                authorization: steps.HasValue ? "granted" : "undetermined",
-                result: steps.HasValue ? "sufficient" : "empty");
+            RecordOk("steps", sw);
             return steps;
         }
         catch
@@ -132,16 +126,12 @@ public sealed class NativeHealthData : INativeHealthData
     // writeup) - CardioFitnessPoint is a record struct and doesn't hit that bug.
     public async Task<IReadOnlyList<CardioFitnessPoint>?> GetCardioFitnessPointsAsync(int days)
     {
+        if (!HealthConnection.Gate.MayAccessHealth) return null;
         var sw = Stopwatch.StartNew();
         try
         {
             var (dates, values) = await HealthBridge.GetCardioFitnessHistoryAsync(days);
-            sw.Stop();
-            // No dashboard minimum applies to cardio fitness readings (sparse by nature -
-            // watchOS computes them roughly monthly) - any reading counts as "sufficient".
-            RecordHealthQuery("vo2max", sw.ElapsedMilliseconds,
-                authorization: dates.Length > 0 ? "granted" : "undetermined",
-                result: dates.Length > 0 ? "sufficient" : "empty");
+            RecordOk("vo2max", sw);
             if (dates.Length == 0) return null;
 
             var result = new List<CardioFitnessPoint>(dates.Length);
@@ -156,35 +146,21 @@ public sealed class NativeHealthData : INativeHealthData
         }
     }
 
-    /// <summary>Shared classification for the array-returning queries (hrv/sleep):
-    /// HealthBridge.swift never distinguishes "denied", "undetermined" and "no samples in range"
-    /// from each other - all three come back as an empty array (see its doc comments) - so an
-    /// empty result is reported as authorization "undetermined" here, not "denied": we genuinely
-    /// don't know which of the three happened. A non-empty result at least proves authorization
-    /// was granted.</summary>
-    private static void RecordArrayResult(string kind, Stopwatch sw, int count, int minimumForSufficient)
+    private static void RecordOk(string kind, Stopwatch sw) => Record(kind, sw, "ok");
+
+    private static void RecordError(string kind, Stopwatch sw) => Record(kind, sw, "error");
+
+    // Only the kind, the duration and ok/error: whether data existed, how much, and whether the user
+    // allowed access are Health-derived and never leave the device.
+    private static void Record(string kind, Stopwatch sw, string result)
     {
         sw.Stop();
-        var result = count == 0 ? "empty" : count < minimumForSufficient ? "below_minimum" : "sufficient";
-        RecordHealthQuery(kind, sw.ElapsedMilliseconds, authorization: count > 0 ? "granted" : "undetermined", result);
-    }
-
-    private static void RecordError(string kind, Stopwatch sw)
-    {
-        sw.Stop();
-        RecordHealthQuery(kind, sw.ElapsedMilliseconds, authorization: "undetermined", result: "error");
-    }
-
-    private static void RecordHealthQuery(string kind, long durationMs, string authorization, string result) =>
         NativeTelemetry.Enqueue(new TelemetryEventDto
         {
             Type = "health_query",
             Kind = kind,
-            DurationMs = durationMs,
-            Authorization = authorization,
+            DurationMs = sw.ElapsedMilliseconds,
             Result = result,
-            // HealthBridge.swift never reports whether it filtered any outliers - always null,
-            // never a fabricated false, per the wire contract's privacy rules.
-            OutlierFiltered = null,
         });
+    }
 }

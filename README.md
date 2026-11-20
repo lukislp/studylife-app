@@ -90,7 +90,7 @@ CI and releases, never a local build.
 
 StudyAtrium is self-hosted, and the first screen says so: there is no central service, so the
 app needs the address of your own server or of the one your school, university or organisation
-runs (a link leads to the setup guide). The address (e.g. `https://studylife.example.com`, the
+runs (a link leads to the setup guide). The address (e.g. `https://studyatrium.example.com`, the
 `https://` may be left out) is checked in plain words: nothing typed, not an address, no
 answer from the server, or an answer that does not look like a StudyAtrium server (the app asks
 `GET api/instance`, which every current server answers with an installation id and a version).
@@ -128,9 +128,8 @@ the old server are untouched.
 
 The app never asks for Health access at start-up. Setup shows **Connect Apple Health**
 (on iOS, where HealthKit exists); only that tap shows the system prompt, once. The state
-comes from the system each time (`HealthAccessCoordinator`): connected (nothing to do, also for
-installs that allowed access before), or declined, where Setup explains where to turn it on
-in the Health app instead of asking again. Until access is granted, finished focus rounds are
+comes from the system once the user has tapped Connect (`HealthAccessCoordinator`): connected, or declined, where Setup explains where to turn it on
+in the Health app instead of asking again. Until the user has tapped Connect (an app-side opt-in, cleared on sign-out; `HealthGate`), no HealthKit query runs and no Mindful Minutes are written, and no health telemetry is recorded. Until access is granted, finished focus rounds are
 not written to Health and the readiness tiles stay hidden.
 
 The dialog and the rest of the app use the **language the system sets for the app** (see
@@ -728,12 +727,10 @@ This app implements the studylife repo's client telemetry contract
   handler. Only the exception type, a sanitized stack (frame lines only, capped at 4 KB, no
   message text) and its SHA-256 hash ever leave the device - never the exception message, which
   can contain user content.
-- `health_query` — one event per Apple HealthKit read (`NativeHealthData.cs`): `kind`
-  (`hrv`/`sleep`/`steps`/`vo2max`), `durationMs`, a coarse `authorization` guess (HealthKit's
-  bridge doesn't expose the real authorization status - "granted" is inferred from "data came
-  back", "undetermined" from an empty result, which conflates denied/undetermined/no-data-in-range)
-  and a bucketed `result` (`empty`/`below_minimum`/`sufficient`/`error`) - **never** the actual
-  sample/night count, and never any health value itself.
+- `health_query` - one event per Apple HealthKit read, only after the user tapped "Connect Apple Health"
+  (`NativeHealthData.cs`): `kind` (`hrv`/`sleep`/`steps`/`vo2max`), `durationMs` and `result` (`ok` or
+  `error`). Nothing derived from Health leaves the device: no authorization state, no "data / no data"
+  signal, no count and no health value.
 - `push` — `registered` (APNs token registration succeeded) / `received` (a notification arrived
   while foregrounded, or was tapped) - no push payload content.
 - `error` with `kind: dotnet | js` — unexpected failures the app caught itself (a print dialog

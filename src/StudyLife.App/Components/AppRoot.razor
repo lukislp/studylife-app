@@ -62,7 +62,7 @@ else if (_needsServerUrl)
             <div style="display:flex; flex-direction:column; gap:0.75rem; margin-top:1.25rem;">
                 <label class="ss-label" for="server-url">@T.Description</label>
                 <input id="server-url" class="input" type="url" inputmode="url" autocapitalize="off"
-                       spellcheck="false" placeholder="https://studylife.example.com"
+                       spellcheck="false" placeholder="https://studyatrium.example.com"
                        aria-label="@T.ServerUrlLabel" aria-invalid="@(_urlError != null ? "true" : null)"
                        aria-describedby="@(_urlError != null ? "server-url-error" : null)"
                        value="@_urlInput" @oninput="OnUrlInput"
@@ -222,7 +222,7 @@ else if (_needsServerUrl)
         WatchBridge.Activate();
         _watchTimer = new WatchTimerCoordinator(Timer, State, Http);
         // Health access is deliberately NOT requested here: Setup offers "Connect Apple Health" and only that
-        // tap shows the system prompt (HealthAccessCoordinator). Until then LogMindfulSession silently no-ops.
+        // tap shows the system prompt (HealthAccessCoordinator). Until then HealthGate keeps every Health query and LogMindfulSession a no-op.
         // Share menu: shared text becomes a note (Android: ACTION_SEND intent,
         // iOS: share extension inbox, drained on foreground transition/boot).
         SharedNoteIntake.PendingChanged += HandleSharedNotesChanged;
