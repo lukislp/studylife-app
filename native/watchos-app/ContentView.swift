@@ -136,7 +136,10 @@ struct ContentView: View {
         }
         .padding(.vertical, 2)
 
-        if let title = snapshot.currentTitle, let ends = snapshot.currentEndsAt {
+        // The store screenshot ends after the week row: below it the lines would be cut off by the screen edge.
+        if storeScreenshotRun {
+            EmptyView()
+        } else if let title = snapshot.currentTitle, let ends = snapshot.currentEndsAt {
             Divider()
             Text("▶ \(title)").font(.caption2.weight(.semibold)).lineLimit(1)
             Text("until \(clockLabel(ends))").font(.caption2).foregroundStyle(.secondary)
@@ -145,7 +148,6 @@ struct ContentView: View {
             Text("→ \(title)").font(.caption2).lineLimit(1)
         }
 
-        // The store screenshot ends after the week row: below it the list would be cut off by the screen edge.
         if !storeScreenshotRun, let recent = snapshot.recentSessions, !recent.isEmpty {
             Divider()
             Text("Recent").font(.caption2).foregroundStyle(.secondary)
