@@ -266,11 +266,11 @@ capture_watch() {
   xcrun simctl bootstatus "$udid" -b >/dev/null
   set_system_language "$udid"
   boot_clean "$udid"
-  # watchOS simulators refuse status bar overrides (simctl: NSPOSIXErrorDomain 45, "not supported"), so the
-  # Watch app draws the pinned time itself (--clock below) in place of the system clock; the override is tried
-  # anyway in case a later Xcode supports it.
+  # watchOS simulators refuse status bar overrides (simctl: NSPOSIXErrorDomain 45, "not supported") and the
+  # Watch app cannot replace the system clock, so the host clock itself is set to STATUS_TIME just before the
+  # capture (below); the override is tried anyway in case a later Xcode supports it.
   xcrun simctl status_bar "$udid" override --time "$STATUS_TIME" >/dev/null 2>&1 \
-    || log "$folder: no status bar override on watchOS, the Watch app draws the pinned clock itself"
+    || log "$folder: no status bar override on watchOS, the host clock is set for the capture instead"
   xcrun simctl install "$udid" "$WATCH_APP_PATH"
   if [ -n "$watch_snapshot" ]; then
     group="$(xcrun simctl get_app_container "$udid" "$WATCH_BUNDLE_ID" "$APP_GROUP" 2>/dev/null || true)"
@@ -280,8 +280,17 @@ capture_watch() {
       echo "::warning::the Watch app has no App Group container in the simulator; the Watch shows its empty state"
     fi
   fi
+  # The runner may set its clock (passwordless sudo, UTC, same day): the simulator follows it, so the Watch shows
+  # STATUS_TIME in its status bar and computes its "next session" for that time, like the phone shots. Set a few
+  # seconds past the minute, right before the launch; the capture follows within about 15 s. Restored afterwards.
+  clock_set=0
+  if sudo -n date "$(date +%m%d)${STATUS_TIME/:/}.05" >/dev/null 2>&1; then
+    clock_set=1
+  else
+    echo "::warning::could not set the host clock; the Watch shows the real time of the run"
+  fi
   xcrun simctl launch --terminate-running-process \
-    --stdout="$OUT_DIR/logs/$folder.log" --stderr="$OUT_DIR/logs/$folder.log" "$udid" "$WATCH_BUNDLE_ID" --store-screenshots --clock "$STATUS_TIME" >/dev/null
+    --stdout="$OUT_DIR/logs/$folder.log" --stderr="$OUT_DIR/logs/$folder.log" "$udid" "$WATCH_BUNDLE_ID" --store-screenshots >/dev/null
   # No readiness signal from a SwiftUI app: it reads the snapshot file on launch and draws once. The argument
   # keeps the notification permission sheet away (StudyLifeWatchApp.swift, simulator builds only).
   sleep 8
@@ -289,6 +298,7 @@ capture_watch() {
   file="$OUT_DIR/$folder/01-today.png"
   xcrun simctl io "$udid" screenshot --type=png "$file" >/dev/null
   log "$folder/01-today.png ($(check_size "$file" "$expected_size"))"
+  if [ "$clock_set" = 1 ]; then sudo -n sntp -sS time.apple.com >/dev/null 2>&1 || log "$folder: host clock not resynced (the runner is discarded after the job)"; fi
   xcrun simctl shutdown "$udid" || true
   xcrun simctl delete "$udid" || true
 }

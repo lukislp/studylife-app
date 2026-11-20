@@ -636,10 +636,10 @@ How it works:
   (`HomeWidgetSnapshot.BuildAsync`, the same bytes `WatchBridge` sends to a paired Watch), and the
   script copies it into the Watch simulator's App Group container before launching the Watch app.
   watchOS simulators refuse status bar overrides (`simctl status_bar`: "not supported"), so the
-  Watch app is launched with `--clock 09:41` as well and, in simulator builds only, hides the
-  system clock and draws that time in its place; its "next session" still uses the real time of the
-  run: a run in the morning (UTC) shows the afternoon session as next. `--store-screenshots`
-  (also simulator builds only) skips the notification permission request, which would cover the
+  script sets the runner's own clock (`sudo date`, UTC, the same day) to 09:41 just before it launches the
+  Watch app, so the Watch shows 09:41 in its status bar and works out its "next session" for that time like the
+  phone does; afterwards the clock is resynchronised. `--store-screenshots`
+  (simulator builds only) skips the notification permission request, which would cover the
   screen and cannot be answered beforehand, and ends the screen after the week row so that no
   list line is cut by the screen edge.
 - **Calendar.** The day view opens scrolled towards the current time, which cuts the first session

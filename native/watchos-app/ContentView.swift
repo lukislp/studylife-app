@@ -35,14 +35,6 @@ struct ContentView: View {
                 .padding(.horizontal, 4)
             }
         }
-        // Store screenshot run only: the simulator cannot pin the system clock, so the real one is hidden and the
-        // pinned time drawn in its place (see storeScreenshotClockText).
-        .toolbar(storeScreenshotClockText == nil ? .automatic : .hidden, for: .navigationBar)
-        .overlay(alignment: .topTrailing) {
-            if let clock = storeScreenshotClockText {
-                Text(clock).font(.system(size: 20, weight: .semibold).monospacedDigit()).padding(.trailing, 14).padding(.top, 2)
-            }
-        }
         // Triggered by a genuine session-complete signal (sessionCompletedAt), never by a
         // plain pause/stop - see StudyLifeWatchApp.swift's didReceiveApplicationContext.
         .sheet(isPresented: $session.showRatingPrompt) {
