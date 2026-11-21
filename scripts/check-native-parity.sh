@@ -61,9 +61,12 @@ APP_FUNCS=$(cat $APP_SCRIPTS | grep -oP '^\s*(async )?function \K\w+' | sort -u)
 #                                  All of these call sites are wrapped in try/catch and already
 #                                  degrade silently by design (see TelemetryService.cs) - adding
 #                                  them would report meaningless metrics, not fix a bug.
+#   canShowNotifications        - private permission check of the browser's showLocalNotification/
+#                                 sendTestNotification; native-bridge.js replaces both with native
+#                                 versions, so nothing on a native page ever calls it.
 # When adding a new name here, say why it's native-irrelevant, same as above - this list is a
 # deliberate exemption, not a place to silence a real gap.
-ALLOWLIST="dispatchTimerStateChanged studylifeLockAcquire studylifeLockRelease studylifeLockTryAcquire studylifeTelemetryInit studylifeTelemetryFlush studylifeGetBootMarks studylifeGetConnectionType studylifeSanitizeErrorStack studylifeCollectStaticVitals studylifeObserveVitals studylifeReportVitalsOnce studylifeMarkFirstRender"
+ALLOWLIST="dispatchTimerStateChanged studylifeLockAcquire studylifeLockRelease studylifeLockTryAcquire studylifeTelemetryInit studylifeTelemetryFlush studylifeGetBootMarks studylifeGetConnectionType studylifeSanitizeErrorStack studylifeCollectStaticVitals studylifeObserveVitals studylifeReportVitalsOnce studylifeMarkFirstRender canShowNotifications"
 
 MISSING_JS=""
 while IFS= read -r fn; do
