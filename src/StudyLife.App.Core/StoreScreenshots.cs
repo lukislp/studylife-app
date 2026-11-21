@@ -6,6 +6,22 @@ namespace StudyLife.App.Core;
 /// ("09:41"), the same as the simulator's status bar override; null leaves the clock alone.</summary>
 public sealed record StoreScreenshotPlan(Uri Server, string Route, string? Clock = null)
 {
+    /// <summary>The focus page route; see <see cref="TimerModeStyle"/>.</summary>
+    public const string FocusRoute = "/focus";
+
+    /// <summary>The built-in timer mode every focus screenshot shows: "Classic 25/5" (the shared client's
+    /// <c>TimerMode.Style</c> "pomodoro"), at its full 25:00.</summary>
+    public const string FocusTimerModeStyle = "pomodoro";
+
+    /// <summary>The timer mode to load before the page opens, or null to leave the timer alone. Without a running
+    /// timer or a session in progress the shared client's focus page picks a mode at random, so each device and
+    /// language showed another one; a mode that is already loaded is kept by the page instead. Only the focus
+    /// route asks for it: the other screens do not show the timer.</summary>
+    public string? TimerModeStyle =>
+        string.Equals(Route.Split('?', 2)[0].TrimEnd('/'), FocusRoute, StringComparison.OrdinalIgnoreCase)
+            ? FocusTimerModeStyle
+            : null;
+
     /// <summary>The app's clock for this run: <see cref="Clock"/> pinned on today's date (see
     /// <see cref="PinnedTimeProvider"/>), or <paramref name="system"/> when the plan has no clock.</summary>
     public TimeProvider CreateClock(TimeProvider system) =>

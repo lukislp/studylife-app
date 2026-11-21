@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using StudyLife.App.Core;
+using StudyLife.Client.Models;
 using StudyLife.Client.Services;
 
 namespace StudyLife.App.Services;
@@ -50,10 +51,11 @@ public static class StoreScreenshotSession
     /// through InvokeAsync), so NavigationManager may be used directly. Ends early when AppRoot goes away (the
     /// reload after the demo sign-in); the new AppRoot starts it again.</summary>
     public static async Task RunAsync(Func<bool> signedIn, NavigationManager nav, IJSRuntime js, AppStateService state,
-        CancellationToken ct)
+        TimerService timer, CancellationToken ct)
     {
         if (Plan is not { } plan)
             return;
+        LoadTimerMode(plan, timer);
         var readiness = new StoreScreenshotReadiness(plan.Route);
         var clock = Stopwatch.StartNew();
         try
@@ -82,6 +84,19 @@ public static class StoreScreenshotSession
             }
         }
         catch (OperationCanceledException) { /* AppRoot disposed: the next instance takes over */ }
+    }
+
+    /// <summary>Loads the plan's timer mode (<see cref="StoreScreenshotPlan.TimerModeStyle"/>) before the focus page
+    /// opens: the page keeps a mode that is already loaded instead of picking one at random, so every device and
+    /// language shows the same one. The timer is not started; nothing reaches the server.</summary>
+    private static void LoadTimerMode(StoreScreenshotPlan plan, TimerService timer)
+    {
+        if (plan.TimerModeStyle is not { } style || timer.CurrentMode?.Style == style)
+            return;
+        if (DefaultData.TimerModes.FirstOrDefault(m => m.Style == style) is { } mode)
+            timer.LoadMode(mode);
+        else
+            DeveloperDiagnostics.Log("screenshots", $"no built-in timer mode '{style}'");
     }
 
     /// <summary>The server runs in demo mode, so the shared client marks the sidebar "DEMO"; a store user never
