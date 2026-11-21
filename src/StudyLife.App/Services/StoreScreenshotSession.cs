@@ -51,13 +51,13 @@ public static class StoreScreenshotSession
     /// through InvokeAsync), so NavigationManager may be used directly. Ends early when AppRoot goes away (the
     /// reload after the demo sign-in); the new AppRoot starts it again.</summary>
     public static async Task RunAsync(Func<bool> signedIn, NavigationManager nav, IJSRuntime js, AppStateService state,
-        TimerService timer, CancellationToken ct)
+        CancellationToken ct)
     {
         if (Plan is not { } plan)
             return;
-        LoadTimerMode(plan, timer);
         var readiness = new StoreScreenshotReadiness(plan.Route);
         var clock = Stopwatch.StartNew();
+        var modeIndex = TimerModeIndex(plan);
         try
         {
             while (!ct.IsCancellationRequested)
@@ -66,6 +66,14 @@ public static class StoreScreenshotSession
                 var path = new Uri(nav.Uri).AbsolutePath;
                 if (path.StartsWith("/calendar", StringComparison.OrdinalIgnoreCase))
                     await RevealMorningAsync(js);
+                if (modeIndex >= 0 && path.StartsWith(StoreScreenshotPlan.FocusRoute, StringComparison.OrdinalIgnoreCase)
+                    && await SelectTimerModeAsync(js, modeIndex))
+                {
+                    // Selected on this look: the page re-renders, so the readiness count starts on the next one.
+                    modeIndex = -1;
+                    await Task.Delay(LookInterval, ct);
+                    continue;
+                }
                 var look = new StoreScreenshotObservation(signedIn(), path, await IsPageBusyAsync(js), clock.Elapsed);
                 switch (readiness.Next(look))
                 {
@@ -86,17 +94,26 @@ public static class StoreScreenshotSession
         catch (OperationCanceledException) { /* AppRoot disposed: the next instance takes over */ }
     }
 
-    /// <summary>Loads the plan's timer mode (<see cref="StoreScreenshotPlan.TimerModeStyle"/>) before the focus page
-    /// opens: the page keeps a mode that is already loaded instead of picking one at random, so every device and
-    /// language shows the same one. The timer is not started; nothing reaches the server.</summary>
-    private static void LoadTimerMode(StoreScreenshotPlan plan, TimerService timer)
+    /// <summary>The position of the plan's timer mode (<see cref="StoreScreenshotPlan.TimerModeStyle"/>) in the focus
+    /// page's mode switcher, or -1 for none. The switcher lists the built-in modes first, in DefaultData order.</summary>
+    private static int TimerModeIndex(StoreScreenshotPlan plan)
     {
-        if (plan.TimerModeStyle is not { } style || timer.CurrentMode?.Style == style)
-            return;
-        if (DefaultData.TimerModes.FirstOrDefault(m => m.Style == style) is { } mode)
-            timer.LoadMode(mode);
-        else
+        if (plan.TimerModeStyle is not { } style)
+            return -1;
+        var index = DefaultData.TimerModes.FindIndex(m => m.Style == style);
+        if (index < 0)
             DeveloperDiagnostics.Log("screenshots", $"no built-in timer mode '{style}'");
+        return index;
+    }
+
+    /// <summary>Without a running timer or a session in progress the focus page picks a timer mode at random; this
+    /// taps the plan's mode in the page's own switcher once it is shown, the same as a user would, so every device and
+    /// language shows that mode with its localized name. The timer is not started; nothing reaches the server
+    /// (TimerService.LoadMode only pushes when it stops a running timer). True once the tap was made.</summary>
+    private static async Task<bool> SelectTimerModeAsync(IJSRuntime js, int index)
+    {
+        try { return await js.InvokeAsync<bool>("storeScreenshotSelectTimerMode", index); }
+        catch { return false; /* page not up yet */ }
     }
 
     /// <summary>The server runs in demo mode, so the shared client marks the sidebar "DEMO"; a store user never

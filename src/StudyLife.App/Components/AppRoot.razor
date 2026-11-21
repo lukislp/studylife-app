@@ -243,7 +243,7 @@ else if (_needsServerUrl)
             HandleDeepLink(pending);
         // Store screenshot run only (a no-op in every other build, see StoreScreenshotSession).
         if (StoreScreenshotSession.Plan is not null)
-            _ = InvokeAsync(() => StoreScreenshotSession.RunAsync(() => TokenStore.Token is not null, Nav, JS, State, Timer, _screenshotRun.Token));
+            _ = InvokeAsync(() => StoreScreenshotSession.RunAsync(() => TokenStore.Token is not null, Nav, JS, State, _screenshotRun.Token));
     }
 
     private readonly CancellationTokenSource _screenshotRun = new();

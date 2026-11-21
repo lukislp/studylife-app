@@ -650,10 +650,11 @@ How it works:
   (`storeScreenshotRevealMorning` in `native-bridge.js`) on every look of the calendar route; a view that
   already starts earlier (the iPad week view) is left alone.
 - **Focus.** Without a running timer or a session in progress the shared client's focus page picks
-  a timer mode at random. For the focus route the screenshot mode loads "Classic 25/5" /
-  "Klassisch 25/5" into the timer before the page opens (not started, nothing sent to the server;
-  `StoreScreenshotPlan.TimerModeStyle`), and the page keeps a mode that is already loaded, so every
-  device and language shows 25:00 of the same mode.
+  a timer mode at random. For the focus route the screenshot mode taps "Classic 25/5" /
+  "Klassisch 25/5" in the page's own mode switcher once it is shown (`StoreScreenshotPlan.TimerModeStyle`,
+  `storeScreenshotSelectTimerMode` in `native-bridge.js`; the timer is not started and nothing is
+  sent to the server), so every device and language shows 25:00 of the same mode with its
+  localized name.
 - **No alpha channel.** App Store Connect rejects screenshots with alpha, and `simctl` writes RGBA
   PNGs. At the end `scripts/store-screenshots/flatten-png.swift` redraws every image onto an opaque
   background and writes it back as RGB; the script then checks each one with `sips -g hasAlpha`

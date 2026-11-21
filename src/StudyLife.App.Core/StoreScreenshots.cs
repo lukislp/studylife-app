@@ -13,10 +13,10 @@ public sealed record StoreScreenshotPlan(Uri Server, string Route, string? Clock
     /// <c>TimerMode.Style</c> "pomodoro"), at its full 25:00.</summary>
     public const string FocusTimerModeStyle = "pomodoro";
 
-    /// <summary>The timer mode to load before the page opens, or null to leave the timer alone. Without a running
+    /// <summary>The timer mode to select on the focus page, or null to leave the timer alone. Without a running
     /// timer or a session in progress the shared client's focus page picks a mode at random, so each device and
-    /// language showed another one; a mode that is already loaded is kept by the page instead. Only the focus
-    /// route asks for it: the other screens do not show the timer.</summary>
+    /// language showed another one; the screenshot mode selects this one in the page's own mode switcher before
+    /// the capture. Only the focus route asks for it: the other screens do not show the timer.</summary>
     public string? TimerModeStyle =>
         string.Equals(Route.Split('?', 2)[0].TrimEnd('/'), FocusRoute, StringComparison.OrdinalIgnoreCase)
             ? FocusTimerModeStyle
