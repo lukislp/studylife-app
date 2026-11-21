@@ -636,7 +636,9 @@ How it works:
   (`HomeWidgetSnapshot.BuildAsync`, the same bytes `WatchBridge` sends to a paired Watch), and the
   script copies it into the Watch simulator's App Group container before launching the Watch app.
   watchOS simulators refuse status bar overrides (`simctl status_bar`: "not supported"), so the
-  script holds the runner's own clock (`sudo date`, UTC, the same day, reset every second) at 09:41
+  script holds the runner's own clock (`sudo date`, UTC, reset every second) at 09:41 on the
+  snapshot's own day (its `day` field, so a run that passes midnight UTC before the Watch shot does
+  not make the Watch zero "today")
   from before the Watch simulator restarts until after its screenshot (the simulator only picks the host time
   up when it boots), so the Watch shows 09:41 in its status bar and works out its "next session" for that
   time like the phone does; afterwards the real time is put back. `--store-screenshots`
@@ -647,6 +649,16 @@ How it works:
   (07:30) off at the top on the phone. The screenshot mode scrolls the grid back to 06:30
   (`storeScreenshotRevealMorning` in `native-bridge.js`) on every look of the calendar route; a view that
   already starts earlier (the iPad week view) is left alone.
+- **Focus.** Without a running timer or a session in progress the shared client's focus page picks
+  a timer mode at random. For the focus route the screenshot mode taps "Classic 25/5" /
+  "Klassisch 25/5" in the page's own mode switcher once it is shown (`StoreScreenshotPlan.TimerModeStyle`,
+  `storeScreenshotSelectTimerMode` in `native-bridge.js`; the timer is not started and nothing is
+  sent to the server), so every device and language shows 25:00 of the same mode with its
+  localized name.
+- **No alpha channel.** App Store Connect rejects screenshots with alpha, and `simctl` writes RGBA
+  PNGs. At the end `scripts/store-screenshots/flatten-png.swift` redraws every image onto an opaque
+  background and writes it back as RGB; the script then checks each one with `sips -g hasAlpha`
+  and fails the job if any alpha is left.
 
 Limits: the iOS simulator build is the plain .NET app, without the native shell
 (`scripts/apple/release-ios.sh`). The home screen widgets, the Live Activity on the lock screen

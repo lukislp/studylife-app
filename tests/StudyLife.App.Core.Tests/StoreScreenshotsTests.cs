@@ -134,6 +134,28 @@ public class StoreScreenshotLaunchTests
         Assert.Equal(route, Decide(true, "--store-screenshots", "https://localhost:5443", "--route", route).Plan!.Route);
 }
 
+public class StoreScreenshotTimerModeTests
+{
+    private static StoreScreenshotPlan Plan(string route) => new(new Uri("https://localhost:5443/"), route, "09:41");
+
+    [Theory]
+    [InlineData("/focus")]
+    [InlineData("/focus/")]
+    [InlineData("/Focus")]
+    [InlineData("/focus?x=1")]
+    public void TheFocusScreen_AlwaysShowsClassic25(string route) =>
+        Assert.Equal("pomodoro", Plan(route).TimerModeStyle);
+
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/calendar")]
+    [InlineData("/notes?note=3")]
+    [InlineData("/auswertung")]
+    [InlineData("/focus-history")]
+    public void OtherScreens_LeaveTheTimerAlone(string route) =>
+        Assert.Null(Plan(route).TimerModeStyle);
+}
+
 public class StoreScreenshotClockTests
 {
     private static readonly TimeZoneInfo Berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");

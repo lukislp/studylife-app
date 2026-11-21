@@ -31,6 +31,8 @@ WATCH_SNAPSHOT_FILE="store-screenshot-watch-snapshot.json"  # StoreScreenshotSes
 STATUS_WAIT_SECONDS=180                                     # above the app's own 120 s readiness timeout
 # The time in the status bar override and the app's clock (--clock), so every "now" in a screenshot agrees.
 STATUS_TIME="09:41"
+# The day the run began (local time), the Watch clock's fallback when there is no snapshot to take the day from.
+RUN_DAY="$(date +%Y-%m-%d)"
 
 case "$LANGUAGE" in
   de) APPLE_LANGUAGE="de"; APPLE_LOCALE="de_DE"; NOTE_TITLE="Merkzettel Eigenwerte" ;;
@@ -248,21 +250,37 @@ for entry in "${DEVICES[@]}"; do
   xcrun simctl delete "$udid" || true
 done
 
-# The runner lets us set its clock (passwordless sudo, UTC, same day) and the simulator follows it, but a watchOS
-# simulator only picks the new time up when it boots. So the clock is held at STATUS_TIME (reset every second) from
-# before the Watch simulator restarts until after its screenshot: the Watch then shows STATUS_TIME in its status
-# bar and works out its "next session" for that time, like the phone shots. unfreeze_clock puts the real time back.
+# The runner lets us set its clock (passwordless sudo, UTC) and the simulator follows it, but a watchOS simulator
+# only picks the new time up when it boots. So the clock is held at STATUS_TIME (reset every second) from before
+# the Watch simulator restarts until after its screenshot: the Watch then shows STATUS_TIME in its status bar and
+# works out its "next session" for that time, like the phone shots. unfreeze_clock puts the real time back.
+#
+# The date is the snapshot's own day, not the date the Watch capture happens to start on: the Watch app zeroes
+# "today" when the snapshot is from another day (WatchSnapshot.swift, loadWatchSnapshot), and a run that passes
+# midnight UTC between the phone's dashboard shot and the Watch shot showed "0 min" today otherwise.
 clock_pid=""
 clock_real_start=0
 clock_seconds_start=0
+# The local day (yyyy-MM-dd) the Watch is set to: the "day" of the phone's snapshot, else the day this run began.
+watch_day() {
+  local day=""
+  [ -z "$watch_snapshot" ] || day="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("day", ""))' "$watch_snapshot" 2>/dev/null || true)"
+  [[ "$day" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || day="$RUN_DAY"
+  echo "$day"
+}
 freeze_clock() {
   if ! sudo -n true >/dev/null 2>&1; then
     echo "::warning::no sudo to set the host clock; the Watch shows the real time of the run"
     return 0
   fi
+  local day stamp
+  day="$(watch_day)"
+  # date(1) on macOS: mmddHHMMccyy.ss, local time (UTC on the runner, as on the simulators).
+  stamp="${day:5:2}${day:8:2}${STATUS_TIME/:/}${day:0:4}.10"
+  log "Watch clock: $day $STATUS_TIME"
   clock_real_start="$(date -u +%s)"
   clock_seconds_start="$SECONDS"
-  ( while :; do sudo -n date "$(date +%m%d)${STATUS_TIME/:/}.10" >/dev/null 2>&1; sleep 1; done ) &
+  ( while :; do sudo -n date "$stamp" >/dev/null 2>&1; sleep 1; done ) &
   clock_pid=$!
 }
 unfreeze_clock() {
@@ -325,6 +343,24 @@ if [ -n "$WATCH_APP_PATH" ]; then
   capture_watch || failures=$((failures + 1))
 else
   log "no WATCH_APP_PATH: no Watch screenshots"
+fi
+
+# App Store Connect rejects screenshots with an alpha channel, and simctl writes RGBA PNGs. flatten-png.swift
+# redraws every image onto an opaque background (black for dark, white for light; the captures are opaque
+# anyway) and writes it back as RGB. sips then confirms that no image has an alpha channel left.
+shopt -s nullglob
+shots=("$OUT_DIR"/*/[0-9][0-9]-*.png)
+shopt -u nullglob
+if [ "${#shots[@]}" -gt 0 ]; then
+  xcrun swift "$(dirname "$0")/flatten-png.swift" "$APPEARANCE" "${shots[@]}" \
+    || { echo "::error::could not remove the alpha channel from the screenshots"; failures=$((failures + 1)); }
+  for file in "${shots[@]}"; do
+    if sips -g hasAlpha "$file" | grep -q 'hasAlpha: yes'; then
+      echo "::error::$file still has an alpha channel"
+      failures=$((failures + 1))
+    fi
+  done
+  log "${#shots[@]} screenshot(s) flattened to RGB without alpha"
 fi
 
 if [ "$failures" -gt 0 ]; then

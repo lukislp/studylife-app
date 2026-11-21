@@ -131,6 +131,17 @@ function storeScreenshotHideDemoBadge() {
     return true;
 }
 
+// Store screenshot mode only: taps the timer mode at `index` in the focus page's mode switcher (the shared
+// client's FocusModeSwitcher, built-in modes first), so the page loads it through its own SelectMode with the
+// localized name instead of the mode it picked at random. False while the switcher is not shown yet. Never
+// called in any other build.
+function storeScreenshotSelectTimerMode(index) {
+    var buttons = document.querySelectorAll('.mode-switcher .mode-opt');
+    if (index < 0 || index >= buttons.length) return false;
+    buttons[index].click();
+    return true;
+}
+
 // Store screenshot mode only: the calendar's day view opens scrolled towards "now" and can cut the first
 // session of the day off at the top. When the grid is scrolled past `minute` (minutes since midnight; the grid
 // is 1px per minute), scroll it back so that minute is the first one shown; a view that already starts earlier
