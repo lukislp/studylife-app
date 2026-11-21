@@ -118,11 +118,16 @@ struct ContentView: View {
 
         HStack(spacing: 14) {
             if let goal = snapshot.weeklyGoalMinutes, goal > 0 {
-                Gauge(value: Double(min(snapshot.weekMinutes, goal)), in: 0...Double(goal)) {
+                let ring = WeekRingState(weekMinutes: snapshot.weekMinutes, goalMinutes: goal)
+                Gauge(value: ring.fill) {
                     EmptyView()
                 } currentValueLabel: {
-                    Text("\(Int((Double(snapshot.weekMinutes) / Double(goal)) * 100))%")
-                        .font(.system(size: 11))
+                    // Goal reached or exceeded: a checkmark instead of a ">100%" number.
+                    if ring.goalReached {
+                        Image(systemName: "checkmark").font(.system(size: 12, weight: .bold))
+                    } else {
+                        Text("\(ring.percent)%").font(.system(size: 11))
+                    }
                 }
                 .gaugeStyle(.accessoryCircularCapacity)
                 .tint(wAccent)

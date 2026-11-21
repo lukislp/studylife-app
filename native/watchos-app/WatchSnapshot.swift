@@ -154,3 +154,24 @@ func bakedWatchSnapshot(_ raw: WatchSnapshot, at date: Date) -> WatchSnapshot {
 func formatWatchMinutes(_ minutes: Int) -> String {
     minutes >= 60 ? String(format: "%d:%02d h", minutes / 60, minutes % 60) : "\(minutes) min"
 }
+
+/// Presentation of the week ring: the fill is capped at 100 %, and once the weekly goal is met
+/// (or exceeded) the center shows a checkmark instead of a percentage above 100.
+struct WeekRingState: Equatable {
+    let fill: Double
+    let percent: Int
+    let goalReached: Bool
+
+    init(weekMinutes: Int, goalMinutes: Int) {
+        guard goalMinutes > 0 else {
+            fill = 0
+            percent = 0
+            goalReached = false
+            return
+        }
+        let ratio = Double(max(weekMinutes, 0)) / Double(goalMinutes)
+        goalReached = ratio >= 1
+        fill = min(ratio, 1)
+        percent = Int(fill * 100)
+    }
+}
