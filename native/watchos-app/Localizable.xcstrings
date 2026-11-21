@@ -243,6 +243,17 @@
         }
       }
     },
+    "Weekly goal reached": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochenziel erreicht"
+          }
+        }
+      }
+    },
     "until %@": {
       "extractionState": "manual",
       "localizations": {

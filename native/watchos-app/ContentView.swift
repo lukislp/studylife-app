@@ -125,6 +125,7 @@ struct ContentView: View {
                     // Goal reached or exceeded: a checkmark instead of a ">100%" number.
                     if ring.goalReached {
                         Image(systemName: "checkmark").font(.system(size: 12, weight: .bold))
+                            .accessibilityLabel(String(localized: "Weekly goal reached"))
                     } else {
                         Text("\(ring.percent)%").font(.system(size: 11))
                     }
