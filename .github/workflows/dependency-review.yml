@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   review:
-    uses: lukislp/ci-workflows/.github/workflows/dependency-review.yml@8b58163da2f126016905ac070b4985c2ee921529 # v1.11.3
+    uses: lukislp/ci-workflows/.github/workflows/dependency-review.yml@deb70637c062a353cc9ad9ad3c296b2b68304212 # v1.11.5
     # Third-party code under the GPL, AGPL or LGPL families cannot go through the App Store (see
     # README "License"). The shared workflow takes SPDX ids without wildcards, so every id of the
     # three families is listed. THIRD-PARTY-NOTICES.md and the test-licences job cover the NuGet
